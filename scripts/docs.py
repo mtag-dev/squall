@@ -205,35 +205,9 @@ def build_lang(
     typer.secho(f"Successfully built docs for: {lang}", color=typer.colors.GREEN)
 
 
-index_sponsors_template = """
-{% if sponsors %}
-{% for sponsor in sponsors.gold -%}
-<a href="{{ sponsor.url }}" target="_blank" title="{{ sponsor.title }}"><img src="{{ sponsor.img }}"></a>
-{% endfor -%}
-{%- for sponsor in sponsors.silver -%}
-<a href="{{ sponsor.url }}" target="_blank" title="{{ sponsor.title }}"><img src="{{ sponsor.img }}"></a>
-{% endfor %}
-{% endif %}
-"""
-
-
 def generate_readme_content():
     en_index = en_docs_path / "docs" / "index.md"
-    content = en_index.read_text("utf-8")
-    match_start = re.search(r"<!-- sponsors -->", content)
-    match_end = re.search(r"<!-- /sponsors -->", content)
-    sponsors_data_path = en_docs_path / "data" / "sponsors.yml"
-    sponsors = mkdocs.utils.yaml_load(sponsors_data_path.read_text(encoding="utf-8"))
-    if not (match_start and match_end):
-        raise RuntimeError("Couldn't auto-generate sponsors section")
-    pre_end = match_start.end()
-    post_start = match_end.start()
-    template = Template(index_sponsors_template)
-    message = template.render(sponsors=sponsors)
-    pre_content = content[:pre_end]
-    post_content = content[post_start:]
-    new_content = pre_content + message + post_content
-    return new_content
+    return en_index.read_text("utf-8")
 
 
 @app.command()
@@ -331,7 +305,7 @@ def serve():
     os.chdir("site")
     server_address = ("", 8008)
     server = HTTPServer(server_address, SimpleHTTPRequestHandler)
-    typer.echo(f"Serving at: http://127.0.0.1:8008")
+    typer.echo('Serving at: http://127.0.0.1:8008')
     server.serve_forever()
 
 
@@ -411,8 +385,7 @@ def get_key_section(
 def get_text_with_translate_missing(text: str) -> str:
     lines = text.splitlines()
     lines.insert(1, missing_translation_snippet)
-    new_text = "\n".join(lines)
-    return new_text
+    return "\n".join(lines)
 
 
 def get_file_to_nav_map(nav: list) -> Dict[str, Tuple[str, ...]]:
