@@ -9,10 +9,10 @@ openapi_schema = {
     "openapi": "3.0.2",
     "info": {"title": "Squall", "version": "0.1.0"},
     "paths": {
-        "/typer": {
+        "/subdomain": {
             "get": {
                 "summary": "Redirect Typer",
-                "operationId": "redirect_typer_typer_get",
+                "operationId": "redirect_typer_subdomain_get",
                 "responses": {
                     "200": {
                         "description": "Successful Response",
@@ -32,6 +32,6 @@ def test_openapi_schema():
 
 
 def test_get():
-    response = client.get("/redirect", allow_redirects=False)
+    response = client.get("/subdomain", allow_redirects=False)
     assert response.status_code == 307, response.text
-    assert response.headers["location"] == "https://redirect.example.com"
+    assert response.headers["location"] == "https://subdomain.example.com"
