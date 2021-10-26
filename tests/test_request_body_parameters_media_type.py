@@ -1,7 +1,6 @@
 import typing
 
 from pydantic import BaseModel
-
 from squall import Body, Squall
 from squall.testclient import TestClient
 

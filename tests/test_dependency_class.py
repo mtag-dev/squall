@@ -1,7 +1,6 @@
 from typing import AsyncGenerator, Generator
 
 import pytest
-
 from squall import Depends, Squall
 from squall.testclient import TestClient
 

@@ -1,7 +1,6 @@
 from typing import Any, List
 
 import pytest
-
 from squall.params import Body, Cookie, Depends, Header, Param, Path, Query
 
 test_data: List[Any] = ["teststr", None, ..., 1, []]

@@ -1,6 +1,7 @@
-from docs_src.advanced_middleware.tutorial003 import app
 from squall.responses import PlainTextResponse
 from squall.testclient import TestClient
+
+from docs_src.advanced_middleware.tutorial003 import app
 
 
 @app.get("/large")

@@ -1,7 +1,6 @@
 from typing import Optional, Set
 
 from pydantic import BaseModel
-
 from squall import Squall, status
 
 app = Squall()

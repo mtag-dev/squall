@@ -1,5 +1,4 @@
 from pydantic import BaseSettings
-
 from squall import Squall
 
 

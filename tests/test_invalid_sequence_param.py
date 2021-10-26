@@ -2,8 +2,7 @@ from typing import Dict, List, Optional, Tuple
 
 import pytest
 from pydantic import BaseModel
-
-from squall import Squall, Query
+from squall import Query, Squall
 
 
 def test_invalid_sequence():

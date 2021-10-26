@@ -1,7 +1,7 @@
 import gzip
 from typing import Callable, List
 
-from squall import Body, Squall, Request, Response
+from squall import Body, Request, Response, Squall
 from squall.routing import APIRoute
 
 

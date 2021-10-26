@@ -2,7 +2,6 @@ from typing import List, Optional
 
 import pytest
 from pydantic import BaseModel, ValidationError
-
 from squall import Squall
 from squall.testclient import TestClient
 

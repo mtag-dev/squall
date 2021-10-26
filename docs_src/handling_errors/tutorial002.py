@@ -1,4 +1,4 @@
-from squall import Squall, HTTPException
+from squall import HTTPException, Squall
 
 app = Squall()
 

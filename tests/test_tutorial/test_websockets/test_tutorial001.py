@@ -1,8 +1,8 @@
 import pytest
-
-from docs_src.websockets.tutorial001 import app
 from squall.testclient import TestClient
 from squall.websockets import WebSocketDisconnect
+
+from docs_src.websockets.tutorial001 import app
 
 client = TestClient(app)
 

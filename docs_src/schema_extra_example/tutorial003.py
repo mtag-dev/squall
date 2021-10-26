@@ -1,7 +1,6 @@
 from typing import Optional
 
 from pydantic import BaseModel
-
 from squall import Body, Squall
 
 app = Squall()

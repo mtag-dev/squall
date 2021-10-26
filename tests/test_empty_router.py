@@ -1,5 +1,4 @@
 import pytest
-
 from squall import APIRouter, Squall
 from squall.testclient import TestClient
 

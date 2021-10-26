@@ -1,5 +1,6 @@
-from docs_src.events.tutorial001 import app
 from squall.testclient import TestClient
+
+from docs_src.events.tutorial001 import app
 
 openapi_schema = {
     "openapi": "3.0.2",

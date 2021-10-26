@@ -1,7 +1,7 @@
 from pytest import MonkeyPatch
+from squall.testclient import TestClient
 
 from docs_src.settings.app02 import main, test_main
-from squall.testclient import TestClient
 
 client = TestClient(main.app)
 

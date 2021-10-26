@@ -1,4 +1,4 @@
-from squall import APIRouter, Squall, Request
+from squall import APIRouter, Request, Squall
 from squall.responses import JSONResponse
 from squall.testclient import TestClient
 

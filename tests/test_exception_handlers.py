@@ -1,8 +1,7 @@
-from starlette.responses import JSONResponse
-
-from squall import Squall, HTTPException
+from squall import HTTPException, Squall
 from squall.exceptions import RequestValidationError
 from squall.testclient import TestClient
+from starlette.responses import JSONResponse
 
 
 def http_exception_handler(request, exception):

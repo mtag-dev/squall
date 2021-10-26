@@ -1,7 +1,6 @@
 from typing import Any
 
 import orjson
-
 from squall import APIRouter, Squall
 from squall.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from squall.testclient import TestClient

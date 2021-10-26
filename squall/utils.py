@@ -4,13 +4,12 @@ from dataclasses import is_dataclass
 from enum import Enum
 from typing import Any, Dict, Optional, Set, Type, Union, cast
 
+import squall
 from pydantic import BaseConfig, BaseModel, create_model
 from pydantic.class_validators import Validator
 from pydantic.fields import FieldInfo, ModelField, UndefinedType
 from pydantic.schema import model_process_schema
 from pydantic.utils import lenient_issubclass
-
-import squall
 from squall.datastructures import DefaultPlaceholder, DefaultType
 from squall.openapi.constants import REF_PREFIX
 

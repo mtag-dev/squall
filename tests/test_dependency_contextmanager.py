@@ -1,7 +1,6 @@
 from typing import Dict
 
 import pytest
-
 from squall import BackgroundTasks, Depends, Squall
 from squall.testclient import TestClient
 

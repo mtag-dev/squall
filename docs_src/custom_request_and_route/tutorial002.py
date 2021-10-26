@@ -1,6 +1,6 @@
 from typing import Callable, List
 
-from squall import Body, Squall, HTTPException, Request, Response
+from squall import Body, HTTPException, Request, Response, Squall
 from squall.exceptions import RequestValidationError
 from squall.routing import APIRoute
 

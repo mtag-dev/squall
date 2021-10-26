@@ -1,4 +1,4 @@
-from squall import Squall, Query
+from squall import Query, Squall
 
 app = Squall()
 

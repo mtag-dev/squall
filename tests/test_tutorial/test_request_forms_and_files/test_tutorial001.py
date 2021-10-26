@@ -1,5 +1,6 @@
-from docs_src.request_forms_and_files.tutorial001 import app
 from squall.testclient import TestClient
+
+from docs_src.request_forms_and_files.tutorial001 import app
 
 client = TestClient(app)
 

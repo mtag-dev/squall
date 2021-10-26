@@ -1,5 +1,4 @@
 import pytest
-
 from squall import Squall
 from squall.testclient import TestClient
 

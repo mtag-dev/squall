@@ -2,7 +2,6 @@ from typing import Dict, List, Tuple
 
 import pytest
 from pydantic import BaseModel
-
 from squall import Squall
 
 

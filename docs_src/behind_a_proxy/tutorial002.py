@@ -1,4 +1,4 @@
-from squall import Squall, Request
+from squall import Request, Squall
 
 app = Squall(root_path="/api/v1")
 

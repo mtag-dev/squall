@@ -1,11 +1,10 @@
 from typing import Optional
 
+from squall.openapi.models import APIKey, APIKeyIn
+from squall.security.base import SecurityBase
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
 from starlette.status import HTTP_403_FORBIDDEN
-
-from squall.openapi.models import APIKey, APIKeyIn
-from squall.security.base import SecurityBase
 
 
 class APIKeyBase(SecurityBase):

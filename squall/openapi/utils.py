@@ -11,10 +11,6 @@ from pydantic.schema import (
     get_model_name_map,
 )
 from pydantic.utils import lenient_issubclass
-from starlette.responses import JSONResponse
-from starlette.routing import BaseRoute
-from starlette.status import HTTP_422_UNPROCESSABLE_ENTITY
-
 from squall import routing
 from squall.datastructures import DefaultPlaceholder
 from squall.dependencies.models import Dependant
@@ -33,6 +29,9 @@ from squall.utils import (
     generate_operation_id_for_path,
     get_model_definitions,
 )
+from starlette.responses import JSONResponse
+from starlette.routing import BaseRoute
+from starlette.status import HTTP_422_UNPROCESSABLE_ENTITY
 
 validation_error_definition = {
     "title": "ValidationError",

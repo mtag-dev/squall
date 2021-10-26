@@ -1,7 +1,6 @@
 from typing import Any, Callable, Dict, Optional, Sequence
 
 from pydantic.fields import Undefined
-
 from squall import params
 
 

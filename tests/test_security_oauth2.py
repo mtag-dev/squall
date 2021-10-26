@@ -1,7 +1,6 @@
 import pytest
 from pydantic import BaseModel
-
-from squall import Depends, Squall, Security
+from squall import Depends, Security, Squall
 from squall.security import OAuth2, OAuth2PasswordRequestFormStrict
 from squall.testclient import TestClient
 

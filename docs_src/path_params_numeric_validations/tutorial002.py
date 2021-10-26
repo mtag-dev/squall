@@ -1,4 +1,4 @@
-from squall import Squall, Path
+from squall import Path, Squall
 
 app = Squall()
 

@@ -1,9 +1,8 @@
 from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
-from starlette.testclient import TestClient
-
 from squall import Squall
+from starlette.testclient import TestClient
 
 app = Squall()
 

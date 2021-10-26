@@ -1,6 +1,5 @@
 from pydantic import BaseModel
-
-from squall import Body, Cookie, Squall, Header, Path, Query
+from squall import Body, Cookie, Header, Path, Query, Squall
 from squall.testclient import TestClient
 
 app = Squall()

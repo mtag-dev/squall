@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from squall import Squall, Header
+from squall import Header, Squall
 
 app = Squall()
 

@@ -1,7 +1,6 @@
 from typing import List, Optional, Set
 
 from pydantic import BaseModel, HttpUrl
-
 from squall import Squall
 
 app = Squall()

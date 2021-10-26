@@ -1,6 +1,6 @@
 from typing import Optional
 
-from squall import Squall, Security
+from squall import Security, Squall
 from squall.security import HTTPAuthorizationCredentials, HTTPBearer
 from squall.testclient import TestClient
 

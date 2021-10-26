@@ -4,8 +4,7 @@ from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel
-
-from squall import Depends, Squall, HTTPException, status
+from squall import Depends, HTTPException, Squall, status
 from squall.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 # to get a string like this run:

@@ -1,5 +1,4 @@
 import pytest
-
 from squall import UploadFile
 from squall.datastructures import Default
 

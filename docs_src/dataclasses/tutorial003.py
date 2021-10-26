@@ -2,7 +2,6 @@ from dataclasses import field  # (1)
 from typing import List, Optional
 
 from pydantic.dataclasses import dataclass  # (2)
-
 from squall import Squall
 
 

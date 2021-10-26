@@ -1,4 +1,4 @@
-from squall import Squall, Request
+from squall import Request, Squall
 
 app = Squall(
     servers=[

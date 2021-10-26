@@ -3,7 +3,6 @@ from typing import List
 import databases
 import sqlalchemy
 from pydantic import BaseModel
-
 from squall import Squall
 
 # SQLAlchemy specific code, as with any other app

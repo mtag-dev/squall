@@ -1,7 +1,7 @@
 import time
 from typing import Callable
 
-from squall import APIRouter, Squall, Request, Response
+from squall import APIRouter, Request, Response, Squall
 from squall.routing import APIRoute
 
 

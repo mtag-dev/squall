@@ -1,9 +1,9 @@
 from unittest.mock import patch
 
 import pytest
+from squall.testclient import TestClient
 
 from docs_src.body.tutorial001 import app
-from squall.testclient import TestClient
 
 client = TestClient(app)
 

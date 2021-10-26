@@ -1,7 +1,7 @@
 import pytest
+from squall.testclient import TestClient
 
 from docs_src.query_params_str_validations.tutorial010 import app
-from squall.testclient import TestClient
 
 client = TestClient(app)
 

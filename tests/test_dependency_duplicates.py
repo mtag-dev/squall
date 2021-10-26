@@ -1,7 +1,6 @@
 from typing import List
 
 from pydantic import BaseModel
-
 from squall import Depends, Squall
 from squall.testclient import TestClient
 

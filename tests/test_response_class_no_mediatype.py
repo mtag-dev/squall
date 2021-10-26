@@ -1,8 +1,7 @@
 import typing
 
 from pydantic import BaseModel
-
-from squall import Squall, Response
+from squall import Response, Squall
 from squall.responses import JSONResponse
 from squall.testclient import TestClient
 

@@ -1,6 +1,5 @@
 import pytest
-
-from squall import Squall, File, Form, UploadFile
+from squall import File, Form, Squall, UploadFile
 from squall.dependencies.utils import (
     multipart_incorrect_install_error,
     multipart_not_installed_error,

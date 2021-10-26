@@ -1,4 +1,4 @@
-from squall import Depends, Squall, Header, HTTPException
+from squall import Depends, Header, HTTPException, Squall
 
 app = Squall()
 

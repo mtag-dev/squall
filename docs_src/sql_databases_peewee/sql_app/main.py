@@ -1,7 +1,7 @@
 import time
 from typing import List
 
-from squall import Depends, Squall, HTTPException
+from squall import Depends, HTTPException, Squall
 
 from . import crud, database, models, schemas
 from .database import db_state_default

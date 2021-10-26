@@ -1,6 +1,6 @@
 from typing import Optional
 
-from squall import Squall, Query
+from squall import Query, Squall
 
 app = Squall()
 

@@ -1,8 +1,7 @@
-from starlette.websockets import WebSocket
-
 from squall import Depends, Squall
 from squall.requests import HTTPConnection
 from squall.testclient import TestClient
+from starlette.websockets import WebSocket
 
 app = Squall()
 app.state.value = 42

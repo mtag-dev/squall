@@ -2,7 +2,6 @@ from typing import Optional
 
 import pytest
 from pydantic import BaseModel, ValidationError, validator
-
 from squall import Depends, Squall
 from squall.testclient import TestClient
 

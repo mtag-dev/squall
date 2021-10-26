@@ -4,7 +4,6 @@ from couchbase import LOCKMODE_WAIT
 from couchbase.bucket import Bucket
 from couchbase.cluster import Cluster, PasswordAuthenticator
 from pydantic import BaseModel
-
 from squall import Squall
 
 USERPROFILE_DOC_TYPE = "userprofile"

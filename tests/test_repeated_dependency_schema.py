@@ -1,4 +1,4 @@
-from squall import Depends, Squall, Header, status
+from squall import Depends, Header, Squall, status
 from squall.testclient import TestClient
 
 app = Squall()

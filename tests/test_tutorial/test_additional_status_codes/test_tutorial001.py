@@ -1,5 +1,6 @@
-from docs_src.additional_status_codes.tutorial001 import app
 from squall.testclient import TestClient
+
+from docs_src.additional_status_codes.tutorial001 import app
 
 client = TestClient(app)
 

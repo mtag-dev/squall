@@ -1,7 +1,6 @@
 from typing import Any, Callable, List, Optional, Sequence
 
 from pydantic.fields import ModelField
-
 from squall.security.base import SecurityBase
 
 

@@ -1,5 +1,6 @@
-from docs_src.dependencies.tutorial012 import app
 from squall.testclient import TestClient
+
+from docs_src.dependencies.tutorial012 import app
 
 client = TestClient(app)
 

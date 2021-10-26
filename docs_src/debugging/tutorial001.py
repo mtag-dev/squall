@@ -1,5 +1,4 @@
 import uvicorn
-
 from squall import Squall
 
 app = Squall()

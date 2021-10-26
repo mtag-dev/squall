@@ -1,8 +1,7 @@
 from typing import List
 
 from sqlalchemy.orm import Session
-
-from squall import Depends, Squall, HTTPException
+from squall import Depends, HTTPException, Squall
 
 from . import crud, models, schemas
 from .database import SessionLocal, engine

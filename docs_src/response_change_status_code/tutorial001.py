@@ -1,4 +1,4 @@
-from squall import Squall, Response, status
+from squall import Response, Squall, status
 
 app = Squall()
 

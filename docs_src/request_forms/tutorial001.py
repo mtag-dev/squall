@@ -1,4 +1,4 @@
-from squall import Squall, Form
+from squall import Form, Squall
 
 app = Squall()
 

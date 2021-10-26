@@ -1,7 +1,6 @@
-from starlette.exceptions import HTTPException as StarletteHTTPException
-
-from squall import Squall, HTTPException
+from squall import HTTPException, Squall
 from squall.testclient import TestClient
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 app = Squall()
 

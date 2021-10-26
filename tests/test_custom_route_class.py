@@ -1,9 +1,8 @@
 import pytest
-from starlette.routing import Route
-
 from squall import APIRouter, Squall
 from squall.routing import APIRoute
 from squall.testclient import TestClient
+from starlette.routing import Route
 
 app = Squall()
 

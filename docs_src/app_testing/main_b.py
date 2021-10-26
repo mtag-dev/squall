@@ -1,8 +1,7 @@
 from typing import Optional
 
 from pydantic import BaseModel
-
-from squall import Squall, Header, HTTPException
+from squall import Header, HTTPException, Squall
 
 fake_secret_token = "coneofsilence"
 

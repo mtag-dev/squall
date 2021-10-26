@@ -1,4 +1,4 @@
-from squall import Squall, Request
+from squall import Request, Squall
 from squall.testclient import TestClient
 
 app = Squall(openapi_prefix="/api/v1")

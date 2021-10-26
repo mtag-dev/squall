@@ -1,7 +1,6 @@
 from typing import Optional
 
 import pytest
-
 from squall import APIRouter, Depends, Squall
 from squall.testclient import TestClient
 

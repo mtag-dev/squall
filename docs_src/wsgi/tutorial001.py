@@ -1,5 +1,4 @@
 from flask import Flask, escape, request
-
 from squall import Squall
 from squall.middleware.wsgi import WSGIMiddleware
 

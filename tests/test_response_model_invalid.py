@@ -1,7 +1,6 @@
 from typing import List
 
 import pytest
-
 from squall import Squall
 from squall.exceptions import SquallError
 

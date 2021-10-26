@@ -1,4 +1,4 @@
-from squall import Squall, File, Form, UploadFile
+from squall import File, Form, Squall, UploadFile
 
 app = Squall()
 

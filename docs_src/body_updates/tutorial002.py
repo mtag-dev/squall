@@ -1,7 +1,6 @@
 from typing import List, Optional
 
 from pydantic import BaseModel
-
 from squall import Squall
 from squall.encoders import jsonable_encoder
 

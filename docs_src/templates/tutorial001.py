@@ -1,4 +1,4 @@
-from squall import Squall, Request
+from squall import Request, Squall
 from squall.responses import HTMLResponse
 from squall.staticfiles import StaticFiles
 from squall.templating import Jinja2Templates

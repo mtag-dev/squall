@@ -1,8 +1,7 @@
-from starlette.exceptions import HTTPException as StarletteHTTPException
-
-from squall import Squall, HTTPException
+from squall import HTTPException, Squall
 from squall.exceptions import RequestValidationError
 from squall.responses import PlainTextResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 app = Squall()
 

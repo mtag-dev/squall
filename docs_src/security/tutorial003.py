@@ -1,8 +1,7 @@
 from typing import Optional
 
 from pydantic import BaseModel
-
-from squall import Depends, Squall, HTTPException, status
+from squall import Depends, HTTPException, Squall, status
 from squall.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 fake_users_db = {

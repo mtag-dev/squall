@@ -1,6 +1,5 @@
 from pydantic import BaseModel
-
-from squall import Squall, Request, status
+from squall import Request, Squall, status
 from squall.encoders import jsonable_encoder
 from squall.exceptions import RequestValidationError
 from squall.responses import JSONResponse

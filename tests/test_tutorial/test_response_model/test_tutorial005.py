@@ -1,5 +1,6 @@
-from docs_src.response_model.tutorial005 import app
 from squall.testclient import TestClient
+
+from docs_src.response_model.tutorial005 import app
 
 client = TestClient(app)
 

@@ -5,7 +5,6 @@ from typing import Optional
 
 import pytest
 from pydantic import BaseModel, Field, ValidationError, create_model
-
 from squall.encoders import jsonable_encoder
 
 

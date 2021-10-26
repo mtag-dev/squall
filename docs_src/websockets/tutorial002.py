@@ -1,6 +1,6 @@
 from typing import Optional
 
-from squall import Cookie, Depends, Squall, Query, WebSocket, status
+from squall import Cookie, Depends, Query, Squall, WebSocket, status
 from squall.responses import HTMLResponse
 
 app = Squall()

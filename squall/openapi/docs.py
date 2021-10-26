@@ -1,9 +1,8 @@
 import json
 from typing import Any, Dict, Optional
 
-from starlette.responses import HTMLResponse
-
 from squall.encoders import jsonable_encoder
+from starlette.responses import HTMLResponse
 
 
 def get_swagger_ui_html(

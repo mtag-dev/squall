@@ -1,6 +1,6 @@
 from typing import List
 
-from squall import Squall, Query
+from squall import Query, Squall
 from squall.testclient import TestClient
 
 app = Squall()

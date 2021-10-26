@@ -1,5 +1,6 @@
-from docs_src.extra_data_types.tutorial001 import app
 from squall.testclient import TestClient
+
+from docs_src.extra_data_types.tutorial001 import app
 
 client = TestClient(app)
 

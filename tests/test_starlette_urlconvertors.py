@@ -1,4 +1,4 @@
-from squall import Squall, Path
+from squall import Path, Squall
 from squall.testclient import TestClient
 
 app = Squall()

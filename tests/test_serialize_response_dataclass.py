@@ -1,7 +1,6 @@
 from typing import List, Optional
 
 from pydantic.dataclasses import dataclass
-
 from squall import Squall
 from squall.testclient import TestClient
 

@@ -1,6 +1,6 @@
 import secrets
 
-from squall import Depends, Squall, HTTPException, status
+from squall import Depends, HTTPException, Squall, status
 from squall.security import HTTPBasic, HTTPBasicCredentials
 
 app = Squall()

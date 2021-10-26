@@ -1,8 +1,9 @@
 import os
 from pathlib import Path
 
-from docs_src.background_tasks.tutorial002 import app
 from squall.testclient import TestClient
+
+from docs_src.background_tasks.tutorial002 import app
 
 client = TestClient(app)
 

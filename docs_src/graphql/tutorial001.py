@@ -1,7 +1,6 @@
 import strawberry
-from strawberry.asgi import GraphQL
-
 from squall import Squall
+from strawberry.asgi import GraphQL
 
 
 @strawberry.type

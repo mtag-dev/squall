@@ -2,7 +2,6 @@ import importlib
 from pathlib import Path
 
 import pytest
-
 from squall.testclient import TestClient
 
 openapi_schema = {

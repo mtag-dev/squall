@@ -1,6 +1,5 @@
 import pytest
-
-from squall import APIRouter, Depends, Squall, Response
+from squall import APIRouter, Depends, Response, Squall
 from squall.responses import JSONResponse
 from squall.testclient import TestClient
 

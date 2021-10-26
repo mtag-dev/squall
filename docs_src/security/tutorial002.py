@@ -1,7 +1,6 @@
 from typing import Optional
 
 from pydantic import BaseModel
-
 from squall import Depends, Squall
 from squall.security import OAuth2PasswordBearer
 

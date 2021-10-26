@@ -2,8 +2,7 @@ from typing import List
 
 import yaml
 from pydantic import BaseModel, ValidationError
-
-from squall import Squall, HTTPException, Request
+from squall import HTTPException, Request, Squall
 
 app = Squall()
 

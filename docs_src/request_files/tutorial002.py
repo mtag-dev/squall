@@ -1,6 +1,6 @@
 from typing import List
 
-from squall import Squall, File, UploadFile
+from squall import File, Squall, UploadFile
 from squall.responses import HTMLResponse
 
 app = Squall()

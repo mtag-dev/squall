@@ -2,7 +2,6 @@ from decimal import Decimal
 from typing import List
 
 from pydantic import BaseModel, condecimal
-
 from squall import Squall
 from squall.testclient import TestClient
 

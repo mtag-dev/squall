@@ -1,5 +1,6 @@
-from docs_src.advanced_middleware.tutorial001 import app
 from squall.testclient import TestClient
+
+from docs_src.advanced_middleware.tutorial001 import app
 
 
 def test_middleware():

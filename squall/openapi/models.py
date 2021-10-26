@@ -2,7 +2,6 @@ from enum import Enum
 from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 
 from pydantic import AnyUrl, BaseModel, Field
-
 from squall.logger import logger
 
 try:

@@ -4,8 +4,7 @@ from typing import List, Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel, ValidationError
-
-from squall import Depends, Squall, HTTPException, Security, status
+from squall import Depends, HTTPException, Security, Squall, status
 from squall.security import (
     OAuth2PasswordBearer,
     OAuth2PasswordRequestForm,

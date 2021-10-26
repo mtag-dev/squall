@@ -1,7 +1,7 @@
 import pytest
+from squall.testclient import TestClient
 
 from docs_src.body_fields.tutorial001 import app
-from squall.testclient import TestClient
 
 client = TestClient(app)
 

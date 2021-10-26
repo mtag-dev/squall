@@ -3,7 +3,6 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-
 from squall.testclient import TestClient
 
 from ...utils import needs_py37

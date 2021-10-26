@@ -1,7 +1,6 @@
 from typing import Optional
 
 from pydantic import BaseModel, HttpUrl
-
 from squall import APIRouter, Squall
 
 app = Squall()
