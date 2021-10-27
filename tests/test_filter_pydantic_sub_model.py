@@ -149,7 +149,7 @@ def test_filter_sub_model():
 def test_validator_is_cloned():
     with pytest.raises(ValidationError) as err:
         client.get("/model/modelX")
-    # raise ValueError(err)
+
     assert err.value.errors() == [
         {
             "loc": ("response", "name"),

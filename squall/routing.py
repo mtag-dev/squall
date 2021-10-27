@@ -139,7 +139,6 @@ def get_request_handler(
             raw_response = await run_endpoint_function(
                 dependant=dependant, values=values, is_coroutine=is_coroutine
             )
-
             if isinstance(raw_response, Response):
                 if raw_response.background is None:
                     raw_response.background = background_tasks
@@ -153,7 +152,7 @@ def get_request_handler(
                     raw_response, {}, loc=("response",)
                 )
                 if errors:
-                    raise ValidationError(errors, response_field.type_)
+                    raise ValidationError([errors], response_field.type_)
             else:
                 value = raw_response
 
