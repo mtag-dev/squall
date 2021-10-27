@@ -404,7 +404,7 @@ def test_create_item(client):
     assert item["title"] == item_data["title"]
     assert item["description"] == item_data["description"]
     assert "id" in item_data
-    assert "owner_id" in item_data
+    assert "owner" in item_data
     response = client.get("/users/1")
     assert response.status_code == 200, response.text
     user_data = response.json()

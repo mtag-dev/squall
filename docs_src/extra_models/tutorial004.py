@@ -1,14 +1,15 @@
 from typing import List
 
-from pydantic import BaseModel
+from pydantic import Field, dataclasses
 from squall import Squall
 
 app = Squall()
 
 
-class Item(BaseModel):
-    name: str
-    description: str
+@dataclasses.dataclass
+class Item:
+    name: str = Field(...)
+    description: str = Field(...)
 
 
 items = [

@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import Field, dataclasses
 from squall import Header, HTTPException, Squall
 
 fake_secret_token = "coneofsilence"
@@ -13,9 +13,10 @@ fake_db = {
 app = Squall()
 
 
-class Item(BaseModel):
-    id: str
-    title: str
+@dataclasses.dataclass
+class Item:
+    id: str = Field(...)
+    title: str = Field(...)
     description: Optional[str] = None
 
 

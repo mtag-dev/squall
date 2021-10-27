@@ -1,23 +1,26 @@
 from typing import Union
 
-from pydantic import BaseModel
+from pydantic import Field, dataclasses
 from squall import Squall
 
 app = Squall()
 
 
-class BaseItem(BaseModel):
-    description: str
-    type: str
+@dataclasses.dataclass
+class BaseItem:
+    description: str = Field(...)
+    type: str = Field(...)
 
 
+@dataclasses.dataclass
 class CarItem(BaseItem):
     type = "car"
 
 
+@dataclasses.dataclass
 class PlaneItem(BaseItem):
     type = "plane"
-    size: int
+    size: int = Field(...)
 
 
 items = {

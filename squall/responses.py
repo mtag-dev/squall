@@ -27,7 +27,7 @@ class JSONResponse(Response):
     media_type = "application/json"
 
     def render(self, content: Any) -> bytes:
-        return orjson.dumps(content, default=default)
+        return orjson.dumps(content, default=default, option=orjson.OPT_NON_STR_KEYS)
 
 
 class UJSONResponse(JSONResponse):

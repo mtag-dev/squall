@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import Field, dataclasses
 from squall import Request, Squall, status
 from squall.exceptions import RequestValidationError
 from squall.responses import JSONResponse
@@ -14,9 +14,10 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 
-class Item(BaseModel):
-    title: str
-    size: int
+@dataclasses.dataclass
+class Item:
+    title: str = Field(...)
+    size: int = Field(...)
 
 
 @app.post("/items/")

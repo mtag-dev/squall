@@ -1,13 +1,14 @@
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import Field, dataclasses
 from squall import Squall
 from squall.responses import FileResponse
 
 
-class Item(BaseModel):
-    id: str
-    value: str
+@dataclasses.dataclass
+class Item:
+    id: str = Field(...)
+    value: str = Field(...)
 
 
 app = Squall()

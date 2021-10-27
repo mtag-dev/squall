@@ -1,7 +1,7 @@
 from typing import Any, List, Optional
 
 import peewee
-from pydantic import BaseModel
+from pydantic import Field, dataclasses
 from pydantic.utils import GetterDict
 
 
@@ -13,37 +13,45 @@ class PeeweeGetterDict(GetterDict):
         return res
 
 
-class ItemBase(BaseModel):
-    title: str
+@dataclasses.dataclass
+class ItemBase:
+    title: str = Field(...)
     description: Optional[str] = None
 
 
+@dataclasses.dataclass
 class ItemCreate(ItemBase):
     pass
 
 
+class Config:
+    orm_mode = True
+    getter_dict = PeeweeGetterDict
+
+
+@dataclasses.dataclass(config=Config)
 class Item(ItemBase):
-    id: int
-    owner_id: int
-
-    class Config:
-        orm_mode = True
-        getter_dict = PeeweeGetterDict
+    id: int = Field(...)
+    owner: int = Field(...)
 
 
-class UserBase(BaseModel):
-    email: str
+@dataclasses.dataclass
+class UserBase:
+    email: str = Field(...)
 
 
+@dataclasses.dataclass
 class UserCreate(UserBase):
-    password: str
+    password: str = Field(...)
 
 
+class Config:
+    orm_mode = True
+    getter_dict = PeeweeGetterDict
+
+
+@dataclasses.dataclass(config=Config)
 class User(UserBase):
-    id: int
-    is_active: bool
-    items: List[Item] = []
-
-    class Config:
-        orm_mode = True
-        getter_dict = PeeweeGetterDict
+    id: int = Field(...)
+    is_active: bool = Field(...)
+    items: List[Item] = Field(default_factory=list)

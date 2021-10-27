@@ -1,5 +1,4 @@
 import asyncio
-import dataclasses
 import email.message
 import enum
 import inspect
@@ -66,18 +65,6 @@ async def run_endpoint_function(
         return await dependant.call(**values)
     else:
         return await run_in_threadpool(dependant.call, **values)
-
-
-def _prepare_response_content(
-    res: Any,
-) -> Any:
-    if isinstance(res, list):
-        return [_prepare_response_content(item) for item in res]
-    elif isinstance(res, dict):
-        return {k: _prepare_response_content(v) for k, v in res.items()}
-    elif dataclasses.is_dataclass(res):
-        return dataclasses
-    return res
 
 
 def get_request_handler(
