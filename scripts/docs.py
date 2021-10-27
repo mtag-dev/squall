@@ -1,5 +1,4 @@
 import os
-import re
 import shutil
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from multiprocessing import Pool
@@ -12,7 +11,6 @@ import mkdocs.config
 import mkdocs.utils
 import typer
 import yaml
-from jinja2 import Template
 
 app = typer.Typer()
 
@@ -305,7 +303,7 @@ def serve():
     os.chdir("site")
     server_address = ("", 8008)
     server = HTTPServer(server_address, SimpleHTTPRequestHandler)
-    typer.echo('Serving at: http://127.0.0.1:8008')
+    typer.echo("Serving at: http://127.0.0.1:8008")
     server.serve_forever()
 
 

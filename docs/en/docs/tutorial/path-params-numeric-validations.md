@@ -80,20 +80,6 @@ The same applies for:
 {!../../../docs_src/path_params_numeric_validations/tutorial005.py!}
 ```
 
-## Number validations: floats, greater than and less than
-
-Number validations also work for `float` values.
-
-Here's where it becomes important to be able to declare <abbr title="greater than"><code>gt</code></abbr> and not just <abbr title="greater than or equal"><code>ge</code></abbr>. As with it you can require, for example, that a value must be greater than `0`, even if it is less than `1`.
-
-So, `0.5` would be a valid value. But `0.0` or `0` would not.
-
-And the same for <abbr title="less than"><code>lt</code></abbr>.
-
-```Python hl_lines="11"
-{!../../../docs_src/path_params_numeric_validations/tutorial006.py!}
-```
-
 ## Recap
 
 With `Query`, `Path` (and others you haven't seen yet) you can declare metadata and string validations in the same ways as with [Query Parameters and String Validations](query-params-str-validations.md){.internal-link target=_blank}.

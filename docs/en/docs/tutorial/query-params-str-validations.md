@@ -115,36 +115,6 @@ Let's say that you want to declare the `q` query parameter to have a `min_length
 !!! note
     Having a default value also makes the parameter optional.
 
-## Make it required
-
-When we don't need to declare more validations or metadata, we can make the `q` query parameter required just by not declaring a default value, like:
-
-```Python
-q: str
-```
-
-instead of:
-
-```Python
-q: Optional[str] = None
-```
-
-But we are now declaring it with `Query`, for example like:
-
-```Python
-q: Optional[str] = Query(None, min_length=3)
-```
-
-So, when you need to declare a value as required while using `Query`, you can use `...` as the first argument:
-
-```Python hl_lines="7"
-{!../../../docs_src/query_params_str_validations/tutorial006.py!}
-```
-
-!!! info
-    If you hadn't seen that `...` before: it is a special single value, it is <a href="https://docs.python.org/3/library/constants.html#Ellipsis" class="external-link" target="_blank">part of Python and is called "Ellipsis"</a>.
-
-This will let **Squall** know that this parameter is required.
 
 ## Query parameter list / multiple values
 

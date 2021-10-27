@@ -107,7 +107,7 @@ So, you will receive a clean error, with an HTTP status code of `418` and a JSON
 ```
 
 !!! note "Technical Details"
-    You could also use `from starlette.requests import Request` and `from starlette.responses import JSONResponse`.
+    You could also use `from squall.requests import Request` and `from squall.responses import JSONResponse`.
 
     **Squall** provides the same `starlette.responses` as `squall.responses` just as a convenience for you, the developer. But most of the available responses come directly from Starlette. The same with `Request`.
 
@@ -184,7 +184,7 @@ For example, you could want to return a plain text response instead of JSON for 
 ```
 
 !!! note "Technical Details"
-    You could also use `from starlette.responses import PlainTextResponse`.
+    You could also use `from squall.responses import PlainTextResponse`.
 
     **Squall** provides the same `starlette.responses` as `squall.responses` just as a convenience for you, the developer. But most of the available responses come directly from Starlette.
 

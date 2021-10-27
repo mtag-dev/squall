@@ -1,7 +1,7 @@
 from pydantic import BaseModel, HttpUrl
 from squall import APIRouter, Squall
+from squall.responses import JSONResponse
 from squall.testclient import TestClient
-from starlette.responses import JSONResponse
 
 
 class CustomModel(BaseModel):

@@ -22,11 +22,7 @@ class Model3(BaseModel):
 app = Squall()
 
 
-@app.get(
-    "/simple_include",
-    response_model=Model2,
-    response_model_include={"baz": ..., "ref": {"foo"}},
-)
+@app.get("/simple_include", response_model=Model2)
 def simple_include():
     return Model2(
         ref=Model1(foo="simple_include model foo", bar="simple_include model bar"),
@@ -34,11 +30,7 @@ def simple_include():
     )
 
 
-@app.get(
-    "/simple_include_dict",
-    response_model=Model2,
-    response_model_include={"baz": ..., "ref": {"foo"}},
-)
+@app.get("/simple_include_dict", response_model=Model2)
 def simple_include_dict():
     return {
         "ref": {
@@ -49,11 +41,7 @@ def simple_include_dict():
     }
 
 
-@app.get(
-    "/simple_exclude",
-    response_model=Model2,
-    response_model_exclude={"ref": {"bar"}},
-)
+@app.get("/simple_exclude", response_model=Model2)
 def simple_exclude():
     return Model2(
         ref=Model1(foo="simple_exclude model foo", bar="simple_exclude model bar"),
@@ -61,11 +49,7 @@ def simple_exclude():
     )
 
 
-@app.get(
-    "/simple_exclude_dict",
-    response_model=Model2,
-    response_model_exclude={"ref": {"bar"}},
-)
+@app.get("/simple_exclude_dict", response_model=Model2)
 def simple_exclude_dict():
     return {
         "ref": {
@@ -76,12 +60,7 @@ def simple_exclude_dict():
     }
 
 
-@app.get(
-    "/mixed",
-    response_model=Model3,
-    response_model_include={"ref2", "name"},
-    response_model_exclude={"ref2": {"baz"}},
-)
+@app.get("/mixed", response_model=Model3)
 def mixed():
     return Model3(
         name="mixed model3 name",
@@ -93,12 +72,7 @@ def mixed():
     )
 
 
-@app.get(
-    "/mixed_dict",
-    response_model=Model3,
-    response_model_include={"ref2", "name"},
-    response_model_exclude={"ref2": {"baz"}},
-)
+@app.get("/mixed_dict", response_model=Model3)
 def mixed_dict():
     return {
         "name": "mixed_dict model3 name",

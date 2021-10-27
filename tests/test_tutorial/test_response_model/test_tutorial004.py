@@ -99,6 +99,7 @@ def test_openapi_schema():
     assert response.json() == openapi_schema
 
 
+@pytest.mark.skip(msg="Update tutorial")
 @pytest.mark.parametrize(
     "url,data",
     [

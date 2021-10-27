@@ -2,8 +2,6 @@
 
 When you create a **Squall** *path operation* you can normally return any data from it: a `dict`, a `list`, a Pydantic model, a database model, etc.
 
-By default, **Squall** would automatically convert that return value to JSON using the `jsonable_encoder` explained in [JSON Compatible Encoder](../tutorial/encoder.md){.internal-link target=_blank}.
-
 Then, behind the scenes, it would put that JSON-compatible data (e.g. a `dict`) inside of a `JSONResponse` that would be used to send the response to the client.
 
 But you can return a `JSONResponse` directly from your *path operations*.
@@ -36,7 +34,7 @@ For those cases, you can use the `jsonable_encoder` to convert your data before 
 ```
 
 !!! note "Technical Details"
-    You could also use `from starlette.responses import JSONResponse`.
+    You could also use `from squall.responses import JSONResponse`.
 
     **Squall** provides the same `starlette.responses` as `squall.responses` just as a convenience for you, the developer. But most of the available responses come directly from Starlette.
 

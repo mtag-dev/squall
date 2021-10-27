@@ -41,27 +41,17 @@ def get_validdict():
     }
 
 
-@app.get(
-    "/items/valid-exclude-unset", response_model=Item, response_model_exclude_unset=True
-)
+@app.get("/items/valid-exclude-unset", response_model=Item)
 def get_valid_exclude_unset():
     return Item(aliased_name="valid", price=1.0)
 
 
-@app.get(
-    "/items/coerce-exclude-unset",
-    response_model=Item,
-    response_model_exclude_unset=True,
-)
+@app.get("/items/coerce-exclude-unset", response_model=Item)
 def get_coerce_exclude_unset():
     return Item(aliased_name="coerce", price="1.0")
 
 
-@app.get(
-    "/items/validlist-exclude-unset",
-    response_model=List[Item],
-    response_model_exclude_unset=True,
-)
+@app.get("/items/validlist-exclude-unset", response_model=List[Item])
 def get_validlist_exclude_unset():
     return [
         Item(aliased_name="foo"),
@@ -70,11 +60,7 @@ def get_validlist_exclude_unset():
     ]
 
 
-@app.get(
-    "/items/validdict-exclude-unset",
-    response_model=Dict[str, Item],
-    response_model_exclude_unset=True,
-)
+@app.get("/items/validdict-exclude-unset", response_model=Dict[str, Item])
 def get_validdict_exclude_unset():
     return {
         "k1": Item(aliased_name="foo"),

@@ -26,7 +26,7 @@ To achieve that, import `JSONResponse`, and return your content there directly, 
     Make sure it has the data you want it to have, and that the values are valid JSON (if you are using `JSONResponse`).
 
 !!! note "Technical Details"
-    You could also use `from starlette.responses import JSONResponse`.
+    You could also use `from squall.responses import JSONResponse`.
 
     **Squall** provides the same `starlette.responses` as `squall.responses` just as a convenience for you, the developer. But most of the available responses come directly from Starlette. The same with `status`.
 

@@ -1,8 +1,7 @@
-from squall.encoders import jsonable_encoder
 from squall.exceptions import RequestValidationError
+from squall.responses import JSONResponse
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
-from starlette.responses import JSONResponse
 from starlette.status import HTTP_422_UNPROCESSABLE_ENTITY
 
 
@@ -21,5 +20,5 @@ async def request_validation_exception_handler(
 ) -> JSONResponse:
     return JSONResponse(
         status_code=HTTP_422_UNPROCESSABLE_ENTITY,
-        content={"detail": jsonable_encoder(exc.errors())},
+        content={"detail": exc.errors()},
     )

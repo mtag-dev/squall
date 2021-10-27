@@ -23,17 +23,17 @@ class ModelNoAlias(BaseModel):
         }
 
 
-@app.get("/dict", response_model=Model, response_model_by_alias=False)
+@app.get("/dict", response_model=Model)
 def read_dict():
     return {"alias": "Foo"}
 
 
-@app.get("/model", response_model=Model, response_model_by_alias=False)
+@app.get("/model", response_model=Model)
 def read_model():
     return Model(alias="Foo")
 
 
-@app.get("/list", response_model=List[Model], response_model_by_alias=False)
+@app.get("/list", response_model=List[Model])
 def read_list():
     return [{"alias": "Foo"}, {"alias": "Bar"}]
 
