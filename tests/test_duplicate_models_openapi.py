@@ -1,21 +1,24 @@
-from pydantic import BaseModel
+from pydantic import Field, dataclasses
 from squall import Squall
 from squall.testclient import TestClient
 
 app = Squall()
 
 
-class Model(BaseModel):
+@dataclasses.dataclass
+class Model:
     pass
 
 
-class Model2(BaseModel):
-    a: Model
+@dataclasses.dataclass
+class Model2:
+    a: Model = Field(...)
 
 
-class Model3(BaseModel):
-    c: Model
-    d: Model2
+@dataclasses.dataclass
+class Model3:
+    c: Model = Field(...)
+    d: Model2 = Field(...)
 
 
 @app.get("/", response_model=Model3)

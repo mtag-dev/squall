@@ -1,16 +1,17 @@
 from decimal import Decimal
 from typing import List
 
-from pydantic import BaseModel, condecimal
+from pydantic import Field, condecimal, dataclasses
 from squall import Squall
 from squall.testclient import TestClient
 
 app = Squall()
 
 
-class Item(BaseModel):
-    name: str
+@dataclasses.dataclass
+class Item:
     age: condecimal(gt=Decimal(0.0))  # type: ignore
+    name: str = Field(...)
 
 
 @app.post("/items/")
@@ -64,7 +65,7 @@ openapi_schema = {
         "schemas": {
             "Item": {
                 "title": "Item",
-                "required": ["name", "age"],
+                "required": ["age", "name"],
                 "type": "object",
                 "properties": {
                     "name": {"title": "Name", "type": "string"},
@@ -114,17 +115,12 @@ single_error = {
 multiple_errors = {
     "detail": [
         {
-            "loc": ["body", 0, "name"],
-            "msg": "field required",
-            "type": "value_error.missing",
-        },
-        {
             "loc": ["body", 0, "age"],
             "msg": "value is not a valid decimal",
             "type": "type_error.decimal",
         },
         {
-            "loc": ["body", 1, "name"],
+            "loc": ["body", 0, "name"],
             "msg": "field required",
             "type": "value_error.missing",
         },
@@ -132,6 +128,11 @@ multiple_errors = {
             "loc": ["body", 1, "age"],
             "msg": "value is not a valid decimal",
             "type": "type_error.decimal",
+        },
+        {
+            "loc": ["body", 1, "name"],
+            "msg": "field required",
+            "type": "value_error.missing",
         },
     ]
 }

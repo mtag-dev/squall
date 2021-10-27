@@ -17,8 +17,7 @@ from typing import (
     Union,
 )
 
-from pydantic import BaseModel
-from pydantic.error_wrappers import ErrorWrapper
+from pydantic.error_wrappers import ErrorWrapper, ValidationError
 from pydantic.fields import ModelField, Undefined
 from squall import params
 from squall.datastructures import Default, DefaultPlaceholder
@@ -56,52 +55,6 @@ from starlette.types import ASGIApp
 from starlette.websockets import WebSocket
 
 
-def _prepare_response_content(
-    res: Any,
-    *,
-    exclude_unset: bool,
-    exclude_defaults: bool = False,
-    exclude_none: bool = False,
-) -> Any:
-    if isinstance(res, BaseModel):
-        read_with_orm_mode = getattr(res.__config__, "read_with_orm_mode", None)
-        if read_with_orm_mode:
-            # Let from_orm extract the data from this model instead of converting
-            # it now to a dict.
-            # Otherwise there's no way to extract lazy data that requires attribute
-            # access instead of dict iteration, e.g. lazy relationships.
-            return res
-        return res.dict(
-            by_alias=True,
-            exclude_unset=exclude_unset,
-            exclude_defaults=exclude_defaults,
-            exclude_none=exclude_none,
-        )
-    elif isinstance(res, list):
-        return [
-            _prepare_response_content(
-                item,
-                exclude_unset=exclude_unset,
-                exclude_defaults=exclude_defaults,
-                exclude_none=exclude_none,
-            )
-            for item in res
-        ]
-    elif isinstance(res, dict):
-        return {
-            k: _prepare_response_content(
-                v,
-                exclude_unset=exclude_unset,
-                exclude_defaults=exclude_defaults,
-                exclude_none=exclude_none,
-            )
-            for k, v in res.items()
-        }
-    elif dataclasses.is_dataclass(res):
-        return dataclasses.asdict(res)
-    return res
-
-
 async def run_endpoint_function(
     *, dependant: Dependant, values: Dict[str, Any], is_coroutine: bool
 ) -> Any:
@@ -115,12 +68,25 @@ async def run_endpoint_function(
         return await run_in_threadpool(dependant.call, **values)
 
 
+def _prepare_response_content(
+    res: Any,
+) -> Any:
+    if isinstance(res, list):
+        return [_prepare_response_content(item) for item in res]
+    elif isinstance(res, dict):
+        return {k: _prepare_response_content(v) for k, v in res.items()}
+    elif dataclasses.is_dataclass(res):
+        return dataclasses
+    return res
+
+
 def get_request_handler(
     dependant: Dependant,
     body_field: Optional[ModelField] = None,
     status_code: Optional[int] = None,
     response_class: Union[Type[Response], DefaultPlaceholder] = Default(JSONResponse),
     dependency_overrides_provider: Optional[Any] = None,
+    response_field: Optional[Type[Any]] = None,
 ) -> Callable[[Request], Coroutine[Any, Any, Response]]:
     assert dependant.call is not None, "dependant.call must be a function"
     is_coroutine = asyncio.iscoroutinefunction(dependant.call)
@@ -182,9 +148,18 @@ def get_request_handler(
             response_args: Dict[str, Any] = {"background": background_tasks}
             # If status_code was set, use it, otherwise use the default from the
             # response class, in the case of redirect it's 307
+            if response_field is not None:
+                value, errors = response_field.validate(
+                    raw_response, {}, loc=("response",)
+                )
+                if errors:
+                    raise ValidationError(errors, response_field.type_)
+            else:
+                value = raw_response
+
             if status_code is not None:
                 response_args["status_code"] = status_code
-            response = actual_response_class(raw_response, **response_args)
+            response = actual_response_class(value, **response_args)
             response.headers.raw.extend(sub_response.headers.raw)
             if sub_response.status_code:
                 response.status_code = sub_response.status_code
@@ -252,12 +227,6 @@ class APIRoute(routing.Route):
         name: Optional[str] = None,
         methods: Optional[Union[Set[str], List[str]]] = None,
         operation_id: Optional[str] = None,
-        # response_model_include: Optional[Union[SetIntStr, DictIntStrAny]] = None,
-        # response_model_exclude: Optional[Union[SetIntStr, DictIntStrAny]] = None,
-        # response_model_by_alias: bool = True,
-        # response_model_exclude_unset: bool = False,
-        # response_model_exclude_defaults: bool = False,
-        # response_model_exclude_none: bool = False,
         include_in_schema: bool = True,
         response_class: Union[Type[Response], DefaultPlaceholder] = Default(
             JSONResponse
@@ -331,12 +300,6 @@ class APIRoute(routing.Route):
             self.response_fields = {}
         self.deprecated = deprecated
         self.operation_id = operation_id
-        # self.response_model_include = response_model_include
-        # self.response_model_exclude = response_model_exclude
-        # self.response_model_by_alias = response_model_by_alias
-        # self.response_model_exclude_unset = response_model_exclude_unset
-        # self.response_model_exclude_defaults = response_model_exclude_defaults
-        # self.response_model_exclude_none = response_model_exclude_none
         self.include_in_schema = include_in_schema
         self.response_class = response_class
 
@@ -359,14 +322,8 @@ class APIRoute(routing.Route):
             body_field=self.body_field,
             status_code=self.status_code,
             response_class=self.response_class,
-            # response_field=self.secure_cloned_response_field,
-            # response_model_include=self.response_model_include,
-            # response_model_exclude=self.response_model_exclude,
-            # response_model_by_alias=self.response_model_by_alias,
-            # response_model_exclude_unset=self.response_model_exclude_unset,
-            # response_model_exclude_defaults=self.response_model_exclude_defaults,
-            # response_model_exclude_none=self.response_model_exclude_none,
             dependency_overrides_provider=self.dependency_overrides_provider,
+            response_field=self.response_field,
         )
 
 
@@ -429,12 +386,6 @@ class APIRouter(routing.Router):
         deprecated: Optional[bool] = None,
         methods: Optional[Union[Set[str], List[str]]] = None,
         operation_id: Optional[str] = None,
-        # response_model_include: Optional[Union[SetIntStr, DictIntStrAny]] = None,
-        # response_model_exclude: Optional[Union[SetIntStr, DictIntStrAny]] = None,
-        # response_model_by_alias: bool = True,
-        # response_model_exclude_unset: bool = False,
-        # response_model_exclude_defaults: bool = False,
-        # response_model_exclude_none: bool = False,
         include_in_schema: bool = True,
         response_class: Union[Type[Response], DefaultPlaceholder] = Default(
             JSONResponse
@@ -473,12 +424,6 @@ class APIRouter(routing.Router):
             deprecated=deprecated or self.deprecated,
             methods=methods,
             operation_id=operation_id,
-            # response_model_include=response_model_include,
-            # response_model_exclude=response_model_exclude,
-            # response_model_by_alias=response_model_by_alias,
-            # response_model_exclude_unset=response_model_exclude_unset,
-            # response_model_exclude_defaults=response_model_exclude_defaults,
-            # response_model_exclude_none=response_model_exclude_none,
             include_in_schema=include_in_schema and self.include_in_schema,
             response_class=current_response_class,
             name=name,
@@ -503,12 +448,6 @@ class APIRouter(routing.Router):
         deprecated: Optional[bool] = None,
         methods: Optional[List[str]] = None,
         operation_id: Optional[str] = None,
-        # response_model_include: Optional[Union[SetIntStr, DictIntStrAny]] = None,
-        # response_model_exclude: Optional[Union[SetIntStr, DictIntStrAny]] = None,
-        # response_model_by_alias: bool = True,
-        # response_model_exclude_unset: bool = False,
-        # response_model_exclude_defaults: bool = False,
-        # response_model_exclude_none: bool = False,
         include_in_schema: bool = True,
         response_class: Type[Response] = Default(JSONResponse),
         name: Optional[str] = None,
@@ -530,12 +469,6 @@ class APIRouter(routing.Router):
                 deprecated=deprecated,
                 methods=methods,
                 operation_id=operation_id,
-                # response_model_include=response_model_include,
-                # response_model_exclude=response_model_exclude,
-                # response_model_by_alias=response_model_by_alias,
-                # response_model_exclude_unset=response_model_exclude_unset,
-                # response_model_exclude_defaults=response_model_exclude_defaults,
-                # response_model_exclude_none=response_model_exclude_none,
                 include_in_schema=include_in_schema,
                 response_class=response_class,
                 name=name,
@@ -632,12 +565,6 @@ class APIRouter(routing.Router):
                     deprecated=route.deprecated or deprecated or self.deprecated,
                     methods=route.methods,
                     operation_id=route.operation_id,
-                    # response_model_include=route.response_model_include,
-                    # response_model_exclude=route.response_model_exclude,
-                    # response_model_by_alias=route.response_model_by_alias,
-                    # response_model_exclude_unset=route.response_model_exclude_unset,
-                    # response_model_exclude_defaults=route.response_model_exclude_defaults,
-                    # response_model_exclude_none=route.response_model_exclude_none,
                     include_in_schema=route.include_in_schema
                     and self.include_in_schema
                     and include_in_schema,
@@ -683,12 +610,6 @@ class APIRouter(routing.Router):
         responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
         deprecated: Optional[bool] = None,
         operation_id: Optional[str] = None,
-        # response_model_include: Optional[Union[SetIntStr, DictIntStrAny]] = None,
-        # response_model_exclude: Optional[Union[SetIntStr, DictIntStrAny]] = None,
-        # response_model_by_alias: bool = True,
-        # response_model_exclude_unset: bool = False,
-        # response_model_exclude_defaults: bool = False,
-        # response_model_exclude_none: bool = False,
         include_in_schema: bool = True,
         response_class: Type[Response] = Default(JSONResponse),
         name: Optional[str] = None,
@@ -708,12 +629,6 @@ class APIRouter(routing.Router):
             deprecated=deprecated,
             methods=["GET"],
             operation_id=operation_id,
-            # response_model_include=response_model_include,
-            # response_model_exclude=response_model_exclude,
-            # response_model_by_alias=response_model_by_alias,
-            # response_model_exclude_unset=response_model_exclude_unset,
-            # response_model_exclude_defaults=response_model_exclude_defaults,
-            # response_model_exclude_none=response_model_exclude_none,
             include_in_schema=include_in_schema,
             response_class=response_class,
             name=name,
@@ -735,12 +650,6 @@ class APIRouter(routing.Router):
         responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
         deprecated: Optional[bool] = None,
         operation_id: Optional[str] = None,
-        # response_model_include: Optional[Union[SetIntStr, DictIntStrAny]] = None,
-        # response_model_exclude: Optional[Union[SetIntStr, DictIntStrAny]] = None,
-        # response_model_by_alias: bool = True,
-        # response_model_exclude_unset: bool = False,
-        # response_model_exclude_defaults: bool = False,
-        # response_model_exclude_none: bool = False,
         include_in_schema: bool = True,
         response_class: Type[Response] = Default(JSONResponse),
         name: Optional[str] = None,
@@ -760,12 +669,6 @@ class APIRouter(routing.Router):
             deprecated=deprecated,
             methods=["PUT"],
             operation_id=operation_id,
-            # response_model_include=response_model_include,
-            # response_model_exclude=response_model_exclude,
-            # response_model_by_alias=response_model_by_alias,
-            # response_model_exclude_unset=response_model_exclude_unset,
-            # response_model_exclude_defaults=response_model_exclude_defaults,
-            # response_model_exclude_none=response_model_exclude_none,
             include_in_schema=include_in_schema,
             response_class=response_class,
             name=name,
@@ -787,12 +690,6 @@ class APIRouter(routing.Router):
         responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
         deprecated: Optional[bool] = None,
         operation_id: Optional[str] = None,
-        # response_model_include: Optional[Union[SetIntStr, DictIntStrAny]] = None,
-        # response_model_exclude: Optional[Union[SetIntStr, DictIntStrAny]] = None,
-        # response_model_by_alias: bool = True,
-        # response_model_exclude_unset: bool = False,
-        # response_model_exclude_defaults: bool = False,
-        # response_model_exclude_none: bool = False,
         include_in_schema: bool = True,
         response_class: Type[Response] = Default(JSONResponse),
         name: Optional[str] = None,
@@ -812,12 +709,6 @@ class APIRouter(routing.Router):
             deprecated=deprecated,
             methods=["POST"],
             operation_id=operation_id,
-            # response_model_include=response_model_include,
-            # response_model_exclude=response_model_exclude,
-            # response_model_by_alias=response_model_by_alias,
-            # response_model_exclude_unset=response_model_exclude_unset,
-            # response_model_exclude_defaults=response_model_exclude_defaults,
-            # response_model_exclude_none=response_model_exclude_none,
             include_in_schema=include_in_schema,
             response_class=response_class,
             name=name,
@@ -839,12 +730,6 @@ class APIRouter(routing.Router):
         responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
         deprecated: Optional[bool] = None,
         operation_id: Optional[str] = None,
-        # response_model_include: Optional[Union[SetIntStr, DictIntStrAny]] = None,
-        # response_model_exclude: Optional[Union[SetIntStr, DictIntStrAny]] = None,
-        # response_model_by_alias: bool = True,
-        # response_model_exclude_unset: bool = False,
-        # response_model_exclude_defaults: bool = False,
-        # response_model_exclude_none: bool = False,
         include_in_schema: bool = True,
         response_class: Type[Response] = Default(JSONResponse),
         name: Optional[str] = None,
@@ -864,12 +749,6 @@ class APIRouter(routing.Router):
             deprecated=deprecated,
             methods=["DELETE"],
             operation_id=operation_id,
-            # response_model_include=response_model_include,
-            # response_model_exclude=response_model_exclude,
-            # response_model_by_alias=response_model_by_alias,
-            # response_model_exclude_unset=response_model_exclude_unset,
-            # response_model_exclude_defaults=response_model_exclude_defaults,
-            # response_model_exclude_none=response_model_exclude_none,
             include_in_schema=include_in_schema,
             response_class=response_class,
             name=name,
@@ -891,12 +770,6 @@ class APIRouter(routing.Router):
         responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
         deprecated: Optional[bool] = None,
         operation_id: Optional[str] = None,
-        # response_model_include: Optional[Union[SetIntStr, DictIntStrAny]] = None,
-        # response_model_exclude: Optional[Union[SetIntStr, DictIntStrAny]] = None,
-        # response_model_by_alias: bool = True,
-        # response_model_exclude_unset: bool = False,
-        # response_model_exclude_defaults: bool = False,
-        # response_model_exclude_none: bool = False,
         include_in_schema: bool = True,
         response_class: Type[Response] = Default(JSONResponse),
         name: Optional[str] = None,
@@ -916,12 +789,6 @@ class APIRouter(routing.Router):
             deprecated=deprecated,
             methods=["OPTIONS"],
             operation_id=operation_id,
-            # response_model_include=response_model_include,
-            # response_model_exclude=response_model_exclude,
-            # response_model_by_alias=response_model_by_alias,
-            # response_model_exclude_unset=response_model_exclude_unset,
-            # response_model_exclude_defaults=response_model_exclude_defaults,
-            # response_model_exclude_none=response_model_exclude_none,
             include_in_schema=include_in_schema,
             response_class=response_class,
             name=name,
@@ -943,12 +810,6 @@ class APIRouter(routing.Router):
         responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
         deprecated: Optional[bool] = None,
         operation_id: Optional[str] = None,
-        # response_model_include: Optional[Union[SetIntStr, DictIntStrAny]] = None,
-        # response_model_exclude: Optional[Union[SetIntStr, DictIntStrAny]] = None,
-        # response_model_by_alias: bool = True,
-        # response_model_exclude_unset: bool = False,
-        # response_model_exclude_defaults: bool = False,
-        # response_model_exclude_none: bool = False,
         include_in_schema: bool = True,
         response_class: Type[Response] = Default(JSONResponse),
         name: Optional[str] = None,
@@ -968,12 +829,6 @@ class APIRouter(routing.Router):
             deprecated=deprecated,
             methods=["HEAD"],
             operation_id=operation_id,
-            # response_model_include=response_model_include,
-            # response_model_exclude=response_model_exclude,
-            # response_model_by_alias=response_model_by_alias,
-            # response_model_exclude_unset=response_model_exclude_unset,
-            # response_model_exclude_defaults=response_model_exclude_defaults,
-            # response_model_exclude_none=response_model_exclude_none,
             include_in_schema=include_in_schema,
             response_class=response_class,
             name=name,
@@ -995,12 +850,6 @@ class APIRouter(routing.Router):
         responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
         deprecated: Optional[bool] = None,
         operation_id: Optional[str] = None,
-        # response_model_include: Optional[Union[SetIntStr, DictIntStrAny]] = None,
-        # response_model_exclude: Optional[Union[SetIntStr, DictIntStrAny]] = None,
-        # response_model_by_alias: bool = True,
-        # response_model_exclude_unset: bool = False,
-        # response_model_exclude_defaults: bool = False,
-        # response_model_exclude_none: bool = False,
         include_in_schema: bool = True,
         response_class: Type[Response] = Default(JSONResponse),
         name: Optional[str] = None,
@@ -1020,12 +869,6 @@ class APIRouter(routing.Router):
             deprecated=deprecated,
             methods=["PATCH"],
             operation_id=operation_id,
-            # response_model_include=response_model_include,
-            # response_model_exclude=response_model_exclude,
-            # response_model_by_alias=response_model_by_alias,
-            # response_model_exclude_unset=response_model_exclude_unset,
-            # response_model_exclude_defaults=response_model_exclude_defaults,
-            # response_model_exclude_none=response_model_exclude_none,
             include_in_schema=include_in_schema,
             response_class=response_class,
             name=name,
@@ -1047,12 +890,6 @@ class APIRouter(routing.Router):
         responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
         deprecated: Optional[bool] = None,
         operation_id: Optional[str] = None,
-        # response_model_include: Optional[Union[SetIntStr, DictIntStrAny]] = None,
-        # response_model_exclude: Optional[Union[SetIntStr, DictIntStrAny]] = None,
-        # response_model_by_alias: bool = True,
-        # response_model_exclude_unset: bool = False,
-        # response_model_exclude_defaults: bool = False,
-        # response_model_exclude_none: bool = False,
         include_in_schema: bool = True,
         response_class: Type[Response] = Default(JSONResponse),
         name: Optional[str] = None,
@@ -1073,12 +910,6 @@ class APIRouter(routing.Router):
             deprecated=deprecated,
             methods=["TRACE"],
             operation_id=operation_id,
-            # response_model_include=response_model_include,
-            # response_model_exclude=response_model_exclude,
-            # response_model_by_alias=response_model_by_alias,
-            # response_model_exclude_unset=response_model_exclude_unset,
-            # response_model_exclude_defaults=response_model_exclude_defaults,
-            # response_model_exclude_none=response_model_exclude_none,
             include_in_schema=include_in_schema,
             response_class=response_class,
             name=name,

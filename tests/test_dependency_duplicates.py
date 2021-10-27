@@ -1,6 +1,6 @@
 from typing import List
 
-from pydantic import BaseModel
+from pydantic import Field, dataclasses
 from squall import Depends, Squall
 from squall.testclient import TestClient
 
@@ -9,8 +9,9 @@ app = Squall()
 client = TestClient(app)
 
 
-class Item(BaseModel):
-    data: str
+@dataclasses.dataclass
+class Item:
+    data: str = Field(...)
 
 
 def duplicate_dependency(item: Item):

@@ -1,18 +1,20 @@
 from typing import Optional, Union
 
-from pydantic import BaseModel
+from pydantic import Field, dataclasses
 from squall import Squall
 from squall.testclient import TestClient
 
 app = Squall()
 
 
-class Item(BaseModel):
+@dataclasses.dataclass
+class Item:
     name: Optional[str] = None
 
 
-class OtherItem(BaseModel):
-    price: int
+@dataclasses.dataclass
+class OtherItem:
+    price: int = Field(...)
 
 
 @app.post("/items/")

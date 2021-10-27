@@ -1,26 +1,20 @@
 from typing import Optional, Union
 
-from pydantic import BaseModel
+from pydantic import Field, dataclasses
 from squall import Squall
 from squall.testclient import TestClient
-
-from .utils import needs_py37
-
-# In Python 3.6:
-# u = Union[ExtendedItem, Item] == __main__.Item
-
-# But in Python 3.7:
-# u = Union[ExtendedItem, Item] == typing.Union[__main__.ExtendedItem, __main__.Item]
 
 app = Squall()
 
 
-class Item(BaseModel):
+@dataclasses.dataclass
+class Item:
     name: Optional[str] = None
 
 
+@dataclasses.dataclass
 class ExtendedItem(Item):
-    age: int
+    age: int = Field(...)
 
 
 @app.post("/items/")
@@ -118,21 +112,18 @@ inherited_item_openapi_schema = {
 }
 
 
-@needs_py37
 def test_inherited_item_openapi_schema():
     response = client.get("/openapi.json")
     assert response.status_code == 200, response.text
     assert response.json() == inherited_item_openapi_schema
 
 
-@needs_py37
 def test_post_extended_item():
     response = client.post("/items/", json={"name": "Foo", "age": 5})
     assert response.status_code == 200, response.text
     assert response.json() == {"item": {"name": "Foo", "age": 5}}
 
 
-@needs_py37
 def test_post_item():
     response = client.post("/items/", json={"name": "Foo"})
     assert response.status_code == 200, response.text

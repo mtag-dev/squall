@@ -1,3 +1,4 @@
+import decimal
 from typing import Any
 
 import orjson
@@ -14,11 +15,19 @@ except ImportError:  # pragma: nocover
     ujson = None  # type: ignore
 
 
+def default(obj):
+    if isinstance(obj, decimal.Decimal):
+        return float(obj)
+    elif isinstance(obj, set):
+        return tuple(obj)
+    raise TypeError
+
+
 class JSONResponse(Response):
     media_type = "application/json"
 
     def render(self, content: Any) -> bytes:
-        return orjson.dumps(content)
+        return orjson.dumps(content, default=default)
 
 
 class UJSONResponse(JSONResponse):

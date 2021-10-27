@@ -1,14 +1,15 @@
-from pydantic import BaseModel
+from pydantic import Field, dataclasses
 from squall import Squall
 from squall.testclient import TestClient
 
 app = Squall()
 
 
-class Product(BaseModel):
-    name: str
+@dataclasses.dataclass
+class Product:
+    name: str = Field(...)
     description: str = None  # type: ignore
-    price: float
+    price: float = Field(...)
 
 
 @app.get("/product")

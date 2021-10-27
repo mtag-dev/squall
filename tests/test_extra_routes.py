@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import Field, dataclasses
 from squall import Squall
 from squall.responses import JSONResponse
 from squall.testclient import TestClient
@@ -8,8 +8,9 @@ from squall.testclient import TestClient
 app = Squall()
 
 
-class Item(BaseModel):
-    name: str
+@dataclasses.dataclass
+class Item:
+    name: str = Field(...)
     price: Optional[float] = None
 
 
