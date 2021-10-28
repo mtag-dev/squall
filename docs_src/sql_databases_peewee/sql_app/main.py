@@ -1,7 +1,7 @@
 import time
 from typing import List
 
-from squall import Depends, HTTPException, Squall
+from fastapi import Depends, FastAPI, HTTPException
 
 from . import crud, database, models, schemas
 from .database import db_state_default
@@ -10,7 +10,7 @@ database.db.connect()
 database.db.create_tables([models.User, models.Item])
 database.db.close()
 
-app = Squall()
+app = FastAPI()
 
 sleep_time = 10
 

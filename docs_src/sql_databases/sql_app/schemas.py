@@ -1,45 +1,37 @@
 from typing import List, Optional
 
-from pydantic import Field, dataclasses
+from pydantic import BaseModel
 
 
-@dataclasses.dataclass
-class ItemBase:
-    title: str = Field(...)
+class ItemBase(BaseModel):
+    title: str
     description: Optional[str] = None
 
 
-@dataclasses.dataclass
 class ItemCreate(ItemBase):
     pass
 
 
-class Config:
-    orm_mode = True
-
-
-@dataclasses.dataclass(config=Config)
 class Item(ItemBase):
-    id: int = Field(...)
-    owner_id: int = Field(...)
+    id: int
+    owner_id: int
+
+    class Config:
+        orm_mode = True
 
 
-@dataclasses.dataclass
-class UserBase:
-    email: str = Field(...)
+class UserBase(BaseModel):
+    email: str
 
 
-@dataclasses.dataclass
 class UserCreate(UserBase):
-    password: str = Field(...)
+    password: str
 
 
-class Config:
-    orm_mode = True
-
-
-@dataclasses.dataclass(config=Config)
 class User(UserBase):
-    id: int = Field(...)
-    is_active: bool = Field(...)
-    items: List[Item] = Field(default_factory=list)
+    id: int
+    is_active: bool
+    items: List[Item] = []
+
+    class Config:
+        orm_mode = True

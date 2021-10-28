@@ -1,5 +1,3 @@
-from dataclasses import asdict
-
 from sqlalchemy.orm import Session
 
 from . import models, schemas
@@ -23,7 +21,7 @@ def create_user(db: Session, user: schemas.UserCreate):
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
-    return schemas.UserCreate.from_orm(db_user)
+    return db_user
 
 
 def get_items(db: Session, skip: int = 0, limit: int = 100):
@@ -31,7 +29,7 @@ def get_items(db: Session, skip: int = 0, limit: int = 100):
 
 
 def create_user_item(db: Session, item: schemas.ItemCreate, user_id: int):
-    db_item = models.Item(**asdict(item), owner_id=user_id)
+    db_item = models.Item(**item.dict(), owner_id=user_id)
     db.add(db_item)
     db.commit()
     db.refresh(db_item)

@@ -1,6 +1,6 @@
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from squall.testclient import TestClient
 
 from ..database import Base
 from ..main import app, get_db

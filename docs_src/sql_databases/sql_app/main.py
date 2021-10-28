@@ -1,14 +1,14 @@
 from typing import List
 
+from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy.orm import Session
-from squall import Depends, HTTPException, Squall
 
 from . import crud, models, schemas
 from .database import SessionLocal, engine
 
 models.Base.metadata.create_all(bind=engine)
 
-app = Squall()
+app = FastAPI()
 
 
 # Dependency
