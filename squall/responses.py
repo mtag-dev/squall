@@ -10,11 +10,6 @@ from starlette.responses import RedirectResponse as RedirectResponse  # noqa
 from starlette.responses import Response as Response  # noqa
 from starlette.responses import StreamingResponse as StreamingResponse  # noqa
 
-try:
-    import ujson
-except ImportError:  # pragma: nocover
-    ujson = None  # type: ignore
-
 
 def default(obj: Any) -> Any:
     if isinstance(obj, BaseModel):
@@ -29,11 +24,5 @@ def default(obj: Any) -> Any:
 class JSONResponse(Response):
     media_type = "application/json"
 
-    def render(self, content: Any) -> bytes:
+    def render(self, content: Any) -> Any:
         return orjson.dumps(content, default=default, option=orjson.OPT_NON_STR_KEYS)
-
-
-class UJSONResponse(JSONResponse):
-    def render(self, content: Any) -> bytes:
-        assert ujson is not None, "ujson must be installed to use UJSONResponse"
-        return ujson.dumps(content, ensure_ascii=False).encode("utf-8")
