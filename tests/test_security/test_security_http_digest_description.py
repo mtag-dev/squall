@@ -1,4 +1,4 @@
-from squall import Security, Squall
+from squall import Squall, Security
 from squall.security import HTTPAuthorizationCredentials, HTTPDigest
 from squall.testclient import TestClient
 

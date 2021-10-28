@@ -1,7 +1,7 @@
-from pydantic import BaseModel
-from squall import Depends, Security, Squall
+from squall import Depends, Squall, Security
 from squall.security.open_id_connect_url import OpenIdConnect
 from squall.testclient import TestClient
+from pydantic import BaseModel
 
 app = Squall()
 

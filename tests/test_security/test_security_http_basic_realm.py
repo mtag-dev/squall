@@ -1,9 +1,9 @@
 from base64 import b64encode
 
-from requests.auth import HTTPBasicAuth
-from squall import Security, Squall
+from squall import Squall, Security
 from squall.security import HTTPBasic, HTTPBasicCredentials
 from squall.testclient import TestClient
+from requests.auth import HTTPBasicAuth
 
 app = Squall()
 
