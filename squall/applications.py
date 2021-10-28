@@ -158,7 +158,7 @@ class Squall(Starlette):
                         self.servers.insert(0, {"url": root_path})
                         server_urls.add(root_path)
                 return JSONResponse(
-                    self.openapi().dict(exclude_unset=True, by_alias=True)
+                    self.openapi().dict(exclude_unset=True, by_alias=True)  # type: ignore
                 )
 
             self.add_route(self.openapi_url, openapi, include_in_schema=False)

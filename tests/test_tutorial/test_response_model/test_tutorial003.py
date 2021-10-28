@@ -1,4 +1,3 @@
-import pytest
 from squall.testclient import TestClient
 
 from docs_src.response_model.tutorial003 import app
@@ -97,14 +96,12 @@ openapi_schema = {
 }
 
 
-@pytest.mark.skip(msg="Update tutorial")
 def test_openapi_schema():
     response = client.get("/openapi.json")
     assert response.status_code == 200, response.text
     assert response.json() == openapi_schema
 
 
-@pytest.mark.skip(msg="Update tutorial")
 def test_post_user():
     response = client.post(
         "/user/",

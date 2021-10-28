@@ -18,7 +18,7 @@ def custom_openapi():
         description="This is a very custom OpenAPI schema",
         routes=app.routes,
     )
-    openapi_schema["info"]["x-logo"] = {
+    openapi_schema.info.logo = {
         "url": "https://squall.mtag.dev/img/logo-margin/logo-teal.png"
     }
     app.openapi_schema = openapi_schema

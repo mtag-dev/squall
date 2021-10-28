@@ -73,7 +73,7 @@ def get_request_handler(
     status_code: Optional[int] = None,
     response_class: Union[Type[Response], DefaultPlaceholder] = Default(JSONResponse),
     dependency_overrides_provider: Optional[Any] = None,
-    response_field: Optional[Type[Any]] = None,
+    response_field: Optional[ModelField] = None,
 ) -> Callable[[Request], Coroutine[Any, Any, Response]]:
     assert dependant.call is not None, "dependant.call must be a function"
     is_coroutine = asyncio.iscoroutinefunction(dependant.call)
@@ -135,17 +135,17 @@ def get_request_handler(
             # If status_code was set, use it, otherwise use the default from the
             # response class, in the case of redirect it's 307
             if response_field is not None:
-                value, errors = response_field.validate(
+                response_value, response_errors = response_field.validate(
                     raw_response, {}, loc=("response",)
                 )
-                if errors:
-                    raise ValidationError([errors], response_field.type_)
+                if response_errors:
+                    raise ValidationError([response_errors], response_field.type_)
             else:
-                value = raw_response
+                response_value = raw_response
 
             if status_code is not None:
                 response_args["status_code"] = status_code
-            response = actual_response_class(value, **response_args)
+            response = actual_response_class(response_value, **response_args)
             response.headers.raw.extend(sub_response.headers.raw)
             if sub_response.status_code:
                 response.status_code = sub_response.status_code

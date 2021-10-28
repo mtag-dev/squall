@@ -49,9 +49,9 @@ def get_swagger_ui_html(
     })"""
 
     if init_oauth:
-        html += f"""
-        ui.initOAuth({orjson.dumps(init_oauth)})
-        """
+        html += """
+        ui.initOAuth({!r})
+        """.format(orjson.dumps(init_oauth))
 
     html += """
     </script>

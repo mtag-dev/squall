@@ -16,7 +16,7 @@ except ImportError:  # pragma: nocover
     ujson = None  # type: ignore
 
 
-def default(obj):
+def default(obj: Any) -> Any:
     if isinstance(obj, BaseModel):
         return dict(obj)
     elif isinstance(obj, decimal.Decimal):
