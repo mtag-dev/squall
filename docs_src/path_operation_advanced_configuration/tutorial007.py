@@ -1,22 +1,25 @@
 from typing import List
 
 import yaml
-from pydantic import BaseModel, ValidationError
+from pydantic import Field, ValidationError, dataclasses
 from squall import HTTPException, Request, Squall
 
 app = Squall()
 
 
-class Item(BaseModel):
-    name: str
-    tags: List[str]
+@dataclasses.dataclass
+class Item:
+    name: str = Field(...)
+    tags: List[str] = Field(...)
 
 
 @app.post(
     "/items/",
     openapi_extra={
         "requestBody": {
-            "content": {"application/x-yaml": {"schema": Item.schema()}},
+            "content": {
+                "application/x-yaml": {"schema": Item.__pydantic_model__.schema()}
+            },
             "required": True,
         },
     },
@@ -28,7 +31,7 @@ async def create_item(request: Request):
     except yaml.YAMLError:
         raise HTTPException(status_code=422, detail="Invalid YAML")
     try:
-        item = Item.parse_obj(data)
+        item = Item(**data)
     except ValidationError as e:
         raise HTTPException(status_code=422, detail=e.errors())
     return item

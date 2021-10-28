@@ -80,7 +80,6 @@ nav:
   - tutorial/request-forms-and-files.md
   - tutorial/handling-errors.md
   - tutorial/path-operation-configuration.md
-  - tutorial/encoder.md
   - tutorial/body-updates.md
   - Dependencies:
     - tutorial/dependencies/index.md

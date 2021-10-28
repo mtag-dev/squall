@@ -60,7 +60,6 @@ openapi_schema = {
                         "uniqueItems": True,
                         "type": "array",
                         "items": {"type": "string"},
-                        "default": [],
                     },
                 },
             },

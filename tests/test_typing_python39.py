@@ -6,13 +6,14 @@ from .utils import needs_py39
 
 @needs_py39
 def test_typing():
-    types = {
-        list[int]: [1, 2, 3],
-        dict[str, list[int]]: {"a": [1, 2, 3], "b": [4, 5, 6]},
-        set[int]: [1, 2, 3],  # `set` is converted to `list`
-        tuple[int, ...]: [1, 2, 3],  # `tuple` is converted to `list`
-    }
-    for test_type, expect in types.items():
+    checks = [
+        (list[int], [1, 2, 3]),
+        (dict[str, list[int]], {"a": [1, 2, 3], "b": [4, 5, 6]}),
+        (tuple[int, ...], [1, 2, 3]),
+        (set[int], [1, 2, 3]),  # `set` is converted to `tuple`
+    ]
+
+    for test_type, expect in checks:
         app = Squall()
 
         @app.post("/", response_model=test_type)

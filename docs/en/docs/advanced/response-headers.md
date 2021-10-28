@@ -29,7 +29,7 @@ Create a response as described in [Return a Response Directly](response-directly
 ```
 
 !!! note "Technical Details"
-    You could also use `from starlette.responses import Response` or `from starlette.responses import JSONResponse`.
+    You could also use `from squall.responses import Response` or `from squall.responses import JSONResponse`.
 
     **Squall** provides the same `starlette.responses` as `squall.responses` just as a convenience for you, the developer. But most of the available responses come directly from Starlette.
 

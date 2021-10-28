@@ -1,15 +1,17 @@
-from pydantic import BaseModel
+from pydantic import dataclasses
 from squall import Body, Cookie, Header, Path, Query, Squall
 from squall.testclient import TestClient
 
 app = Squall()
 
 
-class Item(BaseModel):
-    data: str
+class Config:
+    schema_extra = {"example": {"data": "Data in schema_extra"}}
 
-    class Config:
-        schema_extra = {"example": {"data": "Data in schema_extra"}}
+
+@dataclasses.dataclass(config=Config)
+class Item:
+    data: str
 
 
 @app.post("/schema_extra/")

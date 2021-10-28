@@ -1,15 +1,17 @@
-from pydantic import BaseModel
+from pydantic import Field, dataclasses
 from squall import Squall
 from squall.responses import JSONResponse
 
 
-class Item(BaseModel):
-    id: str
-    value: str
+@dataclasses.dataclass
+class Item:
+    id: str = Field(...)
+    value: str = Field(...)
 
 
-class Message(BaseModel):
-    message: str
+@dataclasses.dataclass
+class Message:
+    message: str = Field(...)
 
 
 app = Squall()

@@ -181,18 +181,3 @@ http://127.0.0.1:8000/items/foo-item?needy=sooooneedy
     "needy": "sooooneedy"
 }
 ```
-
-And of course, you can define some parameters as required, some as having a default value, and some entirely optional:
-
-```Python hl_lines="10"
-{!../../../docs_src/query_params/tutorial006.py!}
-```
-
-In this case, there are 3 query parameters:
-
-* `needy`, a required `str`.
-* `skip`, an `int` with a default value of `0`.
-* `limit`, an optional `int`.
-
-!!! tip
-    You could also use `Enum`s the same way as with [Path Parameters](path-params.md#predefined-values){.internal-link target=_blank}.

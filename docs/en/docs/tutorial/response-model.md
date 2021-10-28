@@ -194,14 +194,6 @@ This can be used as a quick shortcut if you have only one Pydantic model and wan
 
     It is equivalent to `set(["name", "description"])`.
 
-#### Using `list`s instead of `set`s
-
-If you forget to use a `set` and use a `list` or `tuple` instead, Squall will still convert it to a `set` and it will work correctly:
-
-```Python hl_lines="31  37"
-{!../../../docs_src/response_model/tutorial006.py!}
-```
-
 ## Recap
 
 Use the *path operation decorator's* parameter `response_model` to define response models and especially to ensure private data is filtered out.

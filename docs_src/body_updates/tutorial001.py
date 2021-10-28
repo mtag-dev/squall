@@ -1,18 +1,18 @@
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import Field, dataclasses
 from squall import Squall
-from squall.encoders import jsonable_encoder
 
 app = Squall()
 
 
-class Item(BaseModel):
+@dataclasses.dataclass
+class Item:
     name: Optional[str] = None
     description: Optional[str] = None
     price: Optional[float] = None
     tax: float = 10.5
-    tags: List[str] = []
+    tags: List[str] = Field(default_factory=list)
 
 
 items = {
@@ -29,6 +29,6 @@ async def read_item(item_id: str):
 
 @app.put("/items/{item_id}", response_model=Item)
 async def update_item(item_id: str, item: Item):
-    update_item_encoded = jsonable_encoder(item)
+    update_item_encoded = item
     items[item_id] = update_item_encoded
     return update_item_encoded

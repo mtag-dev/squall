@@ -1,13 +1,14 @@
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import Field, dataclasses
 from squall import Body, Squall
 
 app = Squall()
 
 
-class Item(BaseModel):
-    name: str
+@dataclasses.dataclass
+class Item:
+    name: str = Field(...)
     description: Optional[str] = Field(
         None, title="The description of the item", max_length=300
     )

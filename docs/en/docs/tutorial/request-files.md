@@ -128,7 +128,7 @@ To use that, declare a `List` of `bytes` or `UploadFile`:
 You will receive, as declared, a `list` of `bytes` or `UploadFile`s.
 
 !!! note "Technical Details"
-    You could also use `from starlette.responses import HTMLResponse`.
+    You could also use `from squall.responses import HTMLResponse`.
 
     **Squall** provides the same `starlette.responses` as `squall.responses` just as a convenience for you, the developer. But most of the available responses come directly from Starlette.
 

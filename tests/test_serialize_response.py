@@ -1,14 +1,15 @@
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import Field, dataclasses
 from squall import Squall
 from squall.testclient import TestClient
 
 app = Squall()
 
 
-class Item(BaseModel):
-    name: str
+@dataclasses.dataclass
+class Item:
+    name: str = Field(...)
     price: Optional[float] = None
     owner_ids: Optional[List[int]] = None
 

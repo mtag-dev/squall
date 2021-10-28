@@ -74,11 +74,6 @@ openapi_schema = {
                         "type": "string",
                         "format": "time",
                     },
-                    "process_after": {
-                        "title": "Process After",
-                        "type": "number",
-                        "format": "time-delta",
-                    },
                 },
             },
             "ValidationError": {
@@ -123,13 +118,11 @@ def test_extra_types():
         "start_datetime": "2018-12-22T14:00:00+00:00",
         "end_datetime": "2018-12-24T15:00:00+00:00",
         "repeat_at": "15:30:00",
-        "process_after": 300,
     }
     expected_response = data.copy()
     expected_response.update(
         {
-            "start_process": "2018-12-22T14:05:00+00:00",
-            "duration": 176_100,
+            "start_process": "2018-12-22T14:00:00+00:00",
             "item_id": item_id,
         }
     )

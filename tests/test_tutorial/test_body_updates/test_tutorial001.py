@@ -97,7 +97,6 @@ openapi_schema = {
                         "title": "Tags",
                         "type": "array",
                         "items": {"type": "string"},
-                        "default": [],
                     },
                 },
             },

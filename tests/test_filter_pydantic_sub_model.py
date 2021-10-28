@@ -1,25 +1,28 @@
 from typing import Optional
 
 import pytest
-from pydantic import BaseModel, ValidationError, validator
+from pydantic import Field, ValidationError, dataclasses, validator
 from squall import Depends, Squall
 from squall.testclient import TestClient
 
 app = Squall()
 
 
-class ModelB(BaseModel):
+@dataclasses.dataclass
+class ModelB:
     username: str
 
 
+@dataclasses.dataclass
 class ModelC(ModelB):
     password: str
 
 
-class ModelA(BaseModel):
-    name: str
+@dataclasses.dataclass
+class ModelA:
+    name: str = Field(...)
     description: Optional[str] = None
-    model_b: ModelB
+    model_b: ModelB = Field(...)
 
     @validator("name")
     def lower_username(cls, name: str, values):
@@ -139,13 +142,14 @@ def test_filter_sub_model():
     assert response.json() == {
         "name": "modelA",
         "description": "model-a-desc",
-        "model_b": {"username": "test-user"},
+        "model_b": {"username": "test-user", "password": "test-password"},
     }
 
 
 def test_validator_is_cloned():
     with pytest.raises(ValidationError) as err:
         client.get("/model/modelX")
+
     assert err.value.errors() == [
         {
             "loc": ("response", "name"),

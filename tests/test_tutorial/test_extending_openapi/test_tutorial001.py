@@ -10,7 +10,7 @@ openapi_schema = {
         "title": "Custom title",
         "version": "2.5.0",
         "description": "This is a very custom OpenAPI schema",
-        "x-logo": {"url": "https://squall.mtag.dev/img/logo-margin/logo-teal.png"},
+        "logo": {"url": "https://squall.mtag.dev/img/logo-margin/logo-teal.png"},
     },
     "paths": {
         "/items/": {

@@ -43,6 +43,7 @@ from squall.concurrency import (
 )
 from squall.dependencies.models import Dependant, SecurityRequirement
 from squall.logger import logger
+from squall.responses import Response
 from squall.security.base import SecurityBase
 from squall.security.oauth2 import OAuth2, SecurityScopes
 from squall.security.open_id_connect_url import OpenIdConnect
@@ -51,7 +52,6 @@ from starlette.background import BackgroundTasks
 from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import FormData, Headers, QueryParams, UploadFile
 from starlette.requests import HTTPConnection, Request
-from starlette.responses import Response
 from starlette.websockets import WebSocket
 
 sequence_shapes = {

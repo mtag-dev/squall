@@ -1,17 +1,18 @@
 from typing import Optional, Set
 
-from pydantic import BaseModel
+from pydantic import Field, dataclasses
 from squall import Squall
 
 app = Squall()
 
 
-class Item(BaseModel):
-    name: str
+@dataclasses.dataclass
+class Item:
+    name: str = Field(...)
     description: Optional[str] = None
-    price: float
+    price: float = Field(...)
     tax: Optional[float] = None
-    tags: Set[str] = []
+    tags: Set[str] = Field(default_factory=list)
 
 
 @app.post(

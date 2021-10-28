@@ -203,9 +203,10 @@ def test_post_form_for_json():
     assert response.json() == {
         "detail": [
             {
+                "ctx": {"class_name": "Item"},
                 "loc": ["body"],
-                "msg": "value is not a valid dict",
-                "type": "type_error.dict",
+                "msg": "instance of Item, tuple or dict expected",
+                "type": "type_error.dataclass",
             }
         ]
     }
@@ -249,8 +250,9 @@ def test_wrong_headers():
         "detail": [
             {
                 "loc": ["body"],
-                "msg": "value is not a valid dict",
-                "type": "type_error.dict",
+                "ctx": {"class_name": "Item"},
+                "msg": "instance of Item, tuple or dict expected",
+                "type": "type_error.dataclass",
             }
         ]
     }

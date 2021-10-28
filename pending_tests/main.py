@@ -17,7 +17,7 @@ from squall.security import (
     OAuth2PasswordRequestForm,
 )
 from pydantic import BaseModel
-from starlette.responses import HTMLResponse, JSONResponse, PlainTextResponse
+from squall.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from starlette.status import HTTP_202_ACCEPTED
 
 app = Squall()

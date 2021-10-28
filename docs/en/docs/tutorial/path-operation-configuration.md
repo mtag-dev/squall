@@ -76,21 +76,6 @@ You can specify the response description with the parameter `response_descriptio
 
 <img src="/img/tutorial/path-operation-configuration/image03.png">
 
-## Deprecate a *path operation*
-
-If you need to mark a *path operation* as <abbr title="obsolete, recommended not to use it">deprecated</abbr>, but without removing it, pass the parameter `deprecated`:
-
-```Python hl_lines="16"
-{!../../../docs_src/path_operation_configuration/tutorial006.py!}
-```
-
-It will be clearly marked as deprecated in the interactive docs:
-
-<img src="/img/tutorial/path-operation-configuration/image04.png">
-
-Check how deprecated and non-deprecated *path operations* look like:
-
-<img src="/img/tutorial/path-operation-configuration/image05.png">
 
 ## Recap
 

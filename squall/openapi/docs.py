@@ -1,8 +1,7 @@
-import json
 from typing import Any, Dict, Optional
 
-from squall.encoders import jsonable_encoder
-from starlette.responses import HTMLResponse
+import orjson
+from squall.responses import HTMLResponse
 
 
 def get_swagger_ui_html(
@@ -50,9 +49,11 @@ def get_swagger_ui_html(
     })"""
 
     if init_oauth:
-        html += f"""
-        ui.initOAuth({json.dumps(jsonable_encoder(init_oauth))})
-        """
+        html += """
+        ui.initOAuth({!r})
+        """.format(
+            orjson.dumps(init_oauth)
+        )
 
     html += """
     </script>

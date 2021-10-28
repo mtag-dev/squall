@@ -15,7 +15,6 @@ from squall import routing
 from squall.datastructures import DefaultPlaceholder
 from squall.dependencies.models import Dependant
 from squall.dependencies.utils import get_flat_dependant, get_flat_params
-from squall.encoders import jsonable_encoder
 from squall.openapi.constants import (
     METHODS_WITH_BODY,
     REF_PREFIX,
@@ -23,13 +22,12 @@ from squall.openapi.constants import (
 )
 from squall.openapi.models import OpenAPI
 from squall.params import Body, Param
-from squall.responses import Response
+from squall.responses import JSONResponse, Response
 from squall.utils import (
     deep_dict_update,
     generate_operation_id_for_path,
     get_model_definitions,
 )
-from starlette.responses import JSONResponse
 from starlette.routing import BaseRoute
 from starlette.status import HTTP_422_UNPROCESSABLE_ENTITY
 
@@ -72,11 +70,7 @@ def get_openapi_security_definitions(
     security_definitions = {}
     operation_security = []
     for security_requirement in flat_dependant.security_requirements:
-        security_definition = jsonable_encoder(
-            security_requirement.security_scheme.model,
-            by_alias=True,
-            exclude_none=True,
-        )
+        security_definition = (security_requirement.security_scheme.model,)
         security_name = security_requirement.security_scheme.scheme_name
         security_definitions[security_name] = security_definition
         operation_security.append({security_name: security_requirement.scopes})
@@ -103,9 +97,9 @@ def get_openapi_operation_parameters(
         if field_info.description:
             parameter["description"] = field_info.description
         if field_info.examples:
-            parameter["examples"] = jsonable_encoder(field_info.examples)
+            parameter["examples"] = field_info.examples
         elif field_info.example != Undefined:
-            parameter["example"] = jsonable_encoder(field_info.example)
+            parameter["example"] = field_info.example
         if field_info.deprecated:
             parameter["deprecated"] = field_info.deprecated
         parameters.append(parameter)
@@ -131,9 +125,9 @@ def get_openapi_operation_request_body(
         request_body_oai["required"] = required
     request_media_content: Dict[str, Any] = {"schema": body_schema}
     if field_info.examples:
-        request_media_content["examples"] = jsonable_encoder(field_info.examples)
+        request_media_content["examples"] = field_info.examples
     elif field_info.example != Undefined:
-        request_media_content["example"] = jsonable_encoder(field_info.example)
+        request_media_content["example"] = field_info.example
     request_body_oai["content"] = {request_media_type: request_media_content}
     return request_body_oai
 
@@ -407,4 +401,4 @@ def get_openapi(
     output["paths"] = paths
     if tags:
         output["tags"] = tags
-    return jsonable_encoder(OpenAPI(**output), by_alias=True, exclude_none=True)  # type: ignore
+    return OpenAPI(**output)  # type: ignore

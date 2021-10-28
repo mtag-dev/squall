@@ -1,20 +1,22 @@
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import Field, dataclasses
 from squall import Body, Squall
 
 app = Squall()
 
 
-class Item(BaseModel):
-    name: str
+@dataclasses.dataclass
+class Item:
+    name: str = Field(...)
     description: Optional[str] = None
-    price: float
+    price: float = Field(...)
     tax: Optional[float] = None
 
 
-class User(BaseModel):
-    username: str
+@dataclasses.dataclass
+class User:
+    username: str = Field(...)
     full_name: Optional[str] = None
 
 
