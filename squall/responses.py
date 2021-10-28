@@ -2,6 +2,7 @@ import decimal
 from typing import Any
 
 import orjson
+from pydantic import BaseModel
 from starlette.responses import FileResponse as FileResponse  # noqa
 from starlette.responses import HTMLResponse as HTMLResponse  # noqa
 from starlette.responses import PlainTextResponse as PlainTextResponse  # noqa
@@ -16,7 +17,9 @@ except ImportError:  # pragma: nocover
 
 
 def default(obj):
-    if isinstance(obj, decimal.Decimal):
+    if isinstance(obj, BaseModel):
+        return dict(obj)
+    elif isinstance(obj, decimal.Decimal):
         return float(obj)
     elif isinstance(obj, set):
         return tuple(obj)
