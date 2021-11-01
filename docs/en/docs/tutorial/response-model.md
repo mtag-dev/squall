@@ -8,10 +8,6 @@ You can declare the model used for the response with the parameter `response_mod
 * `@app.delete()`
 * etc.
 
-```Python hl_lines="17"
-{!../../../docs_src/response_model/tutorial001.py!}
-```
-
 !!! note
     Notice that `response_model` is a parameter of the "decorator" method (`get`, `post`, etc). Not of your *path operation function*, like all the parameters and body.
 
@@ -35,15 +31,7 @@ But most importantly:
 
 Here we are declaring a `UserIn` model, it will contain a plaintext password:
 
-```Python hl_lines="9  11"
-{!../../../docs_src/response_model/tutorial002.py!}
-```
-
 And we are using this model to declare our input and the same model to declare our output:
-
-```Python hl_lines="17-18"
-{!../../../docs_src/response_model/tutorial002.py!}
-```
 
 Now, whenever a browser is creating a user with a password, the API will return the same password in the response.
 
@@ -184,10 +172,6 @@ This can be used as a quick shortcut if you have only one Pydantic model and wan
     This is because the JSON Schema generated in your app's OpenAPI (and the docs) will still be the one for the complete model, even if you use `response_model_include` or `response_model_exclude` to omit some attributes.
 
     This also applies to `response_model_by_alias` that works similarly.
-
-```Python hl_lines="31  37"
-{!../../../docs_src/response_model/tutorial005.py!}
-```
 
 !!! tip
     The syntax `{"name", "description"}` creates a `set` with those two values.
