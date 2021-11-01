@@ -150,10 +150,6 @@ An alternative JSON response using <a href="https://github.com/ultrajson/ultrajs
 !!! warning
     `ujson` is less careful than Python's built-in implementation in how it handles some edge-cases.
 
-```Python hl_lines="2  7"
-{!../../../docs_src/custom_response/tutorial001.py!}
-```
-
 !!! tip
     It's possible that `ORJSONResponse` might be a faster alternative.
 

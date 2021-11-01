@@ -12,8 +12,6 @@ As part of that, I needed to investigate, test and use many alternatives.
 
 The history of **Squall** is in great part the history of its predecessors.
 
-As said in the section [Alternatives](_alternatives.md){.internal-link target=_blank}:
-
 <blockquote markdown="1">
 
 **Squall** wouldn't exist if not for the previous work of others.

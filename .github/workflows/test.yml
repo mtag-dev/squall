@@ -34,8 +34,8 @@ jobs:
         run: flit install --symlink
       - name: Lint
         if: ${{ matrix.python-version != '3.6' }}
-        run: bash scripts/lint.sh
+        run: make lint
       - name: Test
-        run: bash scripts/test.sh
+        run: make test
 #      - name: Upload coverage
 #        uses: codecov/codecov-action@v1
