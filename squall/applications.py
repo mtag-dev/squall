@@ -22,7 +22,7 @@ from starlette.applications import Starlette
 from starlette.datastructures import State
 from starlette.exceptions import HTTPException
 from starlette.middleware import Middleware
-from starlette.requests import Request
+from squall.requests import Request
 from starlette.routing import BaseRoute
 from starlette.types import ASGIApp, Receive, Scope, Send
 

@@ -6,7 +6,7 @@ from squall.openapi.models import OAuthFlows as OAuthFlowsModel
 from squall.param_functions import Form
 from squall.security.base import SecurityBase
 from squall.security.utils import get_authorization_scheme_param
-from starlette.requests import Request
+from squall.requests import Request
 from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_403_FORBIDDEN
 
 
