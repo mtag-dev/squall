@@ -27,9 +27,9 @@ from squall.dependencies.utils import (
     get_parameterless_sub_dependant,
     solve_dependencies,
 )
-from squall.requests import Request
 from squall.exceptions import RequestValidationError, WebSocketRequestValidationError
 from squall.openapi.constants import STATUS_CODES_WITH_NO_BODY
+from squall.requests import Request
 from squall.responses import JSONResponse, Response
 from squall.types import DecoratedCallable
 from squall.utils import (
@@ -40,23 +40,23 @@ from squall.utils import (
 )
 from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException
+from starlette.routing import BaseRoute as SlBaseRoute
+from starlette.routing import Mount as Mount  # noqa
 from starlette.routing import Route as SlRoute
 from starlette.routing import Router as SlRouter
 from starlette.routing import WebSocketRoute as SlWebSocketRoute
-from starlette.routing import BaseRoute as SlBaseRoute
-from starlette.routing import Mount as Mount  # noqa
 from starlette.routing import (
     compile_path,
     get_name,
+    iscoroutinefunction_or_partial,
     websocket_session,
-    iscoroutinefunction_or_partial
 )
 from starlette.status import WS_1008_POLICY_VIOLATION
 from starlette.types import ASGIApp, Receive, Scope, Send
 from starlette.websockets import WebSocket
 
 
-def request_response(func: Callable) -> ASGIApp:
+def request_response(func: Callable[..., Any]) -> ASGIApp:
     """
     Takes a function or coroutine `func(request) -> response`,
     and returns an ASGI application.
@@ -194,7 +194,22 @@ def get_websocket_app(
 
 
 class Route(SlRoute):
-    ...
+    def __init__(
+        self,
+        path: str,
+        endpoint: Callable[..., Any],
+        *,
+        methods: Optional[List[str]] = None,
+        name: Optional[str] = None,
+        include_in_schema: bool = True,
+    ) -> None:
+        super(Route, self).__init__(
+            path,
+            endpoint,
+            methods=methods,  # type: ignore
+            name=name,  # type: ignore
+            include_in_schema=include_in_schema,
+        )
 
 
 class APIWebSocketRoute(SlWebSocketRoute):
@@ -509,9 +524,9 @@ class APIRouter(SlRouter):
     def add_route(
         self,
         path: str,
-        endpoint: Callable,
-        methods: List[str] = None,
-        name: str = None,
+        endpoint: Callable[..., Any],
+        methods: Optional[List[str]] = None,
+        name: Optional[str] = None,
         include_in_schema: bool = True,
     ) -> None:
         route = Route(

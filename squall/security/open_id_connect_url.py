@@ -1,9 +1,9 @@
 from typing import Optional
 
 from squall.openapi.models import OpenIdConnect as OpenIdConnectModel
+from squall.requests import Request
 from squall.security.base import SecurityBase
 from starlette.exceptions import HTTPException
-from squall.requests import Request
 from starlette.status import HTTP_403_FORBIDDEN
 
 

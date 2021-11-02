@@ -3,14 +3,13 @@ from base64 import b64decode
 from typing import Optional
 
 from pydantic import BaseModel
-from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_403_FORBIDDEN
-
 from squall.exceptions import HTTPException
 from squall.openapi.models import HTTPBase as HTTPBaseModel
 from squall.openapi.models import HTTPBearer as HTTPBearerModel
 from squall.requests import Request
 from squall.security.base import SecurityBase
 from squall.security.utils import get_authorization_scheme_param
+from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_403_FORBIDDEN
 
 
 class HTTPBasicCredentials(BaseModel):

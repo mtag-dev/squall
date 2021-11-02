@@ -41,9 +41,9 @@ from squall.concurrency import (
     asynccontextmanager,
     contextmanager_in_threadpool,
 )
-from squall.requests import Request
 from squall.dependencies.models import Dependant, SecurityRequirement
 from squall.logger import logger
+from squall.requests import Request
 from squall.responses import Response
 from squall.security.base import SecurityBase
 from squall.security.oauth2 import OAuth2, SecurityScopes
