@@ -38,7 +38,7 @@ The middleware function receives:
     But if you have custom headers that you want a client in a browser to be able to see, you need to add them to your CORS configurations ([CORS (Cross-Origin Resource Sharing)](cors.md){.internal-link target=_blank}) using the parameter `expose_headers` documented in <a href="https://www.starlette.io/middleware/#corsmiddleware" class="external-link" target="_blank">Starlette's CORS docs</a>.
 
 !!! note "Technical Details"
-    You could also use `from starlette.requests import Request`.
+    You could also use `from squall.requests import Request`.
 
     **Squall** provides it as a convenience for you, the developer. But it comes directly from Starlette.
 

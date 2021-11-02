@@ -47,6 +47,6 @@ By declaring a *path operation function* parameter with the type being the `Requ
 You can read more details about the <a href="https://www.starlette.io/requests/" class="external-link" target="_blank">`Request` object in the official Starlette documentation site</a>.
 
 !!! note "Technical Details"
-    You could also use `from starlette.requests import Request`.
+    You could also use `from squall.requests import Request`.
 
     **Squall** provides it directly just as a convenience for you, the developer. But it comes directly from Starlette.

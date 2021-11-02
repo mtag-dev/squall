@@ -29,6 +29,7 @@ from squall.dependencies.utils import (
 )
 from squall.exceptions import RequestValidationError, WebSocketRequestValidationError
 from squall.openapi.constants import STATUS_CODES_WITH_NO_BODY
+from squall.requests import Request
 from squall.responses import JSONResponse, Response
 from squall.types import DecoratedCallable
 from squall.utils import (
@@ -37,21 +38,40 @@ from squall.utils import (
     generate_operation_id_for_path,
     get_value_or_default,
 )
-from starlette import routing
 from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException
-from starlette.requests import Request
-from starlette.routing import BaseRoute
+from starlette.routing import BaseRoute as SlBaseRoute
 from starlette.routing import Mount as Mount  # noqa
+from starlette.routing import Route as SlRoute
+from starlette.routing import Router as SlRouter
+from starlette.routing import WebSocketRoute as SlWebSocketRoute
 from starlette.routing import (
     compile_path,
     get_name,
-    request_response,
+    iscoroutinefunction_or_partial,
     websocket_session,
 )
 from starlette.status import WS_1008_POLICY_VIOLATION
-from starlette.types import ASGIApp
+from starlette.types import ASGIApp, Receive, Scope, Send
 from starlette.websockets import WebSocket
+
+
+def request_response(func: Callable[..., Any]) -> ASGIApp:
+    """
+    Takes a function or coroutine `func(request) -> response`,
+    and returns an ASGI application.
+    """
+    is_coroutine = iscoroutinefunction_or_partial(func)
+
+    async def app(scope: Scope, receive: Receive, send: Send) -> None:
+        request = Request(scope, receive=receive, send=send)
+        if is_coroutine:
+            response = await func(request)
+        else:
+            response = await run_in_threadpool(func, request)
+        await response(scope, receive, send)
+
+    return app
 
 
 async def run_endpoint_function(
@@ -173,7 +193,26 @@ def get_websocket_app(
     return app
 
 
-class APIWebSocketRoute(routing.WebSocketRoute):
+class Route(SlRoute):
+    def __init__(
+        self,
+        path: str,
+        endpoint: Callable[..., Any],
+        *,
+        methods: Optional[List[str]] = None,
+        name: Optional[str] = None,
+        include_in_schema: bool = True,
+    ) -> None:
+        super(Route, self).__init__(
+            path,
+            endpoint,
+            methods=methods,  # type: ignore
+            name=name,  # type: ignore
+            include_in_schema=include_in_schema,
+        )
+
+
+class APIWebSocketRoute(SlWebSocketRoute):
     def __init__(
         self,
         path: str,
@@ -195,7 +234,7 @@ class APIWebSocketRoute(routing.WebSocketRoute):
         self.path_regex, self.path_format, self.param_convertors = compile_path(path)
 
 
-class APIRoute(routing.Route):
+class APIRoute(SlRoute):
     def __init__(
         self,
         path: str,
@@ -218,7 +257,7 @@ class APIRoute(routing.Route):
             JSONResponse
         ),
         dependency_overrides_provider: Optional[Any] = None,
-        callbacks: Optional[List[BaseRoute]] = None,
+        callbacks: Optional[List[SlBaseRoute]] = None,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> None:
         # normalise enums e.g. http.HTTPStatus
@@ -230,7 +269,7 @@ class APIRoute(routing.Route):
         self.path_regex, self.path_format, self.param_convertors = compile_path(path)
         if methods is None:
             methods = ["GET"]
-        self.methods: Set[str] = set([method.upper() for method in methods])
+        self.methods: Set[str] = {method.upper() for method in methods}
         self.unique_id = generate_operation_id_for_path(
             name=self.name, path=self.path_format, method=list(methods)[0]
         )
@@ -258,10 +297,7 @@ class APIRoute(routing.Route):
             self.secure_cloned_response_field = None
         self.status_code = status_code
         self.tags = tags or []
-        if dependencies:
-            self.dependencies = list(dependencies)
-        else:
-            self.dependencies = []
+        self.dependencies = list(dependencies) if dependencies else []
         self.summary = summary
         self.description = description or inspect.cleandoc(self.endpoint.__doc__ or "")
         # if a "form feed" character (page break) is found in the description text,
@@ -313,7 +349,7 @@ class APIRoute(routing.Route):
         )
 
 
-class APIRouter(routing.Router):
+class APIRouter(SlRouter):
     def __init__(
         self,
         *,
@@ -322,8 +358,8 @@ class APIRouter(routing.Router):
         dependencies: Optional[Sequence[params.Depends]] = None,
         default_response_class: Type[Response] = Default(JSONResponse),
         responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
-        callbacks: Optional[List[BaseRoute]] = None,
-        routes: Optional[List[routing.BaseRoute]] = None,
+        callbacks: Optional[List[SlBaseRoute]] = None,
+        routes: Optional[List[SlBaseRoute]] = None,
         redirect_slashes: bool = True,
         default: Optional[ASGIApp] = None,
         dependency_overrides_provider: Optional[Any] = None,
@@ -378,7 +414,7 @@ class APIRouter(routing.Router):
         ),
         name: Optional[str] = None,
         route_class_override: Optional[Type[APIRoute]] = None,
-        callbacks: Optional[List[BaseRoute]] = None,
+        callbacks: Optional[List[SlBaseRoute]] = None,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> None:
         route_class = route_class_override or self.route_class
@@ -437,7 +473,7 @@ class APIRouter(routing.Router):
         include_in_schema: bool = True,
         response_class: Type[Response] = Default(JSONResponse),
         name: Optional[str] = None,
-        callbacks: Optional[List[BaseRoute]] = None,
+        callbacks: Optional[List[SlBaseRoute]] = None,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
         def decorator(func: DecoratedCallable) -> DecoratedCallable:
@@ -485,6 +521,23 @@ class APIRouter(routing.Router):
 
         return decorator
 
+    def add_route(
+        self,
+        path: str,
+        endpoint: Callable[..., Any],
+        methods: Optional[List[str]] = None,
+        name: Optional[str] = None,
+        include_in_schema: bool = True,
+    ) -> None:
+        route = Route(
+            path,
+            endpoint=endpoint,
+            methods=methods,
+            name=name,
+            include_in_schema=include_in_schema,
+        )
+        self.routes.append(route)
+
     def include_router(
         self,
         router: "APIRouter",
@@ -494,7 +547,7 @@ class APIRouter(routing.Router):
         dependencies: Optional[Sequence[params.Depends]] = None,
         default_response_class: Type[Response] = Default(JSONResponse),
         responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
-        callbacks: Optional[List[BaseRoute]] = None,
+        callbacks: Optional[List[SlBaseRoute]] = None,
         deprecated: Optional[bool] = None,
         include_in_schema: bool = True,
     ) -> None:
@@ -560,7 +613,7 @@ class APIRouter(routing.Router):
                     callbacks=current_callbacks,
                     openapi_extra=route.openapi_extra,
                 )
-            elif isinstance(route, routing.Route):
+            elif isinstance(route, SlRoute):
                 methods = list(route.methods or [])  # type: ignore # in Starlette
                 self.add_route(
                     prefix + route.path,
@@ -573,7 +626,7 @@ class APIRouter(routing.Router):
                 self.add_api_websocket_route(
                     prefix + route.path, route.endpoint, name=route.name
                 )
-            elif isinstance(route, routing.WebSocketRoute):
+            elif isinstance(route, SlWebSocketRoute):
                 self.add_websocket_route(
                     prefix + route.path, route.endpoint, name=route.name
                 )
@@ -599,7 +652,7 @@ class APIRouter(routing.Router):
         include_in_schema: bool = True,
         response_class: Type[Response] = Default(JSONResponse),
         name: Optional[str] = None,
-        callbacks: Optional[List[BaseRoute]] = None,
+        callbacks: Optional[List[SlBaseRoute]] = None,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
         return self.api_route(
@@ -639,7 +692,7 @@ class APIRouter(routing.Router):
         include_in_schema: bool = True,
         response_class: Type[Response] = Default(JSONResponse),
         name: Optional[str] = None,
-        callbacks: Optional[List[BaseRoute]] = None,
+        callbacks: Optional[List[SlBaseRoute]] = None,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
         return self.api_route(
@@ -679,7 +732,7 @@ class APIRouter(routing.Router):
         include_in_schema: bool = True,
         response_class: Type[Response] = Default(JSONResponse),
         name: Optional[str] = None,
-        callbacks: Optional[List[BaseRoute]] = None,
+        callbacks: Optional[List[SlBaseRoute]] = None,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
         return self.api_route(
@@ -719,7 +772,7 @@ class APIRouter(routing.Router):
         include_in_schema: bool = True,
         response_class: Type[Response] = Default(JSONResponse),
         name: Optional[str] = None,
-        callbacks: Optional[List[BaseRoute]] = None,
+        callbacks: Optional[List[SlBaseRoute]] = None,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
         return self.api_route(
@@ -759,7 +812,7 @@ class APIRouter(routing.Router):
         include_in_schema: bool = True,
         response_class: Type[Response] = Default(JSONResponse),
         name: Optional[str] = None,
-        callbacks: Optional[List[BaseRoute]] = None,
+        callbacks: Optional[List[SlBaseRoute]] = None,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
         return self.api_route(
@@ -799,7 +852,7 @@ class APIRouter(routing.Router):
         include_in_schema: bool = True,
         response_class: Type[Response] = Default(JSONResponse),
         name: Optional[str] = None,
-        callbacks: Optional[List[BaseRoute]] = None,
+        callbacks: Optional[List[SlBaseRoute]] = None,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
         return self.api_route(
@@ -839,7 +892,7 @@ class APIRouter(routing.Router):
         include_in_schema: bool = True,
         response_class: Type[Response] = Default(JSONResponse),
         name: Optional[str] = None,
-        callbacks: Optional[List[BaseRoute]] = None,
+        callbacks: Optional[List[SlBaseRoute]] = None,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
         return self.api_route(
@@ -879,7 +932,7 @@ class APIRouter(routing.Router):
         include_in_schema: bool = True,
         response_class: Type[Response] = Default(JSONResponse),
         name: Optional[str] = None,
-        callbacks: Optional[List[BaseRoute]] = None,
+        callbacks: Optional[List[SlBaseRoute]] = None,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
 

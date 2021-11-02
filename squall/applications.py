@@ -16,13 +16,13 @@ from squall.openapi.docs import (
 )
 from squall.openapi.utils import get_openapi
 from squall.params import Depends
+from squall.requests import Request
 from squall.responses import HTMLResponse, JSONResponse, Response
 from squall.types import DecoratedCallable
 from starlette.applications import Starlette
 from starlette.datastructures import State
 from starlette.exceptions import HTTPException
 from starlette.middleware import Middleware
-from starlette.requests import Request
 from starlette.routing import BaseRoute
 from starlette.types import ASGIApp, Receive, Scope, Send
 

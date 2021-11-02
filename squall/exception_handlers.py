@@ -1,7 +1,7 @@
 from squall.exceptions import RequestValidationError
+from squall.requests import Request
 from squall.responses import JSONResponse
 from starlette.exceptions import HTTPException
-from starlette.requests import Request
 from starlette.status import HTTP_422_UNPROCESSABLE_ENTITY
 
 
