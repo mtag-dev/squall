@@ -14,7 +14,6 @@ def client():
 
     with TestClient(app) as client:
         yield client
-    static_dir.rmdir()
 
 
 def test_swagger_ui_html(client: TestClient):

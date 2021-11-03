@@ -3,6 +3,7 @@ import email.message
 import enum
 import inspect
 import json
+import re
 from typing import (
     Any,
     Callable,
@@ -19,7 +20,7 @@ from typing import (
 from pydantic.error_wrappers import ErrorWrapper, ValidationError
 from pydantic.fields import ModelField, Undefined
 from squall import params
-from squall.datastructures import Default, DefaultPlaceholder
+from squall.datastructures import URL, Default, DefaultPlaceholder
 from squall.dependencies.models import Dependant
 from squall.dependencies.utils import (
     get_body_field,
@@ -30,7 +31,7 @@ from squall.dependencies.utils import (
 from squall.exceptions import RequestValidationError, WebSocketRequestValidationError
 from squall.openapi.constants import STATUS_CODES_WITH_NO_BODY
 from squall.requests import Request
-from squall.responses import JSONResponse, Response
+from squall.responses import JSONResponse, RedirectResponse, Response
 from squall.types import DecoratedCallable
 from squall.utils import (
     create_cloned_field,
@@ -41,6 +42,7 @@ from squall.utils import (
 from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException
 from starlette.routing import BaseRoute as SlBaseRoute
+from starlette.routing import Match as SlMatch
 from starlette.routing import Mount as Mount  # noqa
 from starlette.routing import Route as SlRoute
 from starlette.routing import Router as SlRouter
@@ -54,6 +56,21 @@ from starlette.routing import (
 from starlette.status import WS_1008_POLICY_VIOLATION
 from starlette.types import ASGIApp, Receive, Scope, Send
 from starlette.websockets import WebSocket
+
+
+class NoMatchFound(Exception):
+    """
+    Raised by `.url_for(name, **path_params)` and `.url_path_for(name, **path_params)`
+    if no matching route exists.
+    """
+
+
+#
+# class Match(enum.Enum):
+#     NONE = 0
+#     PARTIAL = 1
+#     FULL = 2
+#
 
 
 def request_response(func: Callable[..., Any]) -> ASGIApp:
@@ -193,6 +210,54 @@ def get_websocket_app(
     return app
 
 
+class OctetRouter:
+    def __init__(self) -> None:
+        self._routes: Dict[str, Any] = {}
+
+    @staticmethod
+    def get_path_octets(path: str) -> List[str]:
+        no_regex = re.sub(r"(\([^)]*\))", "*", path)
+        no_format = re.sub(r"{([^}]*)}", "*", no_regex)
+        return ["*" if "*" in i else i for i in no_format.strip("/").split("/")]
+
+    def add_route(self, route: "APIRoute") -> None:
+        layer = self._routes
+        for octet in self.get_path_octets(route.path):
+            if octet not in layer:
+                layer[octet] = {}
+                if octet != "*":
+                    layer[octet]["*"] = {}
+            layer = layer[octet]
+
+        if "#handlers#" not in layer:
+            layer["#handlers#"] = {}
+
+        # List here for handling cases when single
+        # octets path can have different patterns
+        # /some/{number_item:int}
+        # /some/{string_item:str}
+        methods = getattr(route, "methods", [])
+        for method in methods:
+            if method in layer["#handlers#"]:
+                layer["#handlers#"][method].append(route)
+            else:
+                layer["#handlers#"][method] = [route]
+
+    def _get_handlers(self, path: str) -> Dict[str, Any]:
+        last = self._routes
+        dyn = "*"
+        try:
+            for key in path.strip("/").split("/"):
+                last = last.get(key) or last[dyn]
+        except KeyError:
+            return {}
+        return last
+
+    def get_http_handlers(self, path: str, method: Optional[str] = None) -> List[Any]:
+        res: List[Any] = self._get_handlers(path).get("#handlers#", {}).get(method, [])
+        return res
+
+
 class Route(SlRoute):
     def __init__(
         self,
@@ -234,7 +299,7 @@ class APIWebSocketRoute(SlWebSocketRoute):
         self.path_regex, self.path_format, self.param_convertors = compile_path(path)
 
 
-class APIRoute(SlRoute):
+class APIRoute(Route):
     def __init__(
         self,
         path: str,
@@ -391,6 +456,58 @@ class APIRouter(SlRouter):
         self.dependency_overrides_provider = dependency_overrides_provider
         self.route_class = route_class
         self.default_response_class = default_response_class
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        """
+        The main entry point to the Router class.
+        """
+        assert scope["type"] in ("http", "websocket", "lifespan")
+
+        if "router" not in scope:
+            scope["router"] = self
+
+        if scope["type"] == "lifespan":
+            await self.lifespan(scope, receive, send)
+            return
+
+        partial = None
+
+        for route in self.routes:
+            # Determine if any route matches the incoming scope,
+            # and hand over to the matching route if found.
+            match, child_scope = route.matches(scope)
+            if match == SlMatch.FULL:
+                scope.update(child_scope)
+                await route.handle(scope, receive, send)
+                return
+            elif match == SlMatch.PARTIAL and partial is None:
+                partial = route
+                partial_scope = child_scope
+
+        if partial is not None:
+            #  Handle partial matches. These are cases where an endpoint is
+            # able to handle the request, but is not a preferred option.
+            # We use this in particular to deal with "405 Method Not Allowed".
+            scope.update(partial_scope)
+            await partial.handle(scope, receive, send)
+            return
+
+        if scope["type"] == "http" and self.redirect_slashes and scope["path"] != "/":
+            redirect_scope = dict(scope)
+            if scope["path"].endswith("/"):
+                redirect_scope["path"] = redirect_scope["path"].rstrip("/")
+            else:
+                redirect_scope["path"] = redirect_scope["path"] + "/"
+
+            for route in self.routes:
+                match, child_scope = route.matches(redirect_scope)
+                if match != SlMatch.NONE:
+                    redirect_url = URL(scope=redirect_scope)
+                    response = RedirectResponse(url=str(redirect_url))
+                    await response(scope, receive, send)
+                    return
+
+        await self.default(scope, receive, send)
 
     def add_api_route(
         self,
