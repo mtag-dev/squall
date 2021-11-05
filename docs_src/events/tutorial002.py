@@ -9,6 +9,6 @@ def shutdown_event():
         log.write("Application shutdown")
 
 
-@app.get("/items/")
+@app.router.get("/items/")
 async def read_items():
     return [{"name": "Foo"}]

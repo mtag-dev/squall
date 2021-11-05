@@ -31,12 +31,12 @@ class RecursiveItemViaSubmodel:
 RecursiveSubitemInSubmodel.__pydantic_model__.update_forward_refs()
 
 
-@app.get("/items/recursive", response_model=RecursiveItem)
+@app.router.get("/items/recursive", response_model=RecursiveItem)
 def get_recursive():
     return {"name": "item", "sub_items": [{"name": "subitem", "sub_items": []}]}
 
 
-@app.get("/items/recursive-submodel", response_model=RecursiveItemViaSubmodel)
+@app.router.get("/items/recursive-submodel", response_model=RecursiveItemViaSubmodel)
 def get_recursive_submodel():
     return {
         "name": "item",

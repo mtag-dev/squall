@@ -21,7 +21,7 @@ class Model3:
     d: Model2 = Field(...)
 
 
-@app.get("/", response_model=Model3)
+@app.router.get("/", response_model=Model3)
 def f():
     return {"c": {}, "d": {"a": {}}}
 

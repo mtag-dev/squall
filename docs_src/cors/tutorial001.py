@@ -19,6 +19,6 @@ app.add_middleware(
 )
 
 
-@app.get("/")
+@app.router.get("/")
 async def main():
     return {"message": "Hello World"}

@@ -13,12 +13,12 @@ def set_indirect_cookie(*, dep: str = Depends(set_cookie)):
     return dep
 
 
-@app.get("/directCookie")
+@app.router.get("/directCookie")
 def get_direct_cookie(dep: str = Depends(set_cookie)):
     return {"dep": dep}
 
 
-@app.get("/indirectCookie")
+@app.router.get("/indirectCookie")
 def get_indirect_cookie(dep: str = Depends(set_indirect_cookie)):
     return {"dep": dep}
 

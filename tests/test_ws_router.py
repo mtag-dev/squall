@@ -6,7 +6,7 @@ prefix_router = APIRouter()
 app = Squall()
 
 
-@app.websocket_route("/")
+@app.router.websocket_route("/")
 async def index(websocket: WebSocket):
     await websocket.accept()
     await websocket.send_text("Hello, world!")

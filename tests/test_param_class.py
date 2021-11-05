@@ -7,7 +7,7 @@ from squall.testclient import TestClient
 app = Squall()
 
 
-@app.get("/items/")
+@app.router.get("/items/")
 def read_items(q: Optional[str] = Param(None)):  # type: ignore
     return {"q": q}
 

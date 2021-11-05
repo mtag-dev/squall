@@ -4,6 +4,6 @@ from squall.responses import RedirectResponse
 app = Squall()
 
 
-@app.get("/subdomain")
+@app.router.get("/subdomain")
 async def redirect_typer():
     return RedirectResponse("https://subdomain.example.com")

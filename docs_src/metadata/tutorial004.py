@@ -18,11 +18,11 @@ tags_metadata = [
 app = Squall(openapi_tags=tags_metadata)
 
 
-@app.get("/users/", tags=["users"])
+@app.router.get("/users/", tags=["users"])
 async def get_users():
     return [{"name": "Harry"}, {"name": "Ron"}]
 
 
-@app.get("/items/", tags=["items"])
+@app.router.get("/items/", tags=["items"])
 async def get_items():
     return [{"name": "wand"}, {"name": "flying broom"}]

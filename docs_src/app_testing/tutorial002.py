@@ -5,12 +5,12 @@ from squall.websockets import WebSocket
 app = Squall()
 
 
-@app.get("/")
+@app.router.get("/")
 async def read_main():
     return {"msg": "Hello World"}
 
 
-@app.websocket_route("/ws")
+@app.router.websocket_route("/ws")
 async def websocket(websocket: WebSocket):
     await websocket.accept()
     await websocket.send_json({"msg": "Hello WebSocket"})

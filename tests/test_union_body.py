@@ -17,7 +17,7 @@ class OtherItem:
     price: int = Field(...)
 
 
-@app.post("/items/")
+@app.router.post("/items/")
 def save_union_body(item: Union[OtherItem, Item]):
     return {"item": item}
 

@@ -11,7 +11,7 @@ app = Squall(docs_url=None, redoc_url=None)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
-@app.get("/docs", include_in_schema=False)
+@app.router.get("/docs", include_in_schema=False)
 async def custom_swagger_ui_html():
     return get_swagger_ui_html(
         openapi_url=app.openapi_url,
@@ -22,12 +22,12 @@ async def custom_swagger_ui_html():
     )
 
 
-@app.get(app.swagger_ui_oauth2_redirect_url, include_in_schema=False)
+@app.router.get(app.swagger_ui_oauth2_redirect_url, include_in_schema=False)
 async def swagger_ui_redirect():
     return get_swagger_ui_oauth2_redirect_html()
 
 
-@app.get("/redoc", include_in_schema=False)
+@app.router.get("/redoc", include_in_schema=False)
 async def redoc_html():
     return get_redoc_html(
         openapi_url=app.openapi_url,
@@ -36,6 +36,6 @@ async def redoc_html():
     )
 
 
-@app.get("/users/{username}")
+@app.router.get("/users/{username}")
 async def read_user(username: str):
     return {"message": f"Hello {username}"}

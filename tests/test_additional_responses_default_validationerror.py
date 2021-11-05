@@ -4,7 +4,7 @@ from squall.testclient import TestClient
 app = Squall()
 
 
-@app.get("/a/{id}")
+@app.router.get("/a/{id}")
 async def a(id):
     pass  # pragma: no cover
 

@@ -14,17 +14,17 @@ class Item:
     data: str
 
 
-@app.post("/schema_extra/")
+@app.router.post("/schema_extra/")
 def schema_extra(item: Item):
     return item
 
 
-@app.post("/example/")
+@app.router.post("/example/")
 def example(item: Item = Body(..., example={"data": "Data in Body example"})):
     return item
 
 
-@app.post("/examples/")
+@app.router.post("/examples/")
 def examples(
     item: Item = Body(
         ...,
@@ -40,7 +40,7 @@ def examples(
     return item
 
 
-@app.post("/example_examples/")
+@app.router.post("/example_examples/")
 def example_examples(
     item: Item = Body(
         ...,
@@ -56,12 +56,12 @@ def example_examples(
 
 # TODO: enable these tests once/if Form(embed=False) is supported
 # TODO: In that case, define if File() should support example/examples too
-# @app.post("/form_example")
+# @app.router.post("/form_example")
 # def form_example(firstname: str = Form(..., example="John")):
 #     return firstname
 
 
-# @app.post("/form_examples")
+# @app.router.post("/form_examples")
 # def form_examples(
 #     lastname: str = Form(
 #         ...,
@@ -74,7 +74,7 @@ def example_examples(
 #     return lastname
 
 
-# @app.post("/form_example_examples")
+# @app.router.post("/form_example_examples")
 # def form_example_examples(
 #     lastname: str = Form(
 #         ...,
@@ -88,7 +88,7 @@ def example_examples(
 #     return lastname
 
 
-@app.get("/path_example/{item_id}")
+@app.router.get("/path_example/{item_id}")
 def path_example(
     item_id: str = Path(
         ...,
@@ -98,7 +98,7 @@ def path_example(
     return item_id
 
 
-@app.get("/path_examples/{item_id}")
+@app.router.get("/path_examples/{item_id}")
 def path_examples(
     item_id: str = Path(
         ...,
@@ -111,7 +111,7 @@ def path_examples(
     return item_id
 
 
-@app.get("/path_example_examples/{item_id}")
+@app.router.get("/path_example_examples/{item_id}")
 def path_example_examples(
     item_id: str = Path(
         ...,
@@ -125,7 +125,7 @@ def path_example_examples(
     return item_id
 
 
-@app.get("/query_example/")
+@app.router.get("/query_example/")
 def query_example(
     data: str = Query(
         None,
@@ -135,7 +135,7 @@ def query_example(
     return data
 
 
-@app.get("/query_examples/")
+@app.router.get("/query_examples/")
 def query_examples(
     data: str = Query(
         None,
@@ -148,7 +148,7 @@ def query_examples(
     return data
 
 
-@app.get("/query_example_examples/")
+@app.router.get("/query_example_examples/")
 def query_example_examples(
     data: str = Query(
         None,
@@ -162,7 +162,7 @@ def query_example_examples(
     return data
 
 
-@app.get("/header_example/")
+@app.router.get("/header_example/")
 def header_example(
     data: str = Header(
         None,
@@ -172,7 +172,7 @@ def header_example(
     return data
 
 
-@app.get("/header_examples/")
+@app.router.get("/header_examples/")
 def header_examples(
     data: str = Header(
         None,
@@ -185,7 +185,7 @@ def header_examples(
     return data
 
 
-@app.get("/header_example_examples/")
+@app.router.get("/header_example_examples/")
 def header_example_examples(
     data: str = Header(
         None,
@@ -199,7 +199,7 @@ def header_example_examples(
     return data
 
 
-@app.get("/cookie_example/")
+@app.router.get("/cookie_example/")
 def cookie_example(
     data: str = Cookie(
         None,
@@ -209,7 +209,7 @@ def cookie_example(
     return data
 
 
-@app.get("/cookie_examples/")
+@app.router.get("/cookie_examples/")
 def cookie_examples(
     data: str = Cookie(
         None,
@@ -222,7 +222,7 @@ def cookie_examples(
     return data
 
 
-@app.get("/cookie_example_examples/")
+@app.router.get("/cookie_example_examples/")
 def cookie_example_examples(
     data: str = Cookie(
         None,

@@ -6,6 +6,6 @@ app = Squall()
 app.add_middleware(HTTPSRedirectMiddleware)
 
 
-@app.get("/")
+@app.router.get("/")
 async def main():
     return {"message": "Hello World"}

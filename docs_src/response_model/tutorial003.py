@@ -19,6 +19,6 @@ class UserOut(BaseModel):
     full_name: Optional[str] = None
 
 
-@app.post("/user/", response_model=UserOut)
+@app.router.post("/user/", response_model=UserOut)
 async def create_user(user: UserIn):
     return user

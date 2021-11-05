@@ -18,7 +18,7 @@ async def unicorn_exception_handler(request: Request, exc: UnicornException):
     )
 
 
-@app.get("/unicorns/{name}")
+@app.router.get("/unicorns/{name}")
 async def read_unicorn(name: str):
     if name == "yolo":
         raise UnicornException(name=name)

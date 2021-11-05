@@ -12,7 +12,7 @@ class Product:
     price: float = Field(...)
 
 
-@app.get("/product")
+@app.router.get("/product")
 async def create_item(product: Product):
     return product
 

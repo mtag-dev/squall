@@ -3,7 +3,7 @@ from squall import Squall
 app = Squall()
 
 
-@app.get("/app")
+@app.router.get("/app")
 def read_main():
     return {"message": "Hello World from main app"}
 
@@ -11,7 +11,7 @@ def read_main():
 subapi = Squall()
 
 
-@subapi.get("/sub")
+@subapi.router.get("/sub")
 def read_sub():
     return {"message": "Hello World from sub API"}
 

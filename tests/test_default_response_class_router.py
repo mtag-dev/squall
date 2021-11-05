@@ -16,12 +16,12 @@ router_b_a = APIRouter()
 router_b_a_c_override = APIRouter()  # Overrides default class again
 
 
-@app.get("/")
+@app.router.get("/")
 def get_root():
     return {"msg": "Hello World"}
 
 
-@app.get("/override", response_class=PlainTextResponse)
+@app.router.get("/override", response_class=PlainTextResponse)
 def get_path_override():
     return "Hello World"
 

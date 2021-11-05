@@ -24,6 +24,6 @@ app = Squall()
 app.router.route_class = ValidationErrorLoggingRoute
 
 
-@app.post("/")
+@app.router.post("/")
 async def sum_numbers(numbers: List[int] = Body(...)):
     return sum(numbers)

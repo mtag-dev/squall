@@ -14,17 +14,17 @@ class Item:
     owner_ids: Optional[List[int]] = None
 
 
-@app.get("/items/valid", response_model=Item)
+@app.router.get("/items/valid", response_model=Item)
 def get_valid():
     return Item(name="valid", price=1.0)
 
 
-@app.get("/items/coerce", response_model=Item)
+@app.router.get("/items/coerce", response_model=Item)
 def get_coerce():
     return Item(name="coerce", price="1.0")
 
 
-@app.get("/items/validlist", response_model=List[Item])
+@app.router.get("/items/validlist", response_model=List[Item])
 def get_validlist():
     return [
         Item(name="foo"),
@@ -33,7 +33,7 @@ def get_validlist():
     ]
 
 
-@app.get("/items/validdict", response_model=Dict[str, Item])
+@app.router.get("/items/validdict", response_model=Dict[str, Item])
 def get_validdict():
     return {
         "k1": Item(name="foo"),

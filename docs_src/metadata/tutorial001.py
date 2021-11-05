@@ -32,6 +32,6 @@ app = Squall(
 )
 
 
-@app.get("/items/")
+@app.router.get("/items/")
 async def read_items():
     return [{"name": "Katana"}]

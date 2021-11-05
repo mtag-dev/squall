@@ -5,7 +5,7 @@ from squall import Header, Squall
 app = Squall()
 
 
-@app.get("/items/")
+@app.router.get("/items/")
 async def read_items(
     strange_header: Optional[str] = Header(None, convert_underscores=False)
 ):

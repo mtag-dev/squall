@@ -4,7 +4,7 @@ from squall.openapi.utils import get_openapi
 app = Squall()
 
 
-@app.get("/items/")
+@app.router.get("/items/")
 async def read_items():
     return [{"name": "Foo"}]
 

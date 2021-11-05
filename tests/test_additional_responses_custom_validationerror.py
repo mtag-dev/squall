@@ -21,7 +21,7 @@ class JsonApiError(BaseModel):
     errors: typing.List[Error]
 
 
-@app.get(
+@app.router.get(
     "/a/{id}",
     response_class=JsonApiResponse,
     responses={422: {"description": "Error", "model": JsonApiError}},

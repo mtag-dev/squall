@@ -4,6 +4,6 @@ from squall.responses import ORJSONResponse
 app = Squall(default_response_class=ORJSONResponse)
 
 
-@app.get("/items/")
+@app.router.get("/items/")
 async def read_items():
     return [{"item_id": "Foo"}]

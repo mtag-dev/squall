@@ -26,7 +26,7 @@ class MyUuid:
         raise TypeError("vars() argument must have __dict__ attribute")
 
 
-@app.get("/fast_uuid")
+@app.router.get("/fast_uuid")
 def return_fast_uuid():
     # I don't want to import asyncpg for this test so I made my own UUID
     # Import asyncpg and uncomment the two lines below for the actual bug
@@ -51,7 +51,7 @@ class SomeCustomClass:
     a_uuid: MyUuid
 
 
-@app.get("/get_custom_class")
+@app.router.get("/get_custom_class")
 def return_some_user():
     # Test that the fix also works for custom pydantic classes
     return SomeCustomClass(a_uuid=MyUuid("b8799909-f914-42de-91bc-95c819218d01"))

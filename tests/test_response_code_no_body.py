@@ -21,7 +21,7 @@ class JsonApiError(BaseModel):
     errors: typing.List[Error]
 
 
-@app.get(
+@app.router.get(
     "/a",
     status_code=204,
     response_class=JsonApiResponse,
@@ -31,7 +31,7 @@ async def a():
     pass  # pragma: no cover
 
 
-@app.get("/b", responses={204: {"description": "No Content"}})
+@app.router.get("/b", responses={204: {"description": "No Content"}})
 async def b():
     pass  # pragma: no cover
 

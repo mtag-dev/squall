@@ -14,7 +14,7 @@ class Item:
     tax: Optional[float] = None
 
 
-@app.put("/items/{item_id}")
+@app.router.put("/items/{item_id}")
 async def update_item(
     *,
     item_id: int = Path(..., title="The ID of the item to get", ge=0, le=1000),

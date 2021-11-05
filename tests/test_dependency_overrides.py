@@ -13,12 +13,12 @@ async def common_parameters(q: str, skip: int = 0, limit: int = 100):
     return {"q": q, "skip": skip, "limit": limit}
 
 
-@app.get("/main-depends/")
+@app.router.get("/main-depends/")
 async def main_depends(commons: dict = Depends(common_parameters)):
     return {"in": "main-depends", "params": commons}
 
 
-@app.get("/decorator-depends/", dependencies=[Depends(common_parameters)])
+@app.router.get("/decorator-depends/", dependencies=[Depends(common_parameters)])
 async def decorator_depends():
     return {"in": "decorator-depends"}
 

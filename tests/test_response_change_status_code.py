@@ -12,7 +12,7 @@ async def parent_dep(result=Depends(response_status_setter)):
     return result
 
 
-@app.get("/", dependencies=[Depends(parent_dep)])
+@app.router.get("/", dependencies=[Depends(parent_dep)])
 async def get_main():
     return {"msg": "Hello World"}
 

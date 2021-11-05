@@ -21,7 +21,7 @@ responses = {
 app = Squall()
 
 
-@app.get(
+@app.router.get(
     "/items/{item_id}",
     response_model=Item,
     responses={**responses, 200: {"content": {"image/png": {}}}},

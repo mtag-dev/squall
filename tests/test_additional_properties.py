@@ -11,7 +11,7 @@ class Items(BaseModel):
     items: Dict[str, int]
 
 
-@app.post("/foo")
+@app.router.post("/foo")
 def foo(items: Items):
     return items.items
 

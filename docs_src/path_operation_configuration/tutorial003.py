@@ -14,7 +14,7 @@ class Item(BaseModel):
     tags: Set[str] = []
 
 
-@app.post(
+@app.router.post(
     "/items/",
     response_model=Item,
     summary="Create an item",

@@ -17,7 +17,7 @@ def get_query(background_tasks: BackgroundTasks, q: Optional[str] = None):
     return q
 
 
-@app.post("/send-notification/{email}")
+@app.router.post("/send-notification/{email}")
 async def send_notification(
     email: str, background_tasks: BackgroundTasks, q: str = Depends(get_query)
 ):

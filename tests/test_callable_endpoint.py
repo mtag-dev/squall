@@ -13,7 +13,7 @@ endpoint = partial(main, "foo")
 
 app = Squall()
 
-app.get("/")(endpoint)
+app.router.get("/")(endpoint)
 
 
 client = TestClient(app)

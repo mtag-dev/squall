@@ -3,16 +3,16 @@ from squall import Squall
 app = Squall()
 
 
-@app.get("/items/", tags=["items"])
+@app.router.get("/items/", tags=["items"])
 async def read_items():
     return [{"name": "Foo", "price": 42}]
 
 
-@app.get("/users/", tags=["users"])
+@app.router.get("/users/", tags=["users"])
 async def read_users():
     return [{"username": "johndoe"}]
 
 
-@app.get("/elements/", tags=["items"], deprecated=True)
+@app.router.get("/elements/", tags=["items"], deprecated=True)
 async def read_elements():
     return [{"item_id": "Foo"}]

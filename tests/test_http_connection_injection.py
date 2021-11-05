@@ -11,12 +11,12 @@ async def extract_value_from_http_connection(conn: HTTPConnection):
     return conn.app.state.value
 
 
-@app.get("/http")
+@app.router.get("/http")
 async def get_value_by_http(value: int = Depends(extract_value_from_http_connection)):
     return value
 
 
-@app.websocket("/ws")
+@app.router.websocket("/ws")
 async def get_value_by_ws(
     websocket: WebSocket, value: int = Depends(extract_value_from_http_connection)
 ):

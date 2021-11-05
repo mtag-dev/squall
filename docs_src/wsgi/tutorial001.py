@@ -14,7 +14,7 @@ def flask_main():
 app = Squall()
 
 
-@app.get("/v2")
+@app.router.get("/v2")
 def read_main():
     return {"message": "Hello World"}
 

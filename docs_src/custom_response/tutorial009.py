@@ -5,6 +5,6 @@ some_file_path = "large-video-file.mp4"
 app = Squall()
 
 
-@app.get("/")
+@app.router.get("/")
 async def main():
     return FileResponse(some_file_path)

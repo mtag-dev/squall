@@ -7,7 +7,7 @@ from squall import Body, Squall
 app = Squall()
 
 
-@app.put("/items/{item_id}")
+@app.router.put("/items/{item_id}")
 async def read_items(
     item_id: UUID,
     start_datetime: Optional[datetime] = Body(None),

@@ -138,7 +138,7 @@ router4_override = APIRouter(
 router4_default = APIRouter()
 
 
-@app.get(
+@app.router.get(
     "/override1",
     tags=["path1a", "path1b"],
     responses={
@@ -154,7 +154,7 @@ async def path1_override(level1: str):
     return level1
 
 
-@app.get("/default1")
+@app.router.get("/default1")
 async def path1_default(level1: str):
     return level1
 

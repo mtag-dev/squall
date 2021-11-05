@@ -65,12 +65,12 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
-@app.get("/")
+@app.router.get("/")
 async def get():
     return HTMLResponse(html)
 
 
-@app.websocket("/ws/{client_id}")
+@app.router.websocket("/ws/{client_id}")
 async def websocket_endpoint(websocket: WebSocket, client_id: int):
     await manager.connect(websocket)
     try:

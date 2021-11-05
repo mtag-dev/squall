@@ -8,7 +8,7 @@ from squall.testclient import TestClient
 from docs_src.custom_request_and_route.tutorial001 import app
 
 
-@app.get("/check-class")
+@app.router.get("/check-class")
 async def check_gzip_request(request: Request):
     return {"request_class": type(request).__name__}
 

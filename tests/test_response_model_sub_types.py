@@ -12,22 +12,22 @@ class Model(BaseModel):
 app = Squall()
 
 
-@app.get("/valid1", responses={"500": {"model": int}})
+@app.router.get("/valid1", responses={"500": {"model": int}})
 def valid1():
     pass
 
 
-@app.get("/valid2", responses={"500": {"model": List[int]}})
+@app.router.get("/valid2", responses={"500": {"model": List[int]}})
 def valid2():
     pass
 
 
-@app.get("/valid3", responses={"500": {"model": Model}})
+@app.router.get("/valid3", responses={"500": {"model": Model}})
 def valid3():
     pass
 
 
-@app.get("/valid4", responses={"500": {"model": List[Model]}})
+@app.router.get("/valid4", responses={"500": {"model": List[Model]}})
 def valid4():
     pass
 

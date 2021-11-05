@@ -4,17 +4,17 @@ from squall.testclient import TestClient
 app = Squall()
 
 
-@app.get("/int/{param:int}")
+@app.router.get("/int/{param:int}")
 def int_convertor(param: int = Path(...)):
     return {"int": param}
 
 
-@app.get("/float/{param:float}")
+@app.router.get("/float/{param:float}")
 def float_convertor(param: float = Path(...)):
     return {"float": param}
 
 
-@app.get("/path/{param:path}")
+@app.router.get("/path/{param:path}")
 def path_convertor(param: str = Path(...)):
     return {"path": param}
 

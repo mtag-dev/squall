@@ -17,7 +17,7 @@ class ExtendedItem(Item):
     age: int = Field(...)
 
 
-@app.post("/items/")
+@app.router.post("/items/")
 def save_union_different_body(item: Union[ExtendedItem, Item]):
     return {"item": item}
 

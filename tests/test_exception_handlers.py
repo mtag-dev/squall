@@ -22,12 +22,12 @@ app = Squall(
 client = TestClient(app)
 
 
-@app.get("/http-exception")
+@app.router.get("/http-exception")
 def route_with_http_exception():
     raise HTTPException(status_code=400)
 
 
-@app.get("/request-validation/{param}/")
+@app.router.get("/request-validation/{param}/")
 def route_with_request_validation_exception(param: int):
     pass  # pragma: no cover
 

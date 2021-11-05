@@ -35,7 +35,7 @@ async def get_model_c() -> ModelC:
     return ModelC(username="test-user", password="test-password")
 
 
-@app.get("/model/{name}", response_model=ModelA)
+@app.router.get("/model/{name}", response_model=ModelA)
 async def get_model_a(name: str, model_c=Depends(get_model_c)):
     return {"name": name, "description": "model-a-desc", "model_b": model_c}
 

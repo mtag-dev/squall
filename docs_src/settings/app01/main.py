@@ -5,7 +5,7 @@ from .config import settings
 app = Squall()
 
 
-@app.get("/info")
+@app.router.get("/info")
 async def info():
     return {
         "app_name": settings.app_name,

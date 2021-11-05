@@ -9,11 +9,11 @@ async def common_parameters(q: Optional[str] = None, skip: int = 0, limit: int =
     return {"q": q, "skip": skip, "limit": limit}
 
 
-@app.get("/items/")
+@app.router.get("/items/")
 async def read_items(commons: dict = Depends(common_parameters)):
     return commons
 
 
-@app.get("/users/")
+@app.router.get("/users/")
 async def read_users(commons: dict = Depends(common_parameters)):
     return commons

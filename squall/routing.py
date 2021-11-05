@@ -3,7 +3,6 @@ import email.message
 import enum
 import inspect
 import json
-import re
 from typing import (
     Any,
     Callable,
@@ -71,6 +70,10 @@ class NoMatchFound(Exception):
 #     PARTIAL = 1
 #     FULL = 2
 #
+#
+# class Event(enum.Enum):
+#     STARTUP = "startup"
+#     SHUTDOWN = "shutdown"
 
 
 def request_response(func: Callable[..., Any]) -> ASGIApp:
@@ -210,54 +213,6 @@ def get_websocket_app(
     return app
 
 
-class OctetRouter:
-    def __init__(self) -> None:
-        self._routes: Dict[str, Any] = {}
-
-    @staticmethod
-    def get_path_octets(path: str) -> List[str]:
-        no_regex = re.sub(r"(\([^)]*\))", "*", path)
-        no_format = re.sub(r"{([^}]*)}", "*", no_regex)
-        return ["*" if "*" in i else i for i in no_format.strip("/").split("/")]
-
-    def add_route(self, route: "APIRoute") -> None:
-        layer = self._routes
-        for octet in self.get_path_octets(route.path):
-            if octet not in layer:
-                layer[octet] = {}
-                if octet != "*":
-                    layer[octet]["*"] = {}
-            layer = layer[octet]
-
-        if "#handlers#" not in layer:
-            layer["#handlers#"] = {}
-
-        # List here for handling cases when single
-        # octets path can have different patterns
-        # /some/{number_item:int}
-        # /some/{string_item:str}
-        methods = getattr(route, "methods", [])
-        for method in methods:
-            if method in layer["#handlers#"]:
-                layer["#handlers#"][method].append(route)
-            else:
-                layer["#handlers#"][method] = [route]
-
-    def _get_handlers(self, path: str) -> Dict[str, Any]:
-        last = self._routes
-        dyn = "*"
-        try:
-            for key in path.strip("/").split("/"):
-                last = last.get(key) or last[dyn]
-        except KeyError:
-            return {}
-        return last
-
-    def get_http_handlers(self, path: str, method: Optional[str] = None) -> List[Any]:
-        res: List[Any] = self._get_handlers(path).get("#handlers#", {}).get(method, [])
-        return res
-
-
 class Route(SlRoute):
     def __init__(
         self,
@@ -286,7 +241,7 @@ class APIWebSocketRoute(SlWebSocketRoute):
         name: Optional[str] = None,
         dependency_overrides_provider: Optional[Any] = None,
     ) -> None:
-        self.path = path
+        self.path = self._path_origin = path
         self.endpoint = endpoint
         self.name = get_name(endpoint) if name is None else name
         self.dependant = get_dependant(path=path, call=self.endpoint)
@@ -297,6 +252,12 @@ class APIWebSocketRoute(SlWebSocketRoute):
             )
         )
         self.path_regex, self.path_format, self.param_convertors = compile_path(path)
+
+    def set_defaults(self) -> None:
+        self.path = self._path_origin
+
+    def add_path_prefix(self, prefix: str) -> None:
+        self.path = prefix + self.path
 
 
 class APIRoute(Route):
@@ -328,7 +289,7 @@ class APIRoute(Route):
         # normalise enums e.g. http.HTTPStatus
         if isinstance(status_code, enum.IntEnum):
             status_code = int(status_code)
-        self.path = path
+        self.path = self._path_origin = path
         self.endpoint = endpoint
         self.name = get_name(endpoint) if name is None else name
         self.path_regex, self.path_format, self.param_convertors = compile_path(path)
@@ -412,6 +373,12 @@ class APIRoute(Route):
             dependency_overrides_provider=self.dependency_overrides_provider,
             response_field=self.response_field,
         )
+
+    def set_defaults(self) -> None:
+        self.path = self._path_origin
+
+    def add_path_prefix(self, prefix: str) -> None:
+        self.path = prefix + self.path
 
 
 class APIRouter(SlRouter):

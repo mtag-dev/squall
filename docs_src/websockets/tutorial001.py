@@ -38,12 +38,12 @@ html = """
 """
 
 
-@app.get("/")
+@app.router.get("/")
 async def get():
     return HTMLResponse(html)
 
 
-@app.websocket("/ws")
+@app.router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     while True:

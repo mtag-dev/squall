@@ -4,7 +4,7 @@ from squall import Squall
 app = Squall()
 
 
-@app.get("/")
+@app.router.get("/")
 def root():
     a = "a"
     b = "b" + a

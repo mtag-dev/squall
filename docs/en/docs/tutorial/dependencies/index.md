@@ -41,7 +41,7 @@ That's it.
 
 And it has the same shape and structure that all your *path operation functions* have.
 
-You can think of it as a *path operation function* without the "decorator" (without the `@app.get("/some-path")`).
+You can think of it as a *path operation function* without the "decorator" (without the `@app.router.get("/some-path")`).
 
 And it can return anything you want.
 

@@ -5,7 +5,7 @@ from squall import Query, Squall
 app = Squall()
 
 
-@app.get("/items/")
+@app.router.get("/items/")
 async def read_items(
     q: Optional[str] = Query(None, title="Query string", min_length=3)
 ):

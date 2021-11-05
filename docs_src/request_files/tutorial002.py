@@ -6,17 +6,17 @@ from squall.responses import HTMLResponse
 app = Squall()
 
 
-@app.post("/files/")
+@app.router.post("/files/")
 async def create_files(files: List[bytes] = File(...)):
     return {"file_sizes": [len(file) for file in files]}
 
 
-@app.post("/uploadfiles/")
+@app.router.post("/uploadfiles/")
 async def create_upload_files(files: List[UploadFile] = File(...)):
     return {"filenames": [file.filename for file in files]}
 
 
-@app.get("/")
+@app.router.get("/")
 async def main():
     content = """
 <body>

@@ -48,52 +48,52 @@ async_callable_gen_dependency = AsyncCallableGenDependency()
 methods_dependency = MethodsDependency()
 
 
-@app.get("/callable-dependency")
+@app.router.get("/callable-dependency")
 async def get_callable_dependency(value: str = Depends(callable_dependency)):
     return value
 
 
-@app.get("/callable-gen-dependency")
+@app.router.get("/callable-gen-dependency")
 async def get_callable_gen_dependency(value: str = Depends(callable_gen_dependency)):
     return value
 
 
-@app.get("/async-callable-dependency")
+@app.router.get("/async-callable-dependency")
 async def get_async_callable_dependency(
     value: str = Depends(async_callable_dependency),
 ):
     return value
 
 
-@app.get("/async-callable-gen-dependency")
+@app.router.get("/async-callable-gen-dependency")
 async def get_async_callable_gen_dependency(
     value: str = Depends(async_callable_gen_dependency),
 ):
     return value
 
 
-@app.get("/synchronous-method-dependency")
+@app.router.get("/synchronous-method-dependency")
 async def get_synchronous_method_dependency(
     value: str = Depends(methods_dependency.synchronous),
 ):
     return value
 
 
-@app.get("/synchronous-method-gen-dependency")
+@app.router.get("/synchronous-method-gen-dependency")
 async def get_synchronous_method_gen_dependency(
     value: str = Depends(methods_dependency.synchronous_gen),
 ):
     return value
 
 
-@app.get("/asynchronous-method-dependency")
+@app.router.get("/asynchronous-method-dependency")
 async def get_asynchronous_method_dependency(
     value: str = Depends(methods_dependency.asynchronous),
 ):
     return value
 
 
-@app.get("/asynchronous-method-gen-dependency")
+@app.router.get("/asynchronous-method-gen-dependency")
 async def get_asynchronous_method_gen_dependency(
     value: str = Depends(methods_dependency.asynchronous_gen),
 ):
