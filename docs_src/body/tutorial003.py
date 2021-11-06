@@ -15,6 +15,6 @@ class Item:
 app = Squall()
 
 
-@app.router.put("/items/{item_id}")
+@app.put("/items/{item_id}")
 async def create_item(item_id: int, item: Item):
     return {"item_id": item_id, **item.dict()}

@@ -1,6 +1,13 @@
-from squall import APIRouter
+from squall.router import Router
+from squall import Depends
+from ..dependencies import get_token_header
 
-router = APIRouter()
+router = Router(
+    prefix="/admin",
+    tags=["admin"],
+    dependencies=[Depends(get_token_header)],
+    responses={418: {"description": "I'm a teapot"}},
+)
 
 
 @router.post("/")

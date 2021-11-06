@@ -3,7 +3,7 @@ from squall import Response, Squall
 app = Squall()
 
 
-@app.router.get("/legacy/")
+@app.get("/legacy/")
 def get_legacy_data():
     data = """<?xml version="1.0"?>
     <shampoo>

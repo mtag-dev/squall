@@ -11,7 +11,7 @@ async def extract_value_from_http_connection(conn: HTTPConnection):
     return conn.app.state.value
 
 
-@app.router.get("/http")
+@app.get("/http")
 async def get_value_by_http(value: int = Depends(extract_value_from_http_connection)):
     return value
 

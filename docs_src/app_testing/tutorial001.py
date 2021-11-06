@@ -4,7 +4,7 @@ from squall.testclient import TestClient
 app = Squall()
 
 
-@app.router.get("/")
+@app.get("/")
 async def read_main():
     return {"msg": "Hello World"}
 

@@ -12,7 +12,7 @@ def get_settings():
     return Settings()
 
 
-@app.router.get("/info")
+@app.get("/info")
 async def info(settings: Settings = Depends(get_settings)):
     return {
         "app_name": settings.app_name,

@@ -11,7 +11,7 @@ def test_incorrect_multipart_installed_form(monkeypatch):
     with pytest.raises(RuntimeError, match=multipart_incorrect_install_error):
         app = Squall()
 
-        @app.router.post("/")
+        @app.post("/")
         async def root(username: str = Form(...)):
             return username  # pragma: nocover
 
@@ -21,7 +21,7 @@ def test_incorrect_multipart_installed_file_upload(monkeypatch):
     with pytest.raises(RuntimeError, match=multipart_incorrect_install_error):
         app = Squall()
 
-        @app.router.post("/")
+        @app.post("/")
         async def root(f: UploadFile = File(...)):
             return f  # pragma: nocover
 
@@ -31,7 +31,7 @@ def test_incorrect_multipart_installed_file_bytes(monkeypatch):
     with pytest.raises(RuntimeError, match=multipart_incorrect_install_error):
         app = Squall()
 
-        @app.router.post("/")
+        @app.post("/")
         async def root(f: bytes = File(...)):
             return f  # pragma: nocover
 
@@ -41,7 +41,7 @@ def test_incorrect_multipart_installed_multi_form(monkeypatch):
     with pytest.raises(RuntimeError, match=multipart_incorrect_install_error):
         app = Squall()
 
-        @app.router.post("/")
+        @app.post("/")
         async def root(username: str = Form(...), password: str = Form(...)):
             return username  # pragma: nocover
 
@@ -51,7 +51,7 @@ def test_incorrect_multipart_installed_form_file(monkeypatch):
     with pytest.raises(RuntimeError, match=multipart_incorrect_install_error):
         app = Squall()
 
-        @app.router.post("/")
+        @app.post("/")
         async def root(username: str = Form(...), f: UploadFile = File(...)):
             return username  # pragma: nocover
 
@@ -61,7 +61,7 @@ def test_no_multipart_installed(monkeypatch):
     with pytest.raises(RuntimeError, match=multipart_not_installed_error):
         app = Squall()
 
-        @app.router.post("/")
+        @app.post("/")
         async def root(username: str = Form(...)):
             return username  # pragma: nocover
 
@@ -71,7 +71,7 @@ def test_no_multipart_installed_file(monkeypatch):
     with pytest.raises(RuntimeError, match=multipart_not_installed_error):
         app = Squall()
 
-        @app.router.post("/")
+        @app.post("/")
         async def root(f: UploadFile = File(...)):
             return f  # pragma: nocover
 
@@ -81,7 +81,7 @@ def test_no_multipart_installed_file_bytes(monkeypatch):
     with pytest.raises(RuntimeError, match=multipart_not_installed_error):
         app = Squall()
 
-        @app.router.post("/")
+        @app.post("/")
         async def root(f: bytes = File(...)):
             return f  # pragma: nocover
 
@@ -91,7 +91,7 @@ def test_no_multipart_installed_multi_form(monkeypatch):
     with pytest.raises(RuntimeError, match=multipart_not_installed_error):
         app = Squall()
 
-        @app.router.post("/")
+        @app.post("/")
         async def root(username: str = Form(...), password: str = Form(...)):
             return username  # pragma: nocover
 
@@ -101,6 +101,6 @@ def test_no_multipart_installed_form_file(monkeypatch):
     with pytest.raises(RuntimeError, match=multipart_not_installed_error):
         app = Squall()
 
-        @app.router.post("/")
+        @app.post("/")
         async def root(username: str = Form(...), f: UploadFile = File(...)):
             return username  # pragma: nocover

@@ -5,7 +5,7 @@ some_file_path = "large-video-file.mp4"
 app = Squall()
 
 
-@app.router.get("/")
+@app.get("/")
 def main():
     def iterfile():  # (1)
         with open(some_file_path, mode="rb") as file_like:  # (2)

@@ -6,6 +6,6 @@ app = Squall()
 security = HTTPBasic()
 
 
-@app.router.get("/users/me")
+@app.get("/users/me")
 def read_current_user(credentials: HTTPBasicCredentials = Depends(security)):
     return {"username": credentials.username, "password": credentials.password}

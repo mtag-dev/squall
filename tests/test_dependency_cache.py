@@ -15,19 +15,19 @@ async def super_dep(count: int = Depends(dep_counter)):
     return count
 
 
-@app.router.get("/counter/")
+@app.get("/counter/")
 async def get_counter(count: int = Depends(dep_counter)):
     return {"counter": count}
 
 
-@app.router.get("/sub-counter/")
+@app.get("/sub-counter/")
 async def get_sub_counter(
     subcount: int = Depends(super_dep), count: int = Depends(dep_counter)
 ):
     return {"counter": count, "subcounter": subcount}
 
 
-@app.router.get("/sub-counter-no-cache/")
+@app.get("/sub-counter-no-cache/")
 async def get_sub_counter_no_cache(
     subcount: int = Depends(super_dep),
     count: int = Depends(dep_counter, use_cache=False),

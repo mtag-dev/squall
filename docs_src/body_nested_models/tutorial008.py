@@ -11,6 +11,6 @@ class Image(BaseModel):
     name: str
 
 
-@app.router.post("/images/multiple/")
+@app.post("/images/multiple/")
 async def create_multiple_images(images: List[Image]):
     return images

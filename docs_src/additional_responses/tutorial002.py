@@ -14,7 +14,7 @@ class Item:
 app = Squall()
 
 
-@app.router.get(
+@app.get(
     "/items/{item_id}",
     response_model=Item,
     responses={

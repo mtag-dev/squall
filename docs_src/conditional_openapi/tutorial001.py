@@ -11,6 +11,6 @@ settings = Settings()
 app = Squall(openapi_url=settings.openapi_url)
 
 
-@app.router.get("/")
+@app.get("/")
 def root():
     return {"message": "Hello World"}

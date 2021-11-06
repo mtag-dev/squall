@@ -23,7 +23,7 @@ def get_data_override():
     return [3, 4, 5]
 
 
-@app.router.get("/user")
+@app.get("/user")
 def read_user(
     user_data: Tuple[str, List[str]] = Security(get_user, scopes=["foo", "bar"]),
     data: List[int] = Depends(get_data),

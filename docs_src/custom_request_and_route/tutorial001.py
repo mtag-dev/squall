@@ -30,6 +30,6 @@ app = Squall()
 app.router.route_class = GzipRoute
 
 
-@app.router.post("/sum")
+@app.post("/sum")
 async def sum_numbers(numbers: List[int] = Body(...)):
     return {"sum": sum(numbers)}

@@ -15,7 +15,7 @@ class CommonQueryParams:
         self.limit = limit
 
 
-@app.router.get("/items/")
+@app.get("/items/")
 async def read_items(commons=Depends(CommonQueryParams)):
     response = {}
     if commons.q:

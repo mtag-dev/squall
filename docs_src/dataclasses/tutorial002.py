@@ -16,7 +16,7 @@ class Item:
 app = Squall()
 
 
-@app.router.get("/items/next", response_model=Item)
+@app.get("/items/next", response_model=Item)
 async def read_next_item():
     return {
         "name": "Island In The Moon",

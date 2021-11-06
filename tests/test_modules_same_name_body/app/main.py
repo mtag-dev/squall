@@ -4,5 +4,5 @@ from . import a, b
 
 app = Squall()
 
-app.include_router(a.router, prefix="/a")
-app.include_router(b.router, prefix="/b")
+app.include_router(a.router)
+app.include_router(b.router)

@@ -3,7 +3,7 @@ from squall import File, Form, Squall, UploadFile
 app = Squall()
 
 
-@app.router.post("/files/")
+@app.post("/files/")
 async def create_file(
     file: bytes = File(...), fileb: UploadFile = File(...), token: str = Form(...)
 ):

@@ -37,7 +37,7 @@ def fake_save_user(user_in: UserIn):
     return user_in_db
 
 
-@app.router.post("/user/", response_model=UserOut)
+@app.post("/user/", response_model=UserOut)
 async def create_user(user_in: UserIn):
     user_saved = fake_save_user(user_in)
     return user_saved

@@ -4,7 +4,7 @@ from squall.testclient import TestClient
 from docs_src.advanced_middleware.tutorial003 import app
 
 
-@app.router.get("/large")
+@app.get("/large")
 async def large():
     return PlainTextResponse("x" * 4000, status_code=200)
 

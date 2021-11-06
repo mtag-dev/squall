@@ -6,7 +6,7 @@ from squall.testclient import TestClient
 app = Squall()
 
 
-@app.router.get("/items/")
+@app.get("/items/")
 def read_items(q: List[int] = Query(None)):
     return {"q": q}
 

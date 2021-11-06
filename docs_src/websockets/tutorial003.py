@@ -65,7 +65,7 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
-@app.router.get("/")
+@app.get("/")
 async def get():
     return HTMLResponse(html)
 

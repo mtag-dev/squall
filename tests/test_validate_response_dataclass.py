@@ -16,17 +16,17 @@ class Item:
     owner_ids: Optional[List[int]] = None
 
 
-@app.router.get("/items/invalid", response_model=Item)
+@app.get("/items/invalid", response_model=Item)
 def get_invalid():
     return {"name": "invalid", "price": "foo"}
 
 
-@app.router.get("/items/innerinvalid", response_model=Item)
+@app.get("/items/innerinvalid", response_model=Item)
 def get_innerinvalid():
     return {"name": "double invalid", "price": "foo", "owner_ids": ["foo", "bar"]}
 
 
-@app.router.get("/items/invalidlist", response_model=List[Item])
+@app.get("/items/invalidlist", response_model=List[Item])
 def get_invalidlist():
     return [
         {"name": "foo"},

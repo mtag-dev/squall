@@ -28,17 +28,17 @@ def sub_duplicate_dependency(
     return [item, sub_item]
 
 
-@app.router.post("/with-duplicates")
+@app.post("/with-duplicates")
 async def with_duplicates(item: Item, item2: Item = Depends(duplicate_dependency)):
     return [item, item2]
 
 
-@app.router.post("/no-duplicates")
+@app.post("/no-duplicates")
 async def no_duplicates(item: Item, item2: Item = Depends(dependency)):
     return [item, item2]
 
 
-@app.router.post("/with-duplicates-sub")
+@app.post("/with-duplicates-sub")
 async def no_duplicates_sub(
     item: Item, sub_items: List[Item] = Depends(sub_duplicate_dependency)
 ):

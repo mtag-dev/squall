@@ -4,7 +4,7 @@ from squall.testclient import TestClient
 app = Squall(swagger_ui_oauth2_redirect_url=None)
 
 
-@app.router.get("/items/")
+@app.get("/items/")
 async def read_items():
     return {"id": "foo"}
 

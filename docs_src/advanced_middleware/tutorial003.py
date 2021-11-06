@@ -6,6 +6,6 @@ app = Squall()
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 
-@app.router.get("/")
+@app.get("/")
 async def main():
     return "somebigcontent"

@@ -14,22 +14,22 @@ class Item:
     owner_ids: Optional[List[int]] = None
 
 
-@app.router.get("/items/valid", response_model=Item)
+@app.get("/items/valid", response_model=Item)
 def get_valid():
     return {"name": "valid", "price": 1.0}
 
 
-@app.router.get("/items/object", response_model=Item)
+@app.get("/items/object", response_model=Item)
 def get_object():
     return Item(name="object", price=1.0, owner_ids=[1, 2, 3])
 
 
-@app.router.get("/items/coerce", response_model=Item)
+@app.get("/items/coerce", response_model=Item)
 def get_coerce():
     return {"name": "coerce", "price": "1.0"}
 
 
-@app.router.get("/items/validlist", response_model=List[Item])
+@app.get("/items/validlist", response_model=List[Item])
 def get_validlist():
     return [
         {"name": "foo"},
@@ -38,7 +38,7 @@ def get_validlist():
     ]
 
 
-@app.router.get("/items/objectlist", response_model=List[Item])
+@app.get("/items/objectlist", response_model=List[Item])
 def get_objectlist():
     return [
         Item(name="foo"),
@@ -47,12 +47,12 @@ def get_objectlist():
     ]
 
 
-@app.router.get("/items/no-response-model/object")
+@app.get("/items/no-response-model/object")
 def get_no_response_model_object():
     return Item(name="object", price=1.0, owner_ids=[1, 2, 3])
 
 
-@app.router.get("/items/no-response-model/objectlist")
+@app.get("/items/no-response-model/objectlist")
 def get_no_response_model_objectlist():
     return [
         Item(name="foo"),

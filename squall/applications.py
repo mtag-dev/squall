@@ -81,6 +81,19 @@ class Squall:
             include_in_schema=include_in_schema,
             responses=responses,
         )
+        # Router methods linking for better user experience like having
+        # @app.get(...) instead of @app.router.get(...)
+        self.get = self.router.get
+        self.put = self.router.put
+        self.post = self.router.post
+        self.delete = self.router.delete
+        self.options = self.router.options
+        self.head = self.router.head
+        self.patch = self.router.patch
+        self.trace = self.router.trace
+        self.include_router = self.router.include_router
+        self.routes = self.router.routes
+
         self.exception_handlers: Dict[
             Union[int, Type[Exception]],
             Callable[[Request, Any], Coroutine[Any, Any, Response]],
@@ -170,10 +183,6 @@ class Squall:
             return func
 
         return decorator
-
-    @property
-    def routes(self) -> typing.List[BaseRoute]:
-        return self.router.routes
 
     @property
     def debug(self) -> bool:
@@ -305,31 +314,6 @@ class Squall:
             return
 
         await self.middleware_stack(scope, receive, send)
-
-    def include_router(
-        self,
-        router: router.Router,
-        *,
-        prefix: str = "",
-        tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[Depends]] = None,
-        responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
-        deprecated: Optional[bool] = None,
-        include_in_schema: bool = True,
-        default_response_class: Type[Response] = Default(JSONResponse),
-        callbacks: Optional[List[BaseRoute]] = None,
-    ) -> None:
-        self.router.include_router(
-            router,
-            # prefix=prefix,
-            # tags=tags,
-            # dependencies=dependencies,
-            # responses=responses,
-            # deprecated=deprecated,
-            # include_in_schema=include_in_schema,
-            # default_response_class=default_response_class,
-            # callbacks=callbacks,
-        )
 
     def middleware(self, middleware_type: str) -> typing.Callable:
         assert (

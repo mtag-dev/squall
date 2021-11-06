@@ -4,7 +4,7 @@ from squall.responses import HTMLResponse
 app = Squall()
 
 
-@app.router.get("/items/", response_class=HTMLResponse)
+@app.get("/items/", response_class=HTMLResponse)
 async def read_items():
     return """
     <html>

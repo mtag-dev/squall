@@ -4,7 +4,7 @@ from squall.routing import APIRoute
 app = Squall()
 
 
-@app.router.get("/items/")
+@app.get("/items/")
 async def read_items():
     return [{"item_id": "Foo"}]
 

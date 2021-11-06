@@ -6,6 +6,6 @@ app = Squall()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
-@app.router.get("/items/")
+@app.get("/items/")
 async def read_items(token: str = Depends(oauth2_scheme)):
     return {"token": token}

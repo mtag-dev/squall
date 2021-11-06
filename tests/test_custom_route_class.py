@@ -19,9 +19,9 @@ class APIRouteC(APIRoute):
     x_type = "C"
 
 
-router_a = APIRouter(route_class=APIRouteA)
-router_b = APIRouter(route_class=APIRouteB)
-router_c = APIRouter(route_class=APIRouteC)
+router_a = APIRouter(route_class=APIRouteA, prefix="/a")
+router_b = APIRouter(route_class=APIRouteB, prefix="/b")
+router_c = APIRouter(route_class=APIRouteC, prefix="/c")
 
 
 @router_a.get("/")
@@ -39,9 +39,9 @@ def get_c():
     return {"msg": "C"}
 
 
-router_b.include_router(router=router_c, prefix="/c")
-router_a.include_router(router=router_b, prefix="/b")
-app.include_router(router=router_a, prefix="/a")
+router_b.include_router(router=router_c)
+router_a.include_router(router=router_b)
+app.include_router(router=router_a)
 
 
 client = TestClient(app)

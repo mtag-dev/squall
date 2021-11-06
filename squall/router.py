@@ -661,7 +661,7 @@ class RootRouter(Router):
             include_in_schema=include_in_schema,
             responses=responses,
         )
-        self._redirect_slashes = redirect_slashes
+        self.redirect_slashes = redirect_slashes
         self.default = default or self.not_found
         self._fast_path_route_http: Dict[str, Any] = {}
         self._fast_path_route_ws: Dict[str, Any] = {}
@@ -690,20 +690,20 @@ class RootRouter(Router):
                 await route.handle(scope, receive, send)
                 return
 
-        # if scope["type"] == "http" and self.redirect_slashes and scope["path"] != "/":
-        #     redirect_scope = dict(scope)
-        #     if scope["path"].endswith("/"):
-        #         redirect_scope["path"] = redirect_scope["path"].rstrip("/")
-        #     else:
-        #         redirect_scope["path"] = redirect_scope["path"] + "/"
-        #
-        #     for route in self.get_http_routes(redirect_scope['method'], redirect_scope['path']):
-        #         match, child_scope = route.matches(redirect_scope)
-        #         if match != SlMatch.NONE:
-        #             redirect_url = URL(scope=redirect_scope)
-        #             response = RedirectResponse(url=str(redirect_url))
-        #             await response(scope, receive, send)
-        #             return
+        if scope["type"] == "http" and self.redirect_slashes and scope["path"] != "/":
+            redirect_scope = dict(scope)
+            if scope["path"].endswith("/"):
+                redirect_scope["path"] = redirect_scope["path"].rstrip("/")
+            else:
+                redirect_scope["path"] = redirect_scope["path"] + "/"
+
+            for route in self.get_http_routes(redirect_scope['method'], redirect_scope['path']):
+                match, child_scope = route.matches(redirect_scope)
+                if match != SlMatch.NONE:
+                    redirect_url = URL(scope=redirect_scope)
+                    response = RedirectResponse(url=str(redirect_url))
+                    await response(scope, receive, send)
+                    return
 
         await self.default(scope, receive, send)
 

@@ -20,6 +20,6 @@ class Item:
     size: int = Field(...)
 
 
-@app.router.post("/items/")
+@app.post("/items/")
 async def create_item(item: Item):
     return item

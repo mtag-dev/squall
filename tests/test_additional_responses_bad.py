@@ -5,7 +5,7 @@ from squall.testclient import TestClient
 app = Squall()
 
 
-@app.router.get(
+@app.get(
     "/a", responses={"hello": {"description": "Not a valid additional response"}}
 )
 async def a():

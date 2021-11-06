@@ -1,6 +1,7 @@
-from squall import APIRouter, Body
+from squall import Body
+from squall.router import Router
 
-router = APIRouter()
+router = Router(prefix="/a")
 
 
 @router.post("/compute")

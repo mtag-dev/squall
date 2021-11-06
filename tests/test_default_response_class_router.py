@@ -8,20 +8,20 @@ class OverrideResponse(JSONResponse):
 
 
 app = Squall()
-router_a = APIRouter()
-router_a_a = APIRouter()
-router_a_b_override = APIRouter()  # Overrides default class
-router_b_override = APIRouter()  # Overrides default class
-router_b_a = APIRouter()
-router_b_a_c_override = APIRouter()  # Overrides default class again
+router_a = APIRouter(prefix="/a")
+router_a_a = APIRouter(prefix="/a")
+router_a_b_override = APIRouter(prefix="/b", default_response_class=PlainTextResponse)  # Overrides default class
+router_b_override = APIRouter(prefix="/b", default_response_class=PlainTextResponse)  # Overrides default class
+router_b_a = APIRouter(prefix="/a")
+router_b_a_c_override = APIRouter(prefix="/c", default_response_class=HTMLResponse)  # Overrides default class again
 
 
-@app.router.get("/")
+@app.get("/")
 def get_root():
     return {"msg": "Hello World"}
 
 
-@app.router.get("/override", response_class=PlainTextResponse)
+@app.get("/override", response_class=PlainTextResponse)
 def get_path_override():
     return "Hello World"
 
@@ -87,16 +87,16 @@ def get_b_a_c_path_override():
 
 
 router_b_a.include_router(
-    router_b_a_c_override, prefix="/c", default_response_class=HTMLResponse
+    router_b_a_c_override,
 )
-router_b_override.include_router(router_b_a, prefix="/a")
-router_a.include_router(router_a_a, prefix="/a")
+router_b_override.include_router(router_b_a)
+router_a.include_router(router_a_a)
 router_a.include_router(
-    router_a_b_override, prefix="/b", default_response_class=PlainTextResponse
+    router_a_b_override
 )
-app.include_router(router_a, prefix="/a")
+app.include_router(router_a)
 app.include_router(
-    router_b_override, prefix="/b", default_response_class=PlainTextResponse
+    router_b_override
 )
 
 

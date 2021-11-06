@@ -14,7 +14,7 @@ class Item:
     name: str = Field(...)
 
 
-@app.router.post("/items/")
+@app.post("/items/")
 def save_item_no_body(item: List[Item]):
     return {"item": item}
 

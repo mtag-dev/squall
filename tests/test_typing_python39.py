@@ -16,7 +16,7 @@ def test_typing():
     for test_type, expect in checks:
         app = Squall()
 
-        @app.router.post("/", response_model=test_type)
+        @app.post("/", response_model=test_type)
         def post_endpoint(input: test_type):
             return input
 

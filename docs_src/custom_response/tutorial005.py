@@ -4,6 +4,6 @@ from squall.responses import PlainTextResponse
 app = Squall()
 
 
-@app.router.get("/", response_class=PlainTextResponse)
+@app.get("/", response_class=PlainTextResponse)
 async def main():
     return "Hello World"

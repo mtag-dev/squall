@@ -13,7 +13,7 @@ class Item(BaseModel):
     tax: Optional[float] = None
 
 
-@app.router.put("/items/{item_id}")
+@app.put("/items/{item_id}")
 async def update_item(item_id: int, item: Item = Body(..., embed=True)):
     results = {"item_id": item_id, "item": item}
     return results

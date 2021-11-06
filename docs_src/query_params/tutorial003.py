@@ -5,7 +5,7 @@ from squall import Squall
 app = Squall()
 
 
-@app.router.get("/items/{item_id}")
+@app.get("/items/{item_id}")
 async def read_item(item_id: str, q: Optional[str] = None, short: bool = False):
     item = {"item_id": item_id}
     if q:

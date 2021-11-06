@@ -27,6 +27,6 @@ class Offer(BaseModel):
     items: List[Item]
 
 
-@app.router.post("/offers/")
+@app.post("/offers/")
 async def create_offer(offer: Offer):
     return offer

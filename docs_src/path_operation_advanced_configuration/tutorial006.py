@@ -14,7 +14,7 @@ def magic_data_reader(raw_body: bytes):
     }
 
 
-@app.router.post(
+@app.post(
     "/items/",
     openapi_extra={
         "requestBody": {

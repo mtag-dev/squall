@@ -14,6 +14,6 @@ async def verify_key(x_key: str = Header(...)):
     return x_key
 
 
-@app.router.get("/items/", dependencies=[Depends(verify_token), Depends(verify_key)])
+@app.get("/items/", dependencies=[Depends(verify_token), Depends(verify_key)])
 async def read_items():
     return [{"item": "Foo"}, {"item": "Bar"}]

@@ -18,7 +18,7 @@ class User(BaseModel):
     full_name: Optional[str] = None
 
 
-@app.router.put("/items/{item_id}")
+@app.put("/items/{item_id}")
 async def update_item(
     *,
     item_id: int,

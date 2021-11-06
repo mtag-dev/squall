@@ -15,6 +15,6 @@ class Item:
 app = Squall()
 
 
-@app.router.post("/items/")
+@app.post("/items/")
 async def create_item(item: Item):
     return item

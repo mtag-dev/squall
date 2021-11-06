@@ -9,6 +9,6 @@ async def fake_video_streamer():
         yield b"some fake video bytes"
 
 
-@app.router.get("/")
+@app.get("/")
 async def main():
     return StreamingResponse(fake_video_streamer())

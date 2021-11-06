@@ -12,7 +12,7 @@ settings = Settings()
 app = Squall()
 
 
-@app.router.get("/info")
+@app.get("/info")
 async def info():
     return {
         "app_name": settings.app_name,

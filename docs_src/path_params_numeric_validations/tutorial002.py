@@ -3,7 +3,7 @@ from squall import Path, Squall
 app = Squall()
 
 
-@app.router.get("/items/{item_id}")
+@app.get("/items/{item_id}")
 async def read_items(
     q: str, item_id: int = Path(..., title="The ID of the item to get")
 ):

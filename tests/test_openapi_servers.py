@@ -13,7 +13,7 @@ app = Squall(
 )
 
 
-@app.router.get("/foo")
+@app.get("/foo")
 def foo():
     return {"message": "Hello World"}
 

@@ -3,6 +3,6 @@ from squall import Squall
 app = Squall()
 
 
-@app.router.get("/")
+@app.get("/")
 async def root():
     return {"message": "Hello World"}

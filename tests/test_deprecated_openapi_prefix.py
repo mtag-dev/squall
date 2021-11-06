@@ -4,7 +4,7 @@ from squall.testclient import TestClient
 app = Squall(openapi_prefix="/api/v1")
 
 
-@app.router.get("/app")
+@app.get("/app")
 def read_main(request: Request):
     return {"message": "Hello World", "root_path": request.scope.get("root_path")}
 

@@ -13,7 +13,7 @@ class Item:
     tags: List[str] = Field(...)
 
 
-@app.router.post(
+@app.post(
     "/items/",
     openapi_extra={
         "requestBody": {

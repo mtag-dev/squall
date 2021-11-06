@@ -26,7 +26,7 @@ app = Squall()
 router = APIRouter(route_class=TimedRoute)
 
 
-@app.router.get("/")
+@app.get("/")
 async def not_timed():
     return {"message": "Not timed"}
 

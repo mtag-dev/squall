@@ -21,7 +21,7 @@ class JsonApiError(BaseModel):
     errors: typing.List[Error]
 
 
-@app.router.get(
+@app.get(
     "/a",
     response_class=JsonApiResponse,
     responses={500: {"description": "Error", "model": JsonApiError}},
@@ -30,7 +30,7 @@ async def a():
     pass  # pragma: no cover
 
 
-@app.router.get("/b", responses={500: {"description": "Error", "model": Error}})
+@app.get("/b", responses={500: {"description": "Error", "model": Error}})
 async def b():
     pass  # pragma: no cover
 

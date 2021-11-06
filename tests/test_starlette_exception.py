@@ -7,7 +7,7 @@ app = Squall()
 items = {"foo": "The Foo Wrestlers"}
 
 
-@app.router.get("/items/{item_id}")
+@app.get("/items/{item_id}")
 async def read_item(item_id: str):
     if item_id not in items:
         raise HTTPException(
@@ -18,7 +18,7 @@ async def read_item(item_id: str):
     return {"item": items[item_id]}
 
 
-@app.router.get("/starlette-items/{item_id}")
+@app.get("/starlette-items/{item_id}")
 async def read_starlette_item(item_id: str):
     if item_id not in items:
         raise StarletteHTTPException(status_code=404, detail="Item not found")

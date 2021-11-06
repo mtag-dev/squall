@@ -4,7 +4,7 @@ from squall.responses import JSONResponse
 app = Squall()
 
 
-@app.router.post("/cookie/")
+@app.post("/cookie/")
 def create_cookie():
     content = {"message": "Come to the dark side, we have cookies"}
     response = JSONResponse(content=content)

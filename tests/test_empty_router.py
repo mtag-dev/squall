@@ -4,7 +4,7 @@ from squall.testclient import TestClient
 
 app = Squall()
 
-router = APIRouter()
+router = APIRouter(prefix="/prefix")
 
 
 @router.get("")
@@ -12,7 +12,7 @@ def get_empty():
     return ["OK"]
 
 
-app.include_router(router, prefix="/prefix")
+app.include_router(router)
 
 
 client = TestClient(app)

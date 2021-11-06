@@ -1,13 +1,15 @@
 from typing import Optional
 
-from squall import APIRouter, Squall
+from squall import Squall
+from squall.router import Router
 from squall.testclient import TestClient
 
 app = Squall()
 
 
-user_router = APIRouter()
-item_router = APIRouter()
+user_router = Router(prefix="/users")
+item_router = Router(prefix="/items")
+user_item_router = Router(prefix="/{user_id}/items")
 
 
 @user_router.get("/")
@@ -36,10 +38,11 @@ def get_item(item_id: str, user_id: Optional[str] = None):
         return {"item_id": item_id, "user_id": user_id}
 
 
-app.include_router(user_router, prefix="/users")
-app.include_router(item_router, prefix="/items")
+app.include_router(user_router)
+user_router.include_router(user_item_router)
 
-app.include_router(item_router, prefix="/users/{user_id}/items")
+app.include_router(item_router)
+
 
 
 client = TestClient(app)

@@ -15,7 +15,7 @@ class Item:
     tags: Set[str] = Field(default_factory=list)
 
 
-@app.router.post(
+@app.post(
     "/items/",
     response_model=Item,
     summary="Create an item",

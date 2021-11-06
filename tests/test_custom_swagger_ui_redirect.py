@@ -6,7 +6,7 @@ swagger_ui_oauth2_redirect_url = "/docs/redirect"
 app = Squall(swagger_ui_oauth2_redirect_url=swagger_ui_oauth2_redirect_url)
 
 
-@app.router.get("/items/")
+@app.get("/items/")
 async def read_items():
     return {"id": "foo"}
 

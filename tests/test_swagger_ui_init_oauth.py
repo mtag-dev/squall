@@ -6,7 +6,7 @@ swagger_ui_init_oauth = {"clientId": "the-foo-clients", "appName": "The Predenda
 app = Squall(swagger_ui_init_oauth=swagger_ui_init_oauth)
 
 
-@app.router.get("/items/")
+@app.get("/items/")
 async def read_items():
     return {"id": "foo"}
 

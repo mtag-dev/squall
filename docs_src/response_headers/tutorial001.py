@@ -4,7 +4,7 @@ from squall.responses import JSONResponse
 app = Squall()
 
 
-@app.router.get("/headers/")
+@app.get("/headers/")
 def get_headers():
     content = {"message": "Hello World"}
     headers = {"X-Cat-Dog": "alone in the world", "Content-Language": "en-US"}

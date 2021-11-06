@@ -83,53 +83,53 @@ async def context_b(state: dict = Depends(context_a)):
         state["context_b"] = f"finished b with a: {state['context_a']}"
 
 
-@app.router.get("/async")
+@app.get("/async")
 async def get_async(state: str = Depends(asyncgen_state)):
     return state
 
 
-@app.router.get("/sync")
+@app.get("/sync")
 async def get_sync(state: str = Depends(generator_state)):
     return state
 
 
-@app.router.get("/async_raise")
+@app.get("/async_raise")
 async def get_async_raise(state: str = Depends(asyncgen_state_try)):
     assert state == "asyncgen raise started"
     raise AsyncDependencyError()
 
 
-@app.router.get("/sync_raise")
+@app.get("/sync_raise")
 async def get_sync_raise(state: str = Depends(generator_state_try)):
     assert state == "generator raise started"
     raise SyncDependencyError()
 
 
-@app.router.get("/async_raise_other")
+@app.get("/async_raise_other")
 async def get_async_raise_other(state: str = Depends(asyncgen_state_try)):
     assert state == "asyncgen raise started"
     raise OtherDependencyError()
 
 
-@app.router.get("/sync_raise_other")
+@app.get("/sync_raise_other")
 async def get_sync_raise_other(state: str = Depends(generator_state_try)):
     assert state == "generator raise started"
     raise OtherDependencyError()
 
 
-@app.router.get("/context_b")
+@app.get("/context_b")
 async def get_context_b(state: dict = Depends(context_b)):
     return state
 
 
-@app.router.get("/context_b_raise")
+@app.get("/context_b_raise")
 async def get_context_b_raise(state: dict = Depends(context_b)):
     assert state["context_b"] == "started b"
     assert state["context_a"] == "started a"
     raise OtherDependencyError()
 
 
-@app.router.get("/context_b_bg")
+@app.get("/context_b_bg")
 async def get_context_b_bg(tasks: BackgroundTasks, state: dict = Depends(context_b)):
     async def bg(state: dict):
         state["bg"] = f"bg set - b: {state['context_b']} - a: {state['context_a']}"
@@ -141,53 +141,53 @@ async def get_context_b_bg(tasks: BackgroundTasks, state: dict = Depends(context
 # Sync versions
 
 
-@app.router.get("/sync_async")
+@app.get("/sync_async")
 def get_sync_async(state: str = Depends(asyncgen_state)):
     return state
 
 
-@app.router.get("/sync_sync")
+@app.get("/sync_sync")
 def get_sync_sync(state: str = Depends(generator_state)):
     return state
 
 
-@app.router.get("/sync_async_raise")
+@app.get("/sync_async_raise")
 def get_sync_async_raise(state: str = Depends(asyncgen_state_try)):
     assert state == "asyncgen raise started"
     raise AsyncDependencyError()
 
 
-@app.router.get("/sync_sync_raise")
+@app.get("/sync_sync_raise")
 def get_sync_sync_raise(state: str = Depends(generator_state_try)):
     assert state == "generator raise started"
     raise SyncDependencyError()
 
 
-@app.router.get("/sync_async_raise_other")
+@app.get("/sync_async_raise_other")
 def get_sync_async_raise_other(state: str = Depends(asyncgen_state_try)):
     assert state == "asyncgen raise started"
     raise OtherDependencyError()
 
 
-@app.router.get("/sync_sync_raise_other")
+@app.get("/sync_sync_raise_other")
 def get_sync_sync_raise_other(state: str = Depends(generator_state_try)):
     assert state == "generator raise started"
     raise OtherDependencyError()
 
 
-@app.router.get("/sync_context_b")
+@app.get("/sync_context_b")
 def get_sync_context_b(state: dict = Depends(context_b)):
     return state
 
 
-@app.router.get("/sync_context_b_raise")
+@app.get("/sync_context_b_raise")
 def get_sync_context_b_raise(state: dict = Depends(context_b)):
     assert state["context_b"] == "started b"
     assert state["context_a"] == "started a"
     raise OtherDependencyError()
 
 
-@app.router.get("/sync_context_b_bg")
+@app.get("/sync_context_b_bg")
 async def get_sync_context_b_bg(
     tasks: BackgroundTasks, state: dict = Depends(context_b)
 ):
