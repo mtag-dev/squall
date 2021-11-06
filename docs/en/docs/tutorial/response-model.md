@@ -2,8 +2,8 @@
 
 You can declare the model used for the response with the parameter `response_model` in any of the *path operations*:
 
-* `@app.router.get()`
-* `@app.router.post()`
+* `@app.get()`
+* `@app.post()`
 * `@app.router.put()`
 * `@app.delete()`
 * etc.

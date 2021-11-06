@@ -23,7 +23,7 @@ from starlette.status import HTTP_202_ACCEPTED
 app = Squall()
 
 
-@app.router.get("/security")
+@app.get("/security")
 def get_security(sec=Security(HTTPBasic())):
     return sec
 
@@ -38,12 +38,12 @@ reusable_oauth2 = OAuth2(
 )
 
 
-@app.router.get("/security/oauth2")
+@app.get("/security/oauth2")
 def get_security_oauth2(sec=Security(reusable_oauth2, scopes=["read:user"])):
     return sec
 
 
-@app.router.post("/token")
+@app.post("/token")
 def post_token(request_data: OAuth2PasswordRequestForm = Form(...)):
     data = request_data.parse()
     access_token = data.username + ":" + data.password
@@ -113,6 +113,6 @@ class UserOut(BaseModel):
     last_name: str
 
 
-@app.router.get("/dependency", response_model=UserOut)
+@app.get("/dependency", response_model=UserOut)
 def get_dependency(user: UserInDB = Depends(require_user)):
     return user

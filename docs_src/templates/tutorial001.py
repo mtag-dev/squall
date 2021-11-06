@@ -5,7 +5,7 @@ from squall.templating import Jinja2Templates
 
 app = Squall()
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.add_route("/static", StaticFiles(directory="static"), name="static")
 
 
 templates = Jinja2Templates(directory="templates")

@@ -1,10 +1,11 @@
+import asyncio
 import traceback
 import typing
 import types
 import contextlib
 import functools
 
-from squall.types import ASGIApp, Receive, Scope, Send, LifeSpanContext
+from squall.types import Receive, Scope, Send
 
 _T = typing.TypeVar("_T")
 
@@ -37,23 +38,34 @@ def _wrap_gen_lifespan_context(
     return wrapper
 
 
-class RouterLifespan:
-    def __init__(self, router: "Router"):
-        self._router = router
+class Lifespan:
+    def __init__(self,
+                 on_startup: typing.List[typing.Union[typing.Callable, typing.Coroutine]],
+                 on_shutdown: typing.List[typing.Union[typing.Callable, typing.Coroutine]]):
+        self._on_startup = on_startup
+        self._on_shutdown = on_shutdown
+
+    @staticmethod
+    async def _run_handlers(handlers):
+        for handler in handlers:
+            if asyncio.iscoroutinefunction(handler):
+                await handler()
+            else:
+                handler()
 
     async def __aenter__(self) -> None:
-        pass
-#        self._router.startup()
+        await self._run_handlers(self._on_startup)
 
     async def __aexit__(self, *exc_info: object) -> None:
-        pass
-#        self._router.shutdown()
+        await self._run_handlers(self._on_shutdown)
 
     def __call__(self: _T, app: object) -> _T:
         return self
 
 
 async def lifespan(
+        on_startup: typing.List[typing.Union[typing.Callable, typing.Coroutine]],
+        on_shutdown: typing.List[typing.Union[typing.Callable, typing.Coroutine]],
         scope: Scope,
         receive: Receive,
         send: Send,
@@ -66,10 +78,10 @@ async def lifespan(
     app = scope.get("app")
     await receive()
     try:
-        # async with context(app):
-        await send({"type": "lifespan.startup.complete"})
-        started = True
-        await receive()
+        async with Lifespan(on_startup, on_shutdown):
+            await send({"type": "lifespan.startup.complete"})
+            started = True
+            await receive()
     except BaseException:
         exc_text = traceback.format_exc()
         if started:

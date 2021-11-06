@@ -245,7 +245,7 @@ We are going to call them "**operations**" too.
 {!../../../docs_src/first_steps/tutorial001.py!}
 ```
 
-The `@app.router.get("/")` tells **Squall** that the function right below is in charge of handling requests that go to:
+The `@app.get("/")` tells **Squall** that the function right below is in charge of handling requests that go to:
 
 * the path `/`
 * using a <abbr title="an HTTP GET method"><code>get</code> operation</abbr>
@@ -263,7 +263,7 @@ The `@app.router.get("/")` tells **Squall** that the function right below is in 
 
 You can also use the other operations:
 
-* `@app.router.post()`
+* `@app.post()`
 * `@app.router.put()`
 * `@app.delete()`
 
@@ -289,7 +289,7 @@ This is our "**path operation function**":
 
 * **path**: is `/`.
 * **operation**: is `get`.
-* **function**: is the function below the "decorator" (below `@app.router.get("/")`).
+* **function**: is the function below the "decorator" (below `@app.get("/")`).
 
 ```Python hl_lines="7"
 {!../../../docs_src/first_steps/tutorial001.py!}
@@ -328,6 +328,6 @@ There are many other objects and models that will be automatically converted to 
 
 * Import `Squall`.
 * Create an `app` instance.
-* Write a **path operation decorator** (like `@app.router.get("/")`).
+* Write a **path operation decorator** (like `@app.get("/")`).
 * Write a **path operation function** (like `def root(): ...` above).
 * Run the development server (like `uvicorn main:app --reload`).

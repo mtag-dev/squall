@@ -409,7 +409,7 @@ user = db.query(User).first()
 Then we should declare the *path operation functions* and the dependency without `async def`, just with a normal `def`, as:
 
 ```Python hl_lines="2"
-@app.router.get("/users/{user_id}", response_model=schemas.User)
+@app.get("/users/{user_id}", response_model=schemas.User)
 def read_user(user_id: int, db: Session = Depends(get_db)):
     db_user = crud.get_user(db, user_id=user_id)
     ...

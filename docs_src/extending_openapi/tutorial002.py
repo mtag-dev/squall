@@ -8,7 +8,7 @@ from squall.staticfiles import StaticFiles
 
 app = Squall(docs_url=None, redoc_url=None)
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.add_route("/static", StaticFiles(directory="static"), name="static")
 
 
 @app.get("/docs", include_in_schema=False)

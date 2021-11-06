@@ -1,6 +1,4 @@
-import asyncio
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Sequence, Type, Union, AsyncGenerator
-
+from typing import Any, Callable, Coroutine, Dict, List, Optional, Sequence, Type, Union
 from squall import router
 from squall.concurrency import AsyncExitStack
 from squall.datastructures import Default
@@ -30,7 +28,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.errors import ServerErrorMiddleware
 from starlette.routing import BaseRoute, Router
 from starlette.types import ASGIApp, Receive, Scope, Send
-from squall.lifespan import RouterLifespan, lifespan
+from squall.lifespan import lifespan
 
 
 class Squall:
@@ -73,6 +71,7 @@ class Squall:
     ) -> None:
         self._debug: bool = debug
         self.state: State = State()
+
         self.router: router.RootRouter = router.RootRouter(
             routes=routes,
             default_response_class=default_response_class,
@@ -80,9 +79,10 @@ class Squall:
             deprecated=deprecated,
             include_in_schema=include_in_schema,
             responses=responses,
+            dependency_overrides_provider=self
         )
         # Router methods linking for better user experience like having
-        # @app.get(...) instead of @app.router.get(...)
+        # @app.get(...) instead of @app.get(...)
         self.get = self.router.get
         self.put = self.router.put
         self.post = self.router.post
@@ -93,6 +93,7 @@ class Squall:
         self.trace = self.router.trace
         self.include_router = self.router.include_router
         self.routes = self.router.routes
+        self.add_route = self.router.add_route
 
         self.exception_handlers: Dict[
             Union[int, Type[Exception]],
@@ -193,26 +194,10 @@ class Squall:
         self._debug = value
         self.middleware_stack = self.build_middleware_stack()
 
-    @staticmethod
-    async def _run_handlers(handlers):
-        for handler in handlers:
-            if asyncio.iscoroutinefunction(handler):
-                await handler()
-            else:
-                handler()
-
-    async def startup(self) -> None:
-        """ Run any `.on_startup` event handlers. """
-        await self._run_handlers(self.on_startup)
-
-    async def shutdown(self) -> None:
-        """ Run any `.on_shutdown` event handlers. """
-        await self._run_handlers(self.on_shutdown)
-
     def add_event_handler(self, event: str, handler: Union[Callable, Coroutine]) -> None:
-        if event == "on_startup":
+        if event == "startup":
             self.on_startup.append(handler)
-        elif event == "on_shutdown":
+        elif event == "shutdown":
             self.on_shutdown.append(handler)
 
     def on_event(self, event_type: str) -> typing.Callable:
@@ -310,10 +295,12 @@ class Squall:
 
         scope["app"] = self
         if scope["type"] == "lifespan":
-            await lifespan(scope, receive, send)
+            await lifespan(self.on_startup, self.on_shutdown, scope, receive, send)
             return
 
-        await self.middleware_stack(scope, receive, send)
+        async with AsyncExitStack() as stack:
+            scope["squall_astack"] = stack
+            await self.middleware_stack(scope, receive, send)
 
     def middleware(self, middleware_type: str) -> typing.Callable:
         assert (

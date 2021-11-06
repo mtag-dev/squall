@@ -73,7 +73,7 @@ body:
         app = Squall()
 
 
-        @app.router.get("/")
+        @app.get("/")
         def read_root():
             return {"Hello": "World"}
       render: python
@@ -114,7 +114,7 @@ body:
         app = Squall()
 
 
-        @app.router.get("/", teleport_to_moon=True)
+        @app.get("/", teleport_to_moon=True)
         def read_root():
             return {"Hello": "World"}
       render: python

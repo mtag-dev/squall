@@ -22,15 +22,17 @@ def get_user(user_id: str):
     return {"user_id": user_id}
 
 
+@user_item_router.get("/")
+def get_items(user_id: str):
+    return [{"item_id": "i2", "user_id": user_id}]
+
+
 @item_router.get("/")
-def get_items(user_id: Optional[str] = None):
-    if user_id is None:
-        return [{"item_id": "i1", "user_id": "u1"}, {"item_id": "i2", "user_id": "u2"}]
-    else:
-        return [{"item_id": "i2", "user_id": user_id}]
+def get_items():
+    return [{"item_id": "i1", "user_id": "u1"}, {"item_id": "i2", "user_id": "u2"}]
 
 
-@item_router.get("/{item_id}")
+@user_item_router.get("/{item_id}")
 def get_item(item_id: str, user_id: Optional[str] = None):
     if user_id is None:
         return {"item_id": item_id}
@@ -38,9 +40,9 @@ def get_item(item_id: str, user_id: Optional[str] = None):
         return {"item_id": item_id, "user_id": user_id}
 
 
-app.include_router(user_router)
 user_router.include_router(user_item_router)
 
+app.include_router(user_router)
 app.include_router(item_router)
 
 
@@ -138,4 +140,4 @@ def test_schema_2():
     }
 
     assert d in r["paths"]["/items/{item_id}"]["get"]["parameters"]
-    assert d in r["paths"]["/items/"]["get"]["parameters"]
+

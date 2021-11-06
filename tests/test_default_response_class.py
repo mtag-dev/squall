@@ -1,7 +1,8 @@
 from typing import Any
 
 import orjson
-from squall import APIRouter, Squall
+from squall import Squall
+from squall.router import Router
 from squall.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from squall.testclient import TestClient
 
@@ -18,12 +19,12 @@ class OverrideResponse(JSONResponse):
 
 
 app = Squall()
-router_a = APIRouter(prefix="/a")
-router_a_a = APIRouter(prefix="/a")
-router_a_b_override = APIRouter(prefix="/b", default_response_class=PlainTextResponse)  # Overrides default class
-router_b_override = APIRouter(prefix="/b", default_response_class=PlainTextResponse)  # Overrides default class
-router_b_a = APIRouter(prefix="/a", default_response_class=HTMLResponse)
-router_b_a_c_override = APIRouter(prefix="/c", default_response_class=HTMLResponse)  # Overrides default class again
+router_a = Router(prefix="/a")
+router_a_a = Router(prefix="/a")
+router_a_b_override = Router(prefix="/b", default_response_class=PlainTextResponse)  # Overrides default class
+router_b_override = Router(prefix="/b", default_response_class=PlainTextResponse)  # Overrides default class
+router_b_a = Router(prefix="/a", default_response_class=PlainTextResponse)
+router_b_a_c_override = Router(prefix="/c", default_response_class=HTMLResponse)  # Overrides default class again
 
 
 @app.get("/")
@@ -104,9 +105,10 @@ app.include_router(router_a)
 app.include_router(router_b_override)
 
 
+
 client = TestClient(app)
 
-orjson_type = "application/x-orjson"
+orjson_type = "application/json"
 text_type = "text/plain; charset=utf-8"
 html_type = "text/html; charset=utf-8"
 override_type = "application/x-override"

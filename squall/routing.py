@@ -262,6 +262,7 @@ class APIWebSocketRoute(WebSocketRoute):
 
     def add_path_prefix(self, prefix: str) -> None:
         self.path = prefix + self.path
+        self.path_regex, self.path_format, self.param_convertors = compile_path(self.path)
 
 
 class APIRoute(Route):
@@ -383,6 +384,8 @@ class APIRoute(Route):
 
     def add_path_prefix(self, prefix: str) -> None:
         self.path = prefix + self.path
+        self.path_regex, self.path_format, self.param_convertors = compile_path(self.path)
+
 
 
 class APIRouter(SlRouter):

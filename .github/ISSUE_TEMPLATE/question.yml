@@ -73,7 +73,7 @@ body:
         app = Squall()
 
 
-        @app.router.get("/")
+        @app.get("/")
         def read_root():
             return {"Hello": "World"}
       render: python

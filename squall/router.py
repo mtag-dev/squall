@@ -46,123 +46,6 @@ class NoMatchFound(Exception):
 #     STARTUP = "startup"
 #     SHUTDOWN = "shutdown"
 
-
-def request_response(func: Callable[..., Any]) -> ASGIApp:
-    """
-    Takes a function or coroutine `func(request) -> response`,
-    and returns an ASGI application.
-    """
-    is_coroutine = iscoroutinefunction_or_partial(func)
-
-    async def app(scope: Scope, receive: Receive, send: Send) -> None:
-        request = Request(scope, receive=receive, send=send)
-        if is_coroutine:
-            response = await func(request)
-        else:
-            response = await run_in_threadpool(func, request)
-        await response(scope, receive, send)
-
-    return app
-
-
-async def run_endpoint_function(
-    *, dependant: Dependant, values: Dict[str, Any], is_coroutine: bool
-) -> Any:
-    # Only called by get_request_handler. Has been split into its own function to
-    # facilitate profiling endpoints, since inner functions are harder to profile.
-    assert dependant.call is not None, "dependant.call must be a function"
-
-    if is_coroutine:
-        return await dependant.call(**values)
-    else:
-        return await run_in_threadpool(dependant.call, **values)
-
-
-def get_request_handler(
-    dependant: Dependant,
-    body_field: Optional[ModelField] = None,
-    status_code: Optional[int] = None,
-    response_class: Union[Type[Response], DefaultPlaceholder] = Default(JSONResponse),
-    response_field: Optional[ModelField] = None,
-) -> Callable[[Request], Coroutine[Any, Any, Response]]:
-    assert dependant.call is not None, "dependant.call must be a function"
-    is_coroutine = asyncio.iscoroutinefunction(dependant.call)
-    is_body_form = body_field and isinstance(body_field.field_info, params.Form)
-    if isinstance(response_class, DefaultPlaceholder):
-        actual_response_class: Type[Response] = response_class.value
-    else:
-        actual_response_class = response_class
-
-    async def app(request: Request) -> Response:
-        try:
-            body: Any = None
-            if body_field:
-                if is_body_form:
-                    body = await request.form()
-                else:
-                    body_bytes = await request.body()
-                    if body_bytes:
-                        json_body: Any = Undefined
-                        content_type_value = request.headers.get("content-type")
-                        if not content_type_value:
-                            json_body = await request.json()
-                        else:
-                            message = email.message.Message()
-                            message["content-type"] = content_type_value
-                            if message.get_content_maintype() == "application":
-                                subtype = message.get_content_subtype()
-                                if subtype == "json" or subtype.endswith("+json"):
-                                    json_body = await request.json()
-                        if json_body != Undefined:
-                            body = json_body
-                        else:
-                            body = body_bytes
-        except json.JSONDecodeError as e:
-            raise RequestValidationError([ErrorWrapper(e, ("body", e.pos))], body=e.doc)
-        except Exception as e:
-            raise HTTPException(
-                status_code=400, detail="There was an error parsing the body"
-            ) from e
-        solved_result = await solve_dependencies(
-            request=request,
-            dependant=dependant,
-            body=body,
-        )
-        values, errors, background_tasks, sub_response, _ = solved_result
-        if errors:
-            raise RequestValidationError(errors, body=body)
-        else:
-            raw_response = await run_endpoint_function(
-                dependant=dependant, values=values, is_coroutine=is_coroutine
-            )
-            if isinstance(raw_response, Response):
-                if raw_response.background is None:
-                    raw_response.background = background_tasks
-                return raw_response
-
-            response_args: Dict[str, Any] = {"background": background_tasks}
-            # If status_code was set, use it, otherwise use the default from the
-            # response class, in the case of redirect it's 307
-            if response_field is not None:
-                response_value, response_errors = response_field.validate(
-                    raw_response, {}, loc=("response",)
-                )
-                if response_errors:
-                    raise ValidationError([response_errors], response_field.type_)
-            else:
-                response_value = raw_response
-
-            if status_code is not None:
-                response_args["status_code"] = status_code
-            response = actual_response_class(response_value, **response_args)
-            response.headers.raw.extend(sub_response.headers.raw)
-            if sub_response.status_code:
-                response.status_code = sub_response.status_code
-            return response
-
-    return app
-
-
 class Router:
     def __init__(
         self,
@@ -175,6 +58,7 @@ class Router:
         route_class: Type[APIRoute] = APIRoute,
         deprecated: Optional[bool] = None,
         include_in_schema: bool = True,
+        dependency_overrides_provider: Optional[Any] = None,
     ) -> None:
         self._prefix = prefix
         self._tags = tags or []
@@ -184,6 +68,7 @@ class Router:
         self._deprecated = deprecated
         self._include_in_schema = include_in_schema
         self._responses = responses or {}
+        self.dependency_overrides_provider = dependency_overrides_provider
 
         self._childs: List[Router] = []
         self.routes: List[Union[APIRoute, APIWebSocketRoute]] = routes or []
@@ -208,7 +93,7 @@ class Router:
         response_class: Type[Response] = JSONResponse,
         name: Optional[str] = None,
         route_class_override: Optional[Type[APIRoute]] = None,
-        openapi_extra: Optional[Dict[str, Any]] = None
+        openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> None:
         route_class = route_class_override or self._route_class
         responses = responses or {}
@@ -240,6 +125,63 @@ class Router:
             response_class=current_response_class,
             name=name,
             openapi_extra=openapi_extra,
+            dependency_overrides_provider=self.dependency_overrides_provider
+        )
+        self.route_register(route)
+
+    def add_route(
+        self,
+        path: str,
+        endpoint: Callable[..., Any],
+        *,
+        response_model: Optional[Type[Any]] = None,
+        status_code: Optional[int] = None,
+        tags: Optional[List[str]] = None,
+        dependencies: Optional[Sequence[params.Depends]] = None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        response_description: str = "Successful Response",
+        responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
+        deprecated: Optional[bool] = None,
+        methods: Optional[Union[Set[str], List[str]]] = None,
+        operation_id: Optional[str] = None,
+        include_in_schema: bool = True,
+        response_class: Type[Response] = Response,
+        name: Optional[str] = None,
+        route_class_override: Optional[Type[APIRoute]] = None,
+        openapi_extra: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        route_class = route_class_override or self._route_class
+        responses = responses or {}
+        combined_responses = {**self._responses, **responses}
+        current_response_class = get_value_or_default(
+            response_class, self._default_response_class
+        )
+        current_tags = self._tags.copy()
+        if tags:
+            current_tags.extend(tags)
+        current_dependencies = self._dependencies.copy()
+        if dependencies:
+            current_dependencies.extend(dependencies)
+        route = route_class(
+            self._prefix + path,
+            endpoint=endpoint,
+            response_model=response_model,
+            status_code=status_code,
+            tags=current_tags,
+            dependencies=current_dependencies,
+            summary=summary,
+            description=description,
+            response_description=response_description,
+            responses=combined_responses,
+            deprecated=deprecated or self._deprecated,
+            methods=methods,
+            operation_id=operation_id,
+            include_in_schema=include_in_schema and self._include_in_schema,
+            response_class=current_response_class,
+            name=name,
+            openapi_extra=openapi_extra,
+            dependency_overrides_provider=self.dependency_overrides_provider
         )
         self.route_register(route)
 
@@ -311,6 +253,7 @@ class Router:
             self._prefix + path,
             endpoint=endpoint,
             name=name,
+            dependency_overrides_provider=self.dependency_overrides_provider
         )
         self.route_register(route)
 
@@ -648,6 +591,7 @@ class RootRouter(Router):
         route_class: Type[APIRoute] = APIRoute,
         deprecated: Optional[bool] = None,
         include_in_schema: bool = True,
+        dependency_overrides_provider: Optional[Any] = None
     ) -> None:
         # Need both, Router and Router
         super(RootRouter, self).__init__(
@@ -660,6 +604,7 @@ class RootRouter(Router):
             deprecated=deprecated,
             include_in_schema=include_in_schema,
             responses=responses,
+            dependency_overrides_provider=dependency_overrides_provider
         )
         self.redirect_slashes = redirect_slashes
         self.default = default or self.not_found
