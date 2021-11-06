@@ -5,7 +5,9 @@ from squall import params
 from squall.datastructures import Default
 from squall.exceptions import HTTPException
 from squall.responses import JSONResponse, PlainTextResponse, Response
-from squall.routing import URL, APIRoute, APIWebSocketRoute, RedirectResponse, SlMatch
+from squall.routing import APIRoute, APIWebSocketRoute
+from starlette.routing import URL, RedirectResponse
+from starlette.routing import Match as SlMatch
 from squall.types import DecoratedCallable
 from squall.utils import get_value_or_default
 from starlette.types import ASGIApp, Receive, Scope, Send
