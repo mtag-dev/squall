@@ -1,5 +1,5 @@
 import pytest
-from squall import APIRouter, Squall
+from squall import Router, Squall
 from squall.routing import APIRoute
 from squall.testclient import TestClient
 from starlette.routing import Route
@@ -19,9 +19,9 @@ class APIRouteC(APIRoute):
     x_type = "C"
 
 
-router_a = APIRouter(route_class=APIRouteA, prefix="/a")
-router_b = APIRouter(route_class=APIRouteB, prefix="/b")
-router_c = APIRouter(route_class=APIRouteC, prefix="/c")
+router_a = Router(route_class=APIRouteA, prefix="/a")
+router_b = Router(route_class=APIRouteB, prefix="/b")
+router_c = Router(route_class=APIRouteC, prefix="/c")
 
 
 @router_a.get("/")

@@ -1,4 +1,4 @@
-from squall import APIRouter, Squall
+from squall import Router, Squall
 from squall.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from squall.testclient import TestClient
 
@@ -8,12 +8,18 @@ class OverrideResponse(JSONResponse):
 
 
 app = Squall()
-router_a = APIRouter(prefix="/a")
-router_a_a = APIRouter(prefix="/a")
-router_a_b_override = APIRouter(prefix="/b", default_response_class=PlainTextResponse)  # Overrides default class
-router_b_override = APIRouter(prefix="/b", default_response_class=PlainTextResponse)  # Overrides default class
-router_b_a = APIRouter(prefix="/a")
-router_b_a_c_override = APIRouter(prefix="/c", default_response_class=HTMLResponse)  # Overrides default class again
+router_a = Router(prefix="/a")
+router_a_a = Router(prefix="/a")
+router_a_b_override = Router(
+    prefix="/b", default_response_class=PlainTextResponse
+)  # Overrides default class
+router_b_override = Router(
+    prefix="/b", default_response_class=PlainTextResponse
+)  # Overrides default class
+router_b_a = Router(prefix="/a")
+router_b_a_c_override = Router(
+    prefix="/c", default_response_class=HTMLResponse
+)  # Overrides default class again
 
 
 @app.get("/")
@@ -66,7 +72,7 @@ def get_b_path_override():
     return "Hello B"
 
 
-@router_b_a.get("/")
+@router_b_a.get("/", response_class=PlainTextResponse)
 def get_b_a():
     return "Hello B A"
 
@@ -91,13 +97,9 @@ router_b_a.include_router(
 )
 router_b_override.include_router(router_b_a)
 router_a.include_router(router_a_a)
-router_a.include_router(
-    router_a_b_override
-)
+router_a.include_router(router_a_b_override)
 app.include_router(router_a)
-app.include_router(
-    router_b_override
-)
+app.include_router(router_b_override)
 
 
 client = TestClient(app)

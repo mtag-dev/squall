@@ -19,6 +19,6 @@ from .param_functions import Query as Query
 from .param_functions import Security as Security
 from .requests import Request as Request
 from .responses import Response as Response
-from .routing import APIRouter as APIRouter
+from .router import Router as Router
 from .websockets import WebSocket as WebSocket
 from .websockets import WebSocketDisconnect as WebSocketDisconnect

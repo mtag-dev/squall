@@ -46,7 +46,6 @@ app.include_router(user_router)
 app.include_router(item_router)
 
 
-
 client = TestClient(app)
 
 
@@ -140,4 +139,3 @@ def test_schema_2():
     }
 
     assert d in r["paths"]["/items/{item_id}"]["get"]["parameters"]
-

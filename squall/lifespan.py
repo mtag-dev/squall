@@ -1,9 +1,9 @@
 import asyncio
-import traceback
-import typing
-import types
 import contextlib
 import functools
+import traceback
+import types
+import typing
 
 from squall.types import Receive, Scope, Send
 
@@ -39,9 +39,11 @@ def _wrap_gen_lifespan_context(
 
 
 class Lifespan:
-    def __init__(self,
-                 on_startup: typing.List[typing.Union[typing.Callable, typing.Coroutine]],
-                 on_shutdown: typing.List[typing.Union[typing.Callable, typing.Coroutine]]):
+    def __init__(
+        self,
+        on_startup: typing.List[typing.Union[typing.Callable, typing.Coroutine]],
+        on_shutdown: typing.List[typing.Union[typing.Callable, typing.Coroutine]],
+    ):
         self._on_startup = on_startup
         self._on_shutdown = on_shutdown
 
@@ -64,18 +66,18 @@ class Lifespan:
 
 
 async def lifespan(
-        on_startup: typing.List[typing.Union[typing.Callable, typing.Coroutine]],
-        on_shutdown: typing.List[typing.Union[typing.Callable, typing.Coroutine]],
-        scope: Scope,
-        receive: Receive,
-        send: Send,
+    on_startup: typing.List[typing.Union[typing.Callable, typing.Coroutine]],
+    on_shutdown: typing.List[typing.Union[typing.Callable, typing.Coroutine]],
+    scope: Scope,
+    receive: Receive,
+    send: Send,
 ) -> None:
     """
     Handle ASGI lifespan messages, which allows us to manage application
     startup and shutdown events.
     """
     started = False
-    app = scope.get("app")
+    scope.get("app")
     await receive()
     try:
         async with Lifespan(on_startup, on_shutdown):

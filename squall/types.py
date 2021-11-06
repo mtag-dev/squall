@@ -8,6 +8,8 @@ Send = typing.Callable[[Message], typing.Awaitable[None]]
 
 ASGIApp = typing.Callable[[Scope, Receive, Send], typing.Awaitable[None]]
 
-DecoratedCallable = typing.TypeVar("DecoratedCallable", bound=typing.Callable[..., typing.Any])
+DecoratedCallable = typing.TypeVar(
+    "DecoratedCallable", bound=typing.Callable[..., typing.Any]
+)
 
 LifeSpanContext = typing.Callable[[typing.Any], typing.AsyncContextManager]

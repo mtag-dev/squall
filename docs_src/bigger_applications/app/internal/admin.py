@@ -1,5 +1,6 @@
-from squall.router import Router
 from squall import Depends
+from squall.router import Router
+
 from ..dependencies import get_token_header
 
 router = Router(

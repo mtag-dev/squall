@@ -4,7 +4,7 @@ You can declare the model used for the response with the parameter `response_mod
 
 * `@app.get()`
 * `@app.post()`
-* `@app.router.put()`
+* `@app.put()`
 * `@app.delete()`
 * etc.
 

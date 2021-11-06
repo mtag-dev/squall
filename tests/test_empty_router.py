@@ -1,10 +1,10 @@
 import pytest
-from squall import APIRouter, Squall
+from squall import Router, Squall
 from squall.testclient import TestClient
 
 app = Squall()
 
-router = APIRouter(prefix="/prefix")
+router = Router(prefix="/prefix")
 
 
 @router.get("")

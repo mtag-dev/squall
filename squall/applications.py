@@ -1,4 +1,6 @@
+import typing
 from typing import Any, Callable, Coroutine, Dict, List, Optional, Sequence, Type, Union
+
 from squall import router
 from squall.concurrency import AsyncExitStack
 from squall.datastructures import Default
@@ -7,6 +9,7 @@ from squall.exception_handlers import (
     request_validation_exception_handler,
 )
 from squall.exceptions import RequestValidationError
+from squall.lifespan import lifespan
 from squall.logger import logger
 from squall.openapi.docs import (
     get_redoc_html,
@@ -17,18 +20,13 @@ from squall.openapi.utils import get_openapi
 from squall.params import Depends
 from squall.requests import Request
 from squall.responses import HTMLResponse, JSONResponse, Response
-from starlette.exceptions import HTTPException
-
-import typing
-
-from starlette.datastructures import State, URLPath
-from starlette.exceptions import ExceptionMiddleware
+from starlette.datastructures import State
+from starlette.exceptions import ExceptionMiddleware, HTTPException
 from starlette.middleware import Middleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.errors import ServerErrorMiddleware
-from starlette.routing import BaseRoute, Router
+from starlette.routing import BaseRoute
 from starlette.types import ASGIApp, Receive, Scope, Send
-from squall.lifespan import lifespan
 
 
 class Squall:
@@ -79,7 +77,7 @@ class Squall:
             deprecated=deprecated,
             include_in_schema=include_in_schema,
             responses=responses,
-            dependency_overrides_provider=self
+            dependency_overrides_provider=self,
         )
         # Router methods linking for better user experience like having
         # @app.get(...) instead of @app.get(...)
@@ -194,7 +192,9 @@ class Squall:
         self._debug = value
         self.middleware_stack = self.build_middleware_stack()
 
-    def add_event_handler(self, event: str, handler: Union[Callable, Coroutine]) -> None:
+    def add_event_handler(
+        self, event: str, handler: Union[Callable, Coroutine]
+    ) -> None:
         if event == "startup":
             self.on_startup.append(handler)
         elif event == "shutdown":
@@ -250,7 +250,9 @@ class Squall:
                     self.openapi().dict(exclude_unset=True, by_alias=True)  # type: ignore
                 )
 
-            self.router.add_api_route(self.openapi_url, openapi, include_in_schema=False)
+            self.router.add_api_route(
+                self.openapi_url, openapi, include_in_schema=False
+            )
         if self.openapi_url and self.docs_url:
 
             async def swagger_ui_html(req: Request) -> HTMLResponse:
@@ -266,7 +268,9 @@ class Squall:
                     init_oauth=self.swagger_ui_init_oauth,
                 )
 
-            self.router.add_api_route(self.docs_url, swagger_ui_html, include_in_schema=False)
+            self.router.add_api_route(
+                self.docs_url, swagger_ui_html, include_in_schema=False
+            )
 
             if self.swagger_ui_oauth2_redirect_url:
 
@@ -287,7 +291,9 @@ class Squall:
                     openapi_url=openapi_url, title=self.title + " - ReDoc"
                 )
 
-            self.router.add_api_route(self.redoc_url, redoc_html, include_in_schema=False)
+            self.router.add_api_route(
+                self.redoc_url, redoc_html, include_in_schema=False
+            )
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if self.root_path:

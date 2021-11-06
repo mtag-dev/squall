@@ -1,6 +1,6 @@
 from squall import Depends, Squall
 
-from .dependencies import get_query_token, get_token_header
+from .dependencies import get_query_token
 from .internal import admin
 from .routers import items, users
 

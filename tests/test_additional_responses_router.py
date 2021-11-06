@@ -1,8 +1,8 @@
-from squall import APIRouter, Squall
+from squall import Router, Squall
 from squall.testclient import TestClient
 
 app = Squall()
-router = APIRouter()
+router = Router()
 
 
 @router.get("/a", responses={501: {"description": "Error 1"}})

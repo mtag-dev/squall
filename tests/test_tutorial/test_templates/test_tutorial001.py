@@ -1,8 +1,3 @@
-import os
-import shutil
-
-from squall.testclient import TestClient
-
 #
 # def test_main():
 #     if os.path.isdir("./static"):  # pragma: nocover

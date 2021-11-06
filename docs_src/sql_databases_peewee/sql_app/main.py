@@ -37,9 +37,7 @@ def create_user(user: schemas.UserCreate):
     return crud.create_user(user=user)
 
 
-@app.get(
-    "/users/", response_model=List[schemas.User], dependencies=[Depends(get_db)]
-)
+@app.get("/users/", response_model=List[schemas.User], dependencies=[Depends(get_db)])
 def read_users(skip: int = 0, limit: int = 100):
     users = crud.get_users(skip=skip, limit=limit)
     return users
@@ -64,9 +62,7 @@ def create_item_for_user(user_id: int, item: schemas.ItemCreate):
     return crud.create_user_item(item=item, user_id=user_id)
 
 
-@app.get(
-    "/items/", response_model=List[schemas.Item], dependencies=[Depends(get_db)]
-)
+@app.get("/items/", response_model=List[schemas.Item], dependencies=[Depends(get_db)])
 def read_items(skip: int = 0, limit: int = 100):
     items = crud.get_items(skip=skip, limit=limit)
     return items

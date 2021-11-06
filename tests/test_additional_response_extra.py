@@ -1,9 +1,9 @@
-from squall import APIRouter, Squall
+from squall import Router, Squall
 from squall.testclient import TestClient
 
-router = APIRouter()
+router = Router()
 
-sub_router = APIRouter()
+sub_router = Router(prefix="/items")
 
 app = Squall()
 
@@ -13,7 +13,7 @@ def read_item():
     return {"id": "foo"}
 
 
-router.include_router(sub_router, prefix="/items")
+router.include_router(sub_router)
 
 app.include_router(router)
 

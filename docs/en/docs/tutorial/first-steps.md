@@ -264,7 +264,7 @@ The `@app.get("/")` tells **Squall** that the function right below is in charge 
 You can also use the other operations:
 
 * `@app.post()`
-* `@app.router.put()`
+* `@app.put()`
 * `@app.delete()`
 
 And the more exotic ones:

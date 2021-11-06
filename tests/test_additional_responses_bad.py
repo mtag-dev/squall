@@ -5,9 +5,7 @@ from squall.testclient import TestClient
 app = Squall()
 
 
-@app.get(
-    "/a", responses={"hello": {"description": "Not a valid additional response"}}
-)
+@app.get("/a", responses={"hello": {"description": "Not a valid additional response"}})
 async def a():
     pass  # pragma: no cover
 

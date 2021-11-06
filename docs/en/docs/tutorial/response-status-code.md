@@ -4,7 +4,7 @@ The same way you can specify a response model, you can also declare the HTTP sta
 
 * `@app.get()`
 * `@app.post()`
-* `@app.router.put()`
+* `@app.put()`
 * `@app.delete()`
 * etc.
 

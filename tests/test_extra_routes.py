@@ -26,7 +26,7 @@ def get_not_decorated(item_id: str):
 app.router.add_api_route("/items-not-decorated/{item_id}", get_not_decorated)
 
 
-@app.router.delete("/items/{item_id}")
+@app.delete("/items/{item_id}")
 def delete_item(item_id: str, item: Item):
     return {"item_id": item_id, "item": item}
 
@@ -41,7 +41,7 @@ def options_item(item_id: str):
     return JSONResponse(headers={"x-squall-item-id": item_id})
 
 
-@app.router.patch("/items/{item_id}")
+@app.patch("/items/{item_id}")
 def patch_item(item_id: str, item: Item):
     return {"item_id": item_id, "item": item}
 

@@ -1,38 +1,15 @@
-import asyncio
-import email.message
-import json
 import re
-import traceback
-from typing import (
-    Any,
-    AsyncContextManager,
-    Callable,
-    Coroutine,
-    Dict,
-    List,
-    Optional,
-    Sequence,
-    Set,
-    Type,
-    Union,
-)
+from typing import Any, Callable, Dict, List, Optional, Sequence, Set, Type, Union
 
-from pydantic.error_wrappers import ErrorWrapper, ValidationError
-from pydantic.fields import ModelField, Undefined
 from squall import params
-from squall.concurrency import run_in_threadpool
-from squall.datastructures import Default, DefaultPlaceholder
-from squall.dependencies.models import Dependant
-from squall.dependencies.utils import solve_dependencies
-from squall.exceptions import HTTPException, RequestValidationError
-from squall.requests import Request
+from squall.datastructures import Default
+from squall.exceptions import HTTPException
 from squall.responses import JSONResponse, PlainTextResponse, Response
-from squall.routing import APIRoute, APIWebSocketRoute, SlMatch, RedirectResponse, URL
+from squall.routing import URL, APIRoute, APIWebSocketRoute, RedirectResponse, SlMatch
+from squall.types import DecoratedCallable
 from squall.utils import get_value_or_default
-from starlette.routing import iscoroutinefunction_or_partial
 from starlette.types import ASGIApp, Receive, Scope, Send
 from starlette.websockets import WebSocketClose
-from squall.types import DecoratedCallable
 
 
 class NoMatchFound(Exception):
@@ -45,6 +22,7 @@ class NoMatchFound(Exception):
 # class Event(enum.Enum):
 #     STARTUP = "startup"
 #     SHUTDOWN = "shutdown"
+
 
 class Router:
     def __init__(
@@ -125,7 +103,7 @@ class Router:
             response_class=current_response_class,
             name=name,
             openapi_extra=openapi_extra,
-            dependency_overrides_provider=self.dependency_overrides_provider
+            dependency_overrides_provider=self.dependency_overrides_provider,
         )
         self.route_register(route)
 
@@ -181,7 +159,7 @@ class Router:
             response_class=current_response_class,
             name=name,
             openapi_extra=openapi_extra,
-            dependency_overrides_provider=self.dependency_overrides_provider
+            dependency_overrides_provider=self.dependency_overrides_provider,
         )
         self.route_register(route)
 
@@ -247,13 +225,13 @@ class Router:
         deprecated: Optional[bool] = None,
         operation_id: Optional[str] = None,
         include_in_schema: bool = True,
-        openapi_extra: Optional[Dict[str, Any]] = None
+        openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> None:
         route = APIWebSocketRoute(
             self._prefix + path,
             endpoint=endpoint,
             name=name,
-            dependency_overrides_provider=self.dependency_overrides_provider
+            dependency_overrides_provider=self.dependency_overrides_provider,
         )
         self.route_register(route)
 
@@ -591,7 +569,7 @@ class RootRouter(Router):
         route_class: Type[APIRoute] = APIRoute,
         deprecated: Optional[bool] = None,
         include_in_schema: bool = True,
-        dependency_overrides_provider: Optional[Any] = None
+        dependency_overrides_provider: Optional[Any] = None,
     ) -> None:
         # Need both, Router and Router
         super(RootRouter, self).__init__(
@@ -604,13 +582,13 @@ class RootRouter(Router):
             deprecated=deprecated,
             include_in_schema=include_in_schema,
             responses=responses,
-            dependency_overrides_provider=dependency_overrides_provider
+            dependency_overrides_provider=dependency_overrides_provider,
         )
         self.redirect_slashes = redirect_slashes
         self.default = default or self.not_found
         self._fast_path_route_http: Dict[str, Any] = {}
         self._fast_path_route_ws: Dict[str, Any] = {}
-        #self.lifespan_context: Callable[[Any], AsyncContextManager] = RouterLifespan(self)
+        # self.lifespan_context: Callable[[Any], AsyncContextManager] = RouterLifespan(self)
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """
@@ -619,10 +597,10 @@ class RootRouter(Router):
         if "router" not in scope:
             scope["router"] = self
 
-        if scope["type"] == 'http':
-            routes = self.get_http_routes(scope['method'], scope['path'])
-        elif scope["type"] == 'websocket':
-            routes = self.get_ws_routes(scope['path'])
+        if scope["type"] == "http":
+            routes = self.get_http_routes(scope["method"], scope["path"])
+        elif scope["type"] == "websocket":
+            routes = self.get_ws_routes(scope["path"])
         else:
             assert False, f"RootRouter doesn't allow scope type: {scope['type']}"
 
@@ -642,7 +620,9 @@ class RootRouter(Router):
             else:
                 redirect_scope["path"] = redirect_scope["path"] + "/"
 
-            for route in self.get_http_routes(redirect_scope['method'], redirect_scope['path']):
+            for route in self.get_http_routes(
+                redirect_scope["method"], redirect_scope["path"]
+            ):
                 match, child_scope = route.matches(redirect_scope)
                 if match != SlMatch.NONE:
                     redirect_url = URL(scope=redirect_scope)
