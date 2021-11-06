@@ -5,6 +5,7 @@ import re
 import traceback
 from typing import (
     Any,
+    AsyncContextManager,
     Callable,
     Coroutine,
     Dict,
@@ -26,11 +27,12 @@ from squall.dependencies.utils import solve_dependencies
 from squall.exceptions import HTTPException, RequestValidationError
 from squall.requests import Request
 from squall.responses import JSONResponse, PlainTextResponse, Response
-from squall.routing import APIRoute, APIWebSocketRoute
+from squall.routing import APIRoute, APIWebSocketRoute, SlMatch, RedirectResponse, URL
 from squall.utils import get_value_or_default
 from starlette.routing import iscoroutinefunction_or_partial
 from starlette.types import ASGIApp, Receive, Scope, Send
 from starlette.websockets import WebSocketClose
+from squall.types import DecoratedCallable
 
 
 class NoMatchFound(Exception):
@@ -184,7 +186,7 @@ class Router:
         self._responses = responses or {}
 
         self._childs: List[Router] = []
-        self._routes: List[Union[APIRoute, APIWebSocketRoute]] = routes or []
+        self.routes: List[Union[APIRoute, APIWebSocketRoute]] = routes or []
 
     def add_api_route(
         self,
@@ -221,7 +223,7 @@ class Router:
         if dependencies:
             current_dependencies.extend(dependencies)
         route = route_class(
-            path,
+            self._prefix + path,
             endpoint=endpoint,
             response_model=response_model,
             status_code=status_code,
@@ -239,7 +241,54 @@ class Router:
             name=name,
             openapi_extra=openapi_extra,
         )
-        self._routes.append(route)
+        self.route_register(route)
+
+    def route_register(self, route):
+        self.routes.append(route)
+
+    def api_route(
+        self,
+        path: str,
+        *,
+        response_model: Optional[Type[Any]] = None,
+        status_code: Optional[int] = None,
+        tags: Optional[List[str]] = None,
+        dependencies: Optional[Sequence[params.Depends]] = None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        response_description: str = "Successful Response",
+        responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
+        deprecated: Optional[bool] = None,
+        methods: Optional[List[str]] = None,
+        operation_id: Optional[str] = None,
+        include_in_schema: bool = True,
+        response_class: Type[Response] = Default(JSONResponse),
+        name: Optional[str] = None,
+        openapi_extra: Optional[Dict[str, Any]] = None,
+    ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+        def decorator(func: DecoratedCallable) -> DecoratedCallable:
+            self.add_api_route(
+                path,
+                func,
+                response_model=response_model,
+                status_code=status_code,
+                tags=tags,
+                dependencies=dependencies,
+                summary=summary,
+                description=description,
+                response_description=response_description,
+                responses=responses,
+                deprecated=deprecated,
+                methods=methods,
+                operation_id=operation_id,
+                include_in_schema=include_in_schema,
+                response_class=response_class,
+                name=name,
+                openapi_extra=openapi_extra,
+            )
+            return func
+
+        return decorator
 
     def add_ws_route(
         self,
@@ -259,33 +308,330 @@ class Router:
         openapi_extra: Optional[Dict[str, Any]] = None
     ) -> None:
         route = APIWebSocketRoute(
-            path,
+            self._prefix + path,
             endpoint=endpoint,
             name=name,
         )
-        self._routes.append(route)
+        self.route_register(route)
+
+    def websocket_route(
+        self, path: str, name: Optional[str] = None
+    ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+        def decorator(func: DecoratedCallable) -> DecoratedCallable:
+            self.add_ws_route(path, func, name=name)
+            return func
+
+        return decorator
 
     def include_router(self, router: "Router") -> None:
-        self._childs.append(router)
-
-    @property
-    def routes(self) -> List[Union[APIRoute, APIWebSocketRoute]]:
-        routes = []
-        # Collect all nested routes, add current prefix
-        # trough the route method and add to results
-        for router in self._childs:
-            for child_route in router.routes:
-                routes.append(child_route)
-        # Add prefix to own routes and also put them in results
-        for own_route in self._routes:
-            # Set own path, tags etc to `APIRoute.__init__` params.
-            # Avoid duplication on further calls
-            own_route.set_defaults()
-            routes.append(own_route)
-        # Add current prefix to the routes
-        for route in routes:
+        for route in router.routes:
             route.add_path_prefix(self._prefix)
-        return routes
+            self.route_register(route)
+
+    def get(
+        self,
+        path: str,
+        *,
+        response_model: Optional[Type[Any]] = None,
+        status_code: Optional[int] = None,
+        tags: Optional[List[str]] = None,
+        dependencies: Optional[Sequence[params.Depends]] = None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        response_description: str = "Successful Response",
+        responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
+        deprecated: Optional[bool] = None,
+        operation_id: Optional[str] = None,
+        include_in_schema: bool = True,
+        response_class: Type[Response] = Default(JSONResponse),
+        name: Optional[str] = None,
+        openapi_extra: Optional[Dict[str, Any]] = None,
+    ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+        return self.api_route(
+            path=path,
+            response_model=response_model,
+            status_code=status_code,
+            tags=tags,
+            dependencies=dependencies,
+            summary=summary,
+            description=description,
+            response_description=response_description,
+            responses=responses,
+            deprecated=deprecated,
+            methods=["GET"],
+            operation_id=operation_id,
+            include_in_schema=include_in_schema,
+            response_class=response_class,
+            name=name,
+            openapi_extra=openapi_extra,
+        )
+
+    def put(
+        self,
+        path: str,
+        *,
+        response_model: Optional[Type[Any]] = None,
+        status_code: Optional[int] = None,
+        tags: Optional[List[str]] = None,
+        dependencies: Optional[Sequence[params.Depends]] = None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        response_description: str = "Successful Response",
+        responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
+        deprecated: Optional[bool] = None,
+        operation_id: Optional[str] = None,
+        include_in_schema: bool = True,
+        response_class: Type[Response] = Default(JSONResponse),
+        name: Optional[str] = None,
+        openapi_extra: Optional[Dict[str, Any]] = None,
+    ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+        return self.api_route(
+            path=path,
+            response_model=response_model,
+            status_code=status_code,
+            tags=tags,
+            dependencies=dependencies,
+            summary=summary,
+            description=description,
+            response_description=response_description,
+            responses=responses,
+            deprecated=deprecated,
+            methods=["PUT"],
+            operation_id=operation_id,
+            include_in_schema=include_in_schema,
+            response_class=response_class,
+            name=name,
+            openapi_extra=openapi_extra,
+        )
+
+    def post(
+        self,
+        path: str,
+        *,
+        response_model: Optional[Type[Any]] = None,
+        status_code: Optional[int] = None,
+        tags: Optional[List[str]] = None,
+        dependencies: Optional[Sequence[params.Depends]] = None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        response_description: str = "Successful Response",
+        responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
+        deprecated: Optional[bool] = None,
+        operation_id: Optional[str] = None,
+        include_in_schema: bool = True,
+        response_class: Type[Response] = Default(JSONResponse),
+        name: Optional[str] = None,
+        openapi_extra: Optional[Dict[str, Any]] = None,
+    ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+        return self.api_route(
+            path=path,
+            response_model=response_model,
+            status_code=status_code,
+            tags=tags,
+            dependencies=dependencies,
+            summary=summary,
+            description=description,
+            response_description=response_description,
+            responses=responses,
+            deprecated=deprecated,
+            methods=["POST"],
+            operation_id=operation_id,
+            include_in_schema=include_in_schema,
+            response_class=response_class,
+            name=name,
+            openapi_extra=openapi_extra,
+        )
+
+    def delete(
+        self,
+        path: str,
+        *,
+        response_model: Optional[Type[Any]] = None,
+        status_code: Optional[int] = None,
+        tags: Optional[List[str]] = None,
+        dependencies: Optional[Sequence[params.Depends]] = None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        response_description: str = "Successful Response",
+        responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
+        deprecated: Optional[bool] = None,
+        operation_id: Optional[str] = None,
+        include_in_schema: bool = True,
+        response_class: Type[Response] = Default(JSONResponse),
+        name: Optional[str] = None,
+        openapi_extra: Optional[Dict[str, Any]] = None,
+    ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+        return self.api_route(
+            path=path,
+            response_model=response_model,
+            status_code=status_code,
+            tags=tags,
+            dependencies=dependencies,
+            summary=summary,
+            description=description,
+            response_description=response_description,
+            responses=responses,
+            deprecated=deprecated,
+            methods=["DELETE"],
+            operation_id=operation_id,
+            include_in_schema=include_in_schema,
+            response_class=response_class,
+            name=name,
+            openapi_extra=openapi_extra,
+        )
+
+    def options(
+        self,
+        path: str,
+        *,
+        response_model: Optional[Type[Any]] = None,
+        status_code: Optional[int] = None,
+        tags: Optional[List[str]] = None,
+        dependencies: Optional[Sequence[params.Depends]] = None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        response_description: str = "Successful Response",
+        responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
+        deprecated: Optional[bool] = None,
+        operation_id: Optional[str] = None,
+        include_in_schema: bool = True,
+        response_class: Type[Response] = Default(JSONResponse),
+        name: Optional[str] = None,
+        openapi_extra: Optional[Dict[str, Any]] = None,
+    ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+        return self.api_route(
+            path=path,
+            response_model=response_model,
+            status_code=status_code,
+            tags=tags,
+            dependencies=dependencies,
+            summary=summary,
+            description=description,
+            response_description=response_description,
+            responses=responses,
+            deprecated=deprecated,
+            methods=["OPTIONS"],
+            operation_id=operation_id,
+            include_in_schema=include_in_schema,
+            response_class=response_class,
+            name=name,
+            openapi_extra=openapi_extra,
+        )
+
+    def head(
+        self,
+        path: str,
+        *,
+        response_model: Optional[Type[Any]] = None,
+        status_code: Optional[int] = None,
+        tags: Optional[List[str]] = None,
+        dependencies: Optional[Sequence[params.Depends]] = None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        response_description: str = "Successful Response",
+        responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
+        deprecated: Optional[bool] = None,
+        operation_id: Optional[str] = None,
+        include_in_schema: bool = True,
+        response_class: Type[Response] = Default(JSONResponse),
+        name: Optional[str] = None,
+        openapi_extra: Optional[Dict[str, Any]] = None,
+    ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+        return self.api_route(
+            path=path,
+            response_model=response_model,
+            status_code=status_code,
+            tags=tags,
+            dependencies=dependencies,
+            summary=summary,
+            description=description,
+            response_description=response_description,
+            responses=responses,
+            deprecated=deprecated,
+            methods=["HEAD"],
+            operation_id=operation_id,
+            include_in_schema=include_in_schema,
+            response_class=response_class,
+            name=name,
+            openapi_extra=openapi_extra,
+        )
+
+    def patch(
+        self,
+        path: str,
+        *,
+        response_model: Optional[Type[Any]] = None,
+        status_code: Optional[int] = None,
+        tags: Optional[List[str]] = None,
+        dependencies: Optional[Sequence[params.Depends]] = None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        response_description: str = "Successful Response",
+        responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
+        deprecated: Optional[bool] = None,
+        operation_id: Optional[str] = None,
+        include_in_schema: bool = True,
+        response_class: Type[Response] = Default(JSONResponse),
+        name: Optional[str] = None,
+        openapi_extra: Optional[Dict[str, Any]] = None,
+    ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+        return self.api_route(
+            path=path,
+            response_model=response_model,
+            status_code=status_code,
+            tags=tags,
+            dependencies=dependencies,
+            summary=summary,
+            description=description,
+            response_description=response_description,
+            responses=responses,
+            deprecated=deprecated,
+            methods=["PATCH"],
+            operation_id=operation_id,
+            include_in_schema=include_in_schema,
+            response_class=response_class,
+            name=name,
+            openapi_extra=openapi_extra,
+        )
+
+    def trace(
+        self,
+        path: str,
+        *,
+        response_model: Optional[Type[Any]] = None,
+        status_code: Optional[int] = None,
+        tags: Optional[List[str]] = None,
+        dependencies: Optional[Sequence[params.Depends]] = None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        response_description: str = "Successful Response",
+        responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
+        deprecated: Optional[bool] = None,
+        operation_id: Optional[str] = None,
+        include_in_schema: bool = True,
+        response_class: Type[Response] = Default(JSONResponse),
+        name: Optional[str] = None,
+        openapi_extra: Optional[Dict[str, Any]] = None,
+    ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+
+        return self.api_route(
+            path=path,
+            response_model=response_model,
+            status_code=status_code,
+            tags=tags,
+            dependencies=dependencies,
+            summary=summary,
+            description=description,
+            response_description=response_description,
+            responses=responses,
+            deprecated=deprecated,
+            methods=["TRACE"],
+            operation_id=operation_id,
+            include_in_schema=include_in_schema,
+            response_class=response_class,
+            name=name,
+            openapi_extra=openapi_extra,
+        )
 
 
 class RootRouter(Router):
@@ -316,14 +662,50 @@ class RootRouter(Router):
             responses=responses,
         )
         self._redirect_slashes = redirect_slashes
-        self._default = default or self.not_found
+        self.default = default or self.not_found
         self._fast_path_route_http: Dict[str, Any] = {}
         self._fast_path_route_ws: Dict[str, Any] = {}
+        #self.lifespan_context: Callable[[Any], AsyncContextManager] = RouterLifespan(self)
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """
         The main entry point to the Router class.
         """
+        if "router" not in scope:
+            scope["router"] = self
+
+        if scope["type"] == 'http':
+            routes = self.get_http_routes(scope['method'], scope['path'])
+        elif scope["type"] == 'websocket':
+            routes = self.get_ws_routes(scope['path'])
+        else:
+            assert False, f"RootRouter doesn't allow scope type: {scope['type']}"
+
+        for route in routes:
+            # Determine if any route matches the incoming scope,
+            # and hand over to the matching route if found.
+            match, child_scope = route.matches(scope)
+            if match == SlMatch.FULL:
+                scope.update(child_scope)
+                await route.handle(scope, receive, send)
+                return
+
+        # if scope["type"] == "http" and self.redirect_slashes and scope["path"] != "/":
+        #     redirect_scope = dict(scope)
+        #     if scope["path"].endswith("/"):
+        #         redirect_scope["path"] = redirect_scope["path"].rstrip("/")
+        #     else:
+        #         redirect_scope["path"] = redirect_scope["path"] + "/"
+        #
+        #     for route in self.get_http_routes(redirect_scope['method'], redirect_scope['path']):
+        #         match, child_scope = route.matches(redirect_scope)
+        #         if match != SlMatch.NONE:
+        #             redirect_url = URL(scope=redirect_scope)
+        #             response = RedirectResponse(url=str(redirect_url))
+        #             await response(scope, receive, send)
+        #             return
+
+        await self.default(scope, receive, send)
 
     @staticmethod
     async def not_found(scope: Scope, receive: Receive, send: Send) -> None:
@@ -340,29 +722,6 @@ class RootRouter(Router):
         else:
             response = PlainTextResponse("Not Found", status_code=404)
         await response(scope, receive, send)
-
-    async def lifespan(self, scope: Scope, receive: Receive, send: Send) -> None:
-        """
-        Handle ASGI lifespan messages, which allows us to manage application
-        startup and shutdown events.
-        """
-        started = False
-        scope.get("app")
-        await receive()
-        try:
-            # async with self.lifespan_context(app):
-            await send({"type": "lifespan.startup.complete"})
-            started = True
-            await receive()
-        except BaseException:
-            exc_text = traceback.format_exc()
-            if started:
-                await send({"type": "lifespan.shutdown.failed", "message": exc_text})
-            else:
-                await send({"type": "lifespan.startup.failed", "message": exc_text})
-            raise
-        else:
-            await send({"type": "lifespan.shutdown.complete"})
 
     @staticmethod
     def _get_fast_path_octets(path: str) -> List[str]:
@@ -399,6 +758,13 @@ class RootRouter(Router):
                 layer["#routes#"][method] = []
             layer["#routes#"][method].append(route)
 
+    def route_register(self, route):
+        if isinstance(route, APIRoute):
+            self._add_fast_path_route(route, websocket=False)
+        elif isinstance(route, APIWebSocketRoute):
+            self._add_fast_path_route(route, websocket=True)
+        self.routes.append(route)
+
     def get_http_routes(self, method: str, path: str) -> List[APIRoute]:
         last = self._fast_path_route_http
         dyn = "*"
@@ -419,10 +785,3 @@ class RootRouter(Router):
         except KeyError:
             return []
         return last.get("#routes#", [])
-
-    def setup(self) -> None:
-        for route in self.routes:
-            if isinstance(route, APIRoute):
-                self._add_fast_path_route(route, websocket=False)
-            elif isinstance(route, APIWebSocketRoute):
-                self._add_fast_path_route(route, websocket=True)

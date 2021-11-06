@@ -1,3 +1,13 @@
-from typing import Any, Callable, TypeVar
+import typing
 
-DecoratedCallable = TypeVar("DecoratedCallable", bound=Callable[..., Any])
+Scope = typing.MutableMapping[str, typing.Any]
+Message = typing.MutableMapping[str, typing.Any]
+
+Receive = typing.Callable[[], typing.Awaitable[Message]]
+Send = typing.Callable[[Message], typing.Awaitable[None]]
+
+ASGIApp = typing.Callable[[Scope, Receive, Send], typing.Awaitable[None]]
+
+DecoratedCallable = typing.TypeVar("DecoratedCallable", bound=typing.Callable[..., typing.Any])
+
+LifeSpanContext = typing.Callable[[typing.Any], typing.AsyncContextManager]

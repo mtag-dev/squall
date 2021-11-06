@@ -65,7 +65,7 @@ async def get_cookie_or_token(
     return session or token
 
 
-@app.router.websocket("/items/{item_id}/ws")
+@app.router.websocket_route("/items/{item_id}/ws")
 async def websocket_endpoint(
     websocket: WebSocket,
     item_id: str,

@@ -1,6 +1,7 @@
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Sequence, Type, Union
+import asyncio
+from typing import Any, Callable, Coroutine, Dict, List, Optional, Sequence, Type, Union, AsyncGenerator
 
-from squall import routing
+from squall import router
 from squall.concurrency import AsyncExitStack
 from squall.datastructures import Default
 from squall.exception_handlers import (
@@ -18,15 +19,21 @@ from squall.openapi.utils import get_openapi
 from squall.params import Depends
 from squall.requests import Request
 from squall.responses import HTMLResponse, JSONResponse, Response
-from starlette.applications import Starlette
-from starlette.datastructures import State
 from starlette.exceptions import HTTPException
+
+import typing
+
+from starlette.datastructures import State, URLPath
+from starlette.exceptions import ExceptionMiddleware
 from starlette.middleware import Middleware
-from starlette.routing import BaseRoute
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.errors import ServerErrorMiddleware
+from starlette.routing import BaseRoute, Router
 from starlette.types import ASGIApp, Receive, Scope, Send
+from squall.lifespan import RouterLifespan, lifespan
 
 
-class Squall(Starlette):
+class Squall:
     def __init__(
         self,
         *,
@@ -60,21 +67,16 @@ class Squall(Starlette):
         root_path: str = "",
         root_path_in_servers: bool = True,
         responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
-        callbacks: Optional[List[BaseRoute]] = None,
         deprecated: Optional[bool] = None,
         include_in_schema: bool = True,
         **extra: Any,
     ) -> None:
         self._debug: bool = debug
         self.state: State = State()
-        self.router: routing.APIRouter = routing.APIRouter(
+        self.router: router.RootRouter = router.RootRouter(
             routes=routes,
-            dependency_overrides_provider=self,
-            on_startup=on_startup,
-            on_shutdown=on_shutdown,
             default_response_class=default_response_class,
             dependencies=dependencies,
-            callbacks=callbacks,
             deprecated=deprecated,
             include_in_schema=include_in_schema,
             responses=responses,
@@ -127,7 +129,101 @@ class Squall(Starlette):
             assert self.title, "A title must be provided for OpenAPI, e.g.: 'My API'"
             assert self.version, "A version must be provided for OpenAPI, e.g.: '2.1.0'"
         self.openapi_schema: Optional[Dict[str, Any]] = None
+        self.on_startup = []
+        if on_startup:
+            self.on_startup.extend(list(on_startup))
+        self.on_shutdown = [] if on_shutdown is None else list(on_shutdown)
+
         self.setup()
+
+    def build_middleware_stack(self) -> ASGIApp:
+        debug = self.debug
+        error_handler = None
+        exception_handlers = {}
+
+        for key, value in self.exception_handlers.items():
+            if key in (500, Exception):
+                error_handler = value
+            else:
+                exception_handlers[key] = value
+
+        middleware = (
+            [Middleware(ServerErrorMiddleware, handler=error_handler, debug=debug)]
+            + self.user_middleware
+            + [
+                Middleware(
+                    ExceptionMiddleware, handlers=exception_handlers, debug=debug
+                )
+            ]
+        )
+
+        app = self.router
+        for cls, options in reversed(middleware):
+            app = cls(app=app, **options)
+        return app
+
+    def exception_handler(
+        self, exc_class_or_status_code: typing.Union[int, typing.Type[Exception]]
+    ) -> typing.Callable:
+        def decorator(func: typing.Callable) -> typing.Callable:
+            self.add_exception_handler(exc_class_or_status_code, func)
+            return func
+
+        return decorator
+
+    @property
+    def routes(self) -> typing.List[BaseRoute]:
+        return self.router.routes
+
+    @property
+    def debug(self) -> bool:
+        return self._debug
+
+    @debug.setter
+    def debug(self, value: bool) -> None:
+        self._debug = value
+        self.middleware_stack = self.build_middleware_stack()
+
+    @staticmethod
+    async def _run_handlers(handlers):
+        for handler in handlers:
+            if asyncio.iscoroutinefunction(handler):
+                await handler()
+            else:
+                handler()
+
+    async def startup(self) -> None:
+        """ Run any `.on_startup` event handlers. """
+        await self._run_handlers(self.on_startup)
+
+    async def shutdown(self) -> None:
+        """ Run any `.on_shutdown` event handlers. """
+        await self._run_handlers(self.on_shutdown)
+
+    def add_event_handler(self, event: str, handler: Union[Callable, Coroutine]) -> None:
+        if event == "on_startup":
+            self.on_startup.append(handler)
+        elif event == "on_shutdown":
+            self.on_shutdown.append(handler)
+
+    def on_event(self, event_type: str) -> typing.Callable:
+        def decorator(func: typing.Callable) -> typing.Callable:
+            self.add_event_handler(event_type, func)
+            return func
+
+        return decorator
+
+    def add_middleware(self, middleware_class: type, **options: typing.Any) -> None:
+        self.user_middleware.insert(0, Middleware(middleware_class, **options))
+        self.middleware_stack = self.build_middleware_stack()
+
+    def add_exception_handler(
+        self,
+        exc_class_or_status_code: typing.Union[int, typing.Type[Exception]],
+        handler: typing.Callable,
+    ) -> None:
+        self.exception_handlers[exc_class_or_status_code] = handler
+        self.middleware_stack = self.build_middleware_stack()
 
     def openapi(self) -> Dict[str, Any]:
         if not self.openapi_schema:
@@ -160,7 +256,7 @@ class Squall(Starlette):
                     self.openapi().dict(exclude_unset=True, by_alias=True)  # type: ignore
                 )
 
-            self.add_route(self.openapi_url, openapi, include_in_schema=False)
+            self.router.add_api_route(self.openapi_url, openapi, include_in_schema=False)
         if self.openapi_url and self.docs_url:
 
             async def swagger_ui_html(req: Request) -> HTMLResponse:
@@ -176,14 +272,14 @@ class Squall(Starlette):
                     init_oauth=self.swagger_ui_init_oauth,
                 )
 
-            self.add_route(self.docs_url, swagger_ui_html, include_in_schema=False)
+            self.router.add_api_route(self.docs_url, swagger_ui_html, include_in_schema=False)
 
             if self.swagger_ui_oauth2_redirect_url:
 
                 async def swagger_ui_redirect(req: Request) -> HTMLResponse:
                     return get_swagger_ui_oauth2_redirect_html()
 
-                self.add_route(
+                self.router.add_api_route(
                     self.swagger_ui_oauth2_redirect_url,
                     swagger_ui_redirect,
                     include_in_schema=False,
@@ -197,21 +293,22 @@ class Squall(Starlette):
                     openapi_url=openapi_url, title=self.title + " - ReDoc"
                 )
 
-            self.add_route(self.redoc_url, redoc_html, include_in_schema=False)
+            self.router.add_api_route(self.redoc_url, redoc_html, include_in_schema=False)
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if self.root_path:
             scope["root_path"] = self.root_path
-        if AsyncExitStack:
-            async with AsyncExitStack() as stack:
-                scope["squall_astack"] = stack
-                await super().__call__(scope, receive, send)
-        else:
-            await super().__call__(scope, receive, send)  # pragma: no cover
+
+        scope["app"] = self
+        if scope["type"] == "lifespan":
+            await lifespan(scope, receive, send)
+            return
+
+        await self.middleware_stack(scope, receive, send)
 
     def include_router(
         self,
-        router: routing.APIRouter,
+        router: router.Router,
         *,
         prefix: str = "",
         tags: Optional[List[str]] = None,
@@ -224,12 +321,23 @@ class Squall(Starlette):
     ) -> None:
         self.router.include_router(
             router,
-            prefix=prefix,
-            tags=tags,
-            dependencies=dependencies,
-            responses=responses,
-            deprecated=deprecated,
-            include_in_schema=include_in_schema,
-            default_response_class=default_response_class,
-            callbacks=callbacks,
+            # prefix=prefix,
+            # tags=tags,
+            # dependencies=dependencies,
+            # responses=responses,
+            # deprecated=deprecated,
+            # include_in_schema=include_in_schema,
+            # default_response_class=default_response_class,
+            # callbacks=callbacks,
         )
+
+    def middleware(self, middleware_type: str) -> typing.Callable:
+        assert (
+            middleware_type == "http"
+        ), 'Currently only middleware("http") is supported.'
+
+        def decorator(func: typing.Callable) -> typing.Callable:
+            self.add_middleware(BaseHTTPMiddleware, dispatch=func)
+            return func
+
+        return decorator

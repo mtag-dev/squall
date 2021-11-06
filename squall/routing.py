@@ -57,6 +57,10 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 from starlette.websockets import WebSocket
 
 
+class WebSocketRoute(SlWebSocketRoute):
+    def add_path_prefix(self, prefix: str) -> None:
+        self.path = prefix + self.path
+
 class NoMatchFound(Exception):
     """
     Raised by `.url_for(name, **path_params)` and `.url_path_for(name, **path_params)`
@@ -232,7 +236,7 @@ class Route(SlRoute):
         )
 
 
-class APIWebSocketRoute(SlWebSocketRoute):
+class APIWebSocketRoute(WebSocketRoute):
     def __init__(
         self,
         path: str,
@@ -710,7 +714,7 @@ class APIRouter(SlRouter):
                 self.add_api_websocket_route(
                     prefix + route.path, route.endpoint, name=route.name
                 )
-            elif isinstance(route, SlWebSocketRoute):
+            elif isinstance(route, WebSocketRoute):
                 self.add_websocket_route(
                     prefix + route.path, route.endpoint, name=route.name
                 )

@@ -84,16 +84,16 @@ def test_add_api_route_custom(mocker):
 
 
 def test_sub_routing():
-    router = squall.router.Router(prefix="/api")
-    v1_router = squall.router.Router(prefix="/v1")
-    router.include_router(v1_router)
     user_router = squall.router.Router(prefix="/user")
     user_router.add_api_route(
         "/some/prefix(?P<some>[^/]+)/item/(?P<item>[^/]+)/(?P<more>[^/]+)-suffix",
         methods=["GET", "POST"],
         endpoint=lambda *a: {},
     )
+    v1_router = squall.router.Router(prefix="/v1")
     v1_router.include_router(user_router)
+    router = squall.router.Router(prefix="/api")
+    router.include_router(v1_router)
 
     assert router.routes[0].path == "".join(
         [

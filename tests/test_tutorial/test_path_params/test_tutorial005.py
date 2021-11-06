@@ -3,7 +3,7 @@ from squall.testclient import TestClient
 
 from docs_src.path_params.tutorial005 import app
 
-client = TestClient(app)
+#client = TestClient(app)
 
 openapi_schema = {
     "openapi": "3.0.2",
@@ -150,10 +150,11 @@ openapi_schema2 = {
 
 
 def test_openapi():
-    response = client.get("/openapi.json")
-    assert response.status_code == 200, response.text
-    data = response.json()
-    assert data == openapi_schema or data == openapi_schema2
+    with TestClient(app) as client:
+        response = client.get("/openapi.json")
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert data == openapi_schema or data == openapi_schema2
 
 
 @pytest.mark.parametrize(
@@ -191,6 +192,7 @@ def test_openapi():
     ],
 )
 def test_get_enums(url, status_code, expected):
-    response = client.get(url)
-    assert response.status_code == status_code
-    assert response.json() == expected
+    with TestClient(app) as client:
+        response = client.get(url)
+        assert response.status_code == status_code
+        assert response.json() == expected

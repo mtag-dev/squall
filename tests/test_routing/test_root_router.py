@@ -44,7 +44,6 @@ def test_fast_path_routing(mocker):
         "/some/prefix(?P<some>[^/]+)/item/(?P<item>[^/]+)/(?P<more>[^/]+)-suffix",
         endpoint_ws,
     )
-    router.setup()
 
     assert (
         router._fast_path_route_http["some"]["*"]["item"]["*"]["*"]["#routes#"]["GET"][
