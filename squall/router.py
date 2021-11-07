@@ -55,7 +55,7 @@ class Router:
         self.dependency_overrides_provider = dependency_overrides_provider
 
         self._childs: List[Router] = []
-        self.routes: List[Union[APIRoute, APIWebSocketRoute]] = routes or []
+        self._routes: List[Union[APIRoute, APIWebSocketRoute]] = routes or []
 
     def add_api_route(
         self,
@@ -170,7 +170,7 @@ class Router:
         self.route_register(route)
 
     def route_register(self, route: Union[APIRoute, APIWebSocketRoute]) -> None:
-        self.routes.append(route)
+        self._routes.append(route)
 
     def api_route(
         self,
@@ -254,6 +254,10 @@ class Router:
         for route in router.routes:
             route.add_path_prefix(self._prefix)
             self.route_register(route)
+
+    @property
+    def routes(self) -> List[Union[APIRoute, APIWebSocketRoute]]:
+        return self._routes
 
     def get(
         self,
@@ -711,7 +715,7 @@ class RootRouter(Router):
             self._add_fast_path_route(route, websocket=False)
         elif isinstance(route, APIWebSocketRoute):
             self._add_fast_path_route(route, websocket=True)
-        self.routes.append(route)
+        self._routes.append(route)
 
     def get_http_routes(
         self, method: str, path: str

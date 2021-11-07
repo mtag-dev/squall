@@ -95,7 +95,7 @@ def test_sub_routing():
     router = squall.router.Router(prefix="/api")
     router.include_router(v1_router)
 
-    assert router.routes[0].path == "".join(
+    assert router._routes[0].path == "".join(
         [
             "/api",
             "/v1",
@@ -105,7 +105,7 @@ def test_sub_routing():
     )
 
     # Check that second coll didn't add extra path prefix
-    assert router.routes[0].path == "".join(
+    assert router._routes[0].path == "".join(
         [
             "/api",
             "/v1",

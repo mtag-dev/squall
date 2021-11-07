@@ -21,13 +21,12 @@ from squall.params import Depends
 from squall.requests import Request
 from squall.responses import HTMLResponse, JSONResponse, Response
 from squall.routing import APIRoute, APIWebSocketRoute
-from squall.types import AnyFunc
+from squall.types import AnyFunc, ASGIApp, Receive, Scope, Send
 from starlette.datastructures import State
 from starlette.exceptions import ExceptionMiddleware, HTTPException
 from starlette.middleware import Middleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.errors import ServerErrorMiddleware
-from starlette.types import ASGIApp, Receive, Scope, Send
 
 
 class Squall:
@@ -108,7 +107,7 @@ class Squall:
         self.user_middleware: List[Middleware] = (
             [] if middleware is None else list(middleware)
         )
-        self.middleware_stack: ASGIApp = self.build_middleware_stack()
+        self.middleware_stack: ASGIApp = self._build_middleware_stack()
 
         self.title = title
         self.description = description
@@ -146,9 +145,162 @@ class Squall:
         self.on_shutdown = [] if on_shutdown is None else list(on_shutdown)
         self.lifespan_ctx = LifespanContext(self.on_startup, self.on_shutdown)
 
-        self.setup()
+        self._setup()
 
-    def build_middleware_stack(self) -> ASGIApp:
+    @property
+    def debug(self) -> bool:
+        """Returns debug flag."""
+        return self._debug
+
+    @debug.setter
+    def debug(self, value: bool) -> None:
+        """Set debug flag."""
+        self._debug = value
+        self.middleware_stack = self._build_middleware_stack()
+
+    def add_event_handler(self, event: str, handler: AnyFunc) -> None:
+        """Registrates event hooks.
+        There are two evens availiable: startup, shutdown
+
+        Examples:
+            >>> app = Squall()
+            >>>
+            >>> def some_func_to_call_on_startup():
+            >>>     pass
+            >>>
+            >>> async def some_func_to_call_on_shutdown():
+            >>>     pass
+            >>>
+            >>> app.add_event_handler("startup", some_func_to_call_on_startup)
+            >>> app.add_event_handler("shutdown", some_func_to_call_on_shutdown)
+        """
+        if event == "startup":
+            self.on_startup.append(handler)
+        elif event == "shutdown":
+            self.on_shutdown.append(handler)
+
+    def on_event(self, event_type: str) -> typing.Callable[..., Any]:
+        """Decorator for event hook registration
+
+        Examples:
+            >>> app = Squall()
+            >>>
+            >>> @app.on_event("startup")
+            >>> def some_func_to_call_on_startup():
+            >>>     pass
+            >>>
+            >>> @app.on_event("shutdown")
+            >>> async def some_func_to_call_on_shutdown():
+            >>>     pass
+        """
+
+        def decorator(func: AnyFunc) -> AnyFunc:
+            self.add_event_handler(event_type, func)
+            return func
+
+        return decorator
+
+    def add_exception_handler(
+        self,
+        exc_class_or_status_code: typing.Union[int, typing.Type[Exception]],
+        handler: typing.Callable[..., Any],
+    ) -> None:
+        """Adds exception handler.
+
+        Examples:
+            >>> app = Squall()
+            >>>
+            >>> class BackEndException(Exception): pass
+            >>>
+            >>> async def backend_exception_handler():
+            >>>     return JSONResponse(
+            >>>         status_code=500,
+            >>>         content={"message": "BackEnd error"}
+            >>>     )
+            >>>
+            >>> app.add_exception_handler(BackEndException, handle_backend_exception)
+        """
+        self.exception_handlers[exc_class_or_status_code] = handler
+        self.middleware_stack = self._build_middleware_stack()
+
+    def exception_handler(
+        self, exc_class_or_status_code: typing.Union[int, typing.Type[Exception]]
+    ) -> typing.Callable[..., Any]:
+        """Decorator for exception handler registration.
+
+        Examples:
+            >>> app = Squall()
+            >>>
+            >>> class BackEndException(Exception): pass
+            >>>
+            >>> @app.exception_handler(BackEndException)
+            >>> async def handle_backend_exception():
+            >>>     return JSONResponse(
+            >>>         status_code=500,
+            >>>         content={"message": "BackEnd error"}
+            >>>     )
+            >>>
+        """
+
+        def decorator(func: typing.Callable[..., Any]) -> typing.Callable[..., Any]:
+            self.add_exception_handler(exc_class_or_status_code, func)
+            return func
+
+        return decorator
+
+    def add_middleware(self, middleware_class: type, **options: typing.Any) -> None:
+        """Adds middleware.
+
+        Examples:
+            >>> from squall.middleware.httpsredirect import HTTPSRedirectMiddleware
+            >>>
+            >>> app = Squall()
+            >>>
+            >>> app.add_middleware(HTTPSRedirectMiddleware)
+        """
+        self.user_middleware.insert(0, Middleware(middleware_class, **options))
+        self.middleware_stack = self._build_middleware_stack()
+
+    def middleware(self, middleware_type: str) -> typing.Callable[..., Any]:
+        """Decorator for middleware registration.
+
+        Examples:
+            >>> app = Squall()
+            >>>
+            >>> @app.middleware("http")
+            >>> async def add_process_time_header(request: Request, call_next):
+            >>>     start_time = time.time()
+            >>>     response = await call_next(request)
+            >>>     process_time = time.time() - start_time
+            >>>     response.headers["X-Process-Time"] = str(process_time)
+            >>>     return response
+        """
+        assert (
+            middleware_type == "http"
+        ), 'Currently only middleware("http") is supported.'
+
+        def decorator(func: ASGIApp) -> ASGIApp:
+            self.add_middleware(BaseHTTPMiddleware, dispatch=func)
+            return func
+
+        return decorator
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        """ASGI calls entrypoint."""
+        if self.root_path:
+            scope["root_path"] = self.root_path
+
+        scope["app"] = self
+        if scope["type"] == "lifespan":
+            await lifespan(self.lifespan_ctx, scope, receive, send)
+            return
+
+        async with AsyncExitStack() as stack:
+            scope["squall_astack"] = stack
+            await self.middleware_stack(scope, receive, send)
+
+    def _build_middleware_stack(self) -> ASGIApp:
+        """Build stack for middlewares pipelining"""
         debug = self.debug
         error_handler = None
         exception_handlers = {}
@@ -174,49 +326,6 @@ class Squall:
             app = cls(app=app, **options)
         return app
 
-    def exception_handler(
-        self, exc_class_or_status_code: typing.Union[int, typing.Type[Exception]]
-    ) -> typing.Callable[..., Any]:
-        def decorator(func: typing.Callable[..., Any]) -> typing.Callable[..., Any]:
-            self.add_exception_handler(exc_class_or_status_code, func)
-            return func
-
-        return decorator
-
-    @property
-    def debug(self) -> bool:
-        return self._debug
-
-    @debug.setter
-    def debug(self, value: bool) -> None:
-        self._debug = value
-        self.middleware_stack = self.build_middleware_stack()
-
-    def add_event_handler(self, event: str, handler: AnyFunc) -> None:
-        if event == "startup":
-            self.on_startup.append(handler)
-        elif event == "shutdown":
-            self.on_shutdown.append(handler)
-
-    def on_event(self, event_type: str) -> typing.Callable[..., Any]:
-        def decorator(func: AnyFunc) -> AnyFunc:
-            self.add_event_handler(event_type, func)
-            return func
-
-        return decorator
-
-    def add_middleware(self, middleware_class: type, **options: typing.Any) -> None:
-        self.user_middleware.insert(0, Middleware(middleware_class, **options))
-        self.middleware_stack = self.build_middleware_stack()
-
-    def add_exception_handler(
-        self,
-        exc_class_or_status_code: typing.Union[int, typing.Type[Exception]],
-        handler: typing.Callable[..., Any],
-    ) -> None:
-        self.exception_handlers[exc_class_or_status_code] = handler
-        self.middleware_stack = self.build_middleware_stack()
-
     def openapi(self) -> Dict[str, Any]:
         if not self.openapi_schema:
             self.openapi_schema = get_openapi(
@@ -233,7 +342,8 @@ class Squall:
             )
         return self.openapi_schema
 
-    def setup(self) -> None:
+    def _setup(self) -> None:
+        """Setups OpenAPI functionality"""
         if self.openapi_url:
             urls = (server_data.get("url") for server_data in self.servers)
             server_urls = {url for url in urls if url}
@@ -292,27 +402,3 @@ class Squall:
             self.router.add_api_route(
                 self.redoc_url, redoc_html, include_in_schema=False
             )
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if self.root_path:
-            scope["root_path"] = self.root_path
-
-        scope["app"] = self
-        if scope["type"] == "lifespan":
-            await lifespan(self.lifespan_ctx, scope, receive, send)
-            return
-
-        async with AsyncExitStack() as stack:
-            scope["squall_astack"] = stack
-            await self.middleware_stack(scope, receive, send)
-
-    def middleware(self, middleware_type: str) -> typing.Callable[..., Any]:
-        assert (
-            middleware_type == "http"
-        ), 'Currently only middleware("http") is supported.'
-
-        def decorator(func: ASGIApp) -> ASGIApp:
-            self.add_middleware(BaseHTTPMiddleware, dispatch=func)
-            return func
-
-        return decorator
