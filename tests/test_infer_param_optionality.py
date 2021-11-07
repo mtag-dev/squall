@@ -27,9 +27,9 @@ def get_items(user_id: str):
     return [{"item_id": "i2", "user_id": user_id}]
 
 
-@item_router.get("/")
-def get_items():
-    return [{"item_id": "i1", "user_id": "u1"}, {"item_id": "i2", "user_id": "u2"}]
+# @item_router.get("/")
+# def get_items():
+#     return [{"item_id": "i1", "user_id": "u1"}, {"item_id": "i2", "user_id": "u2"}]
 
 
 @user_item_router.get("/{item_id}")

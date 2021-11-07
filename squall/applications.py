@@ -9,7 +9,7 @@ from squall.exception_handlers import (
     request_validation_exception_handler,
 )
 from squall.exceptions import RequestValidationError
-from squall.lifespan import lifespan
+from squall.lifespan import LifespanContext, lifespan
 from squall.logger import logger
 from squall.openapi.docs import (
     get_redoc_html,
@@ -20,12 +20,13 @@ from squall.openapi.utils import get_openapi
 from squall.params import Depends
 from squall.requests import Request
 from squall.responses import HTMLResponse, JSONResponse, Response
+from squall.routing import APIRoute, APIWebSocketRoute
+from squall.types import AnyFunc
 from starlette.datastructures import State
 from starlette.exceptions import ExceptionMiddleware, HTTPException
 from starlette.middleware import Middleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.errors import ServerErrorMiddleware
-from starlette.routing import BaseRoute
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 
@@ -34,7 +35,7 @@ class Squall:
         self,
         *,
         debug: bool = False,
-        routes: Optional[List[BaseRoute]] = None,
+        routes: Optional[Optional[List[Union[APIRoute, APIWebSocketRoute]]]] = None,
         title: str = "Squall",
         description: str = "",
         version: str = "0.1.0",
@@ -141,10 +142,9 @@ class Squall:
             assert self.title, "A title must be provided for OpenAPI, e.g.: 'My API'"
             assert self.version, "A version must be provided for OpenAPI, e.g.: '2.1.0'"
         self.openapi_schema: Optional[Dict[str, Any]] = None
-        self.on_startup = []
-        if on_startup:
-            self.on_startup.extend(list(on_startup))
+        self.on_startup = [] if on_startup is None else list(on_startup)
         self.on_shutdown = [] if on_shutdown is None else list(on_shutdown)
+        self.lifespan_ctx = LifespanContext(self.on_startup, self.on_shutdown)
 
         self.setup()
 
@@ -176,8 +176,8 @@ class Squall:
 
     def exception_handler(
         self, exc_class_or_status_code: typing.Union[int, typing.Type[Exception]]
-    ) -> typing.Callable:
-        def decorator(func: typing.Callable) -> typing.Callable:
+    ) -> typing.Callable[..., Any]:
+        def decorator(func: typing.Callable[..., Any]) -> typing.Callable[..., Any]:
             self.add_exception_handler(exc_class_or_status_code, func)
             return func
 
@@ -192,16 +192,14 @@ class Squall:
         self._debug = value
         self.middleware_stack = self.build_middleware_stack()
 
-    def add_event_handler(
-        self, event: str, handler: Union[Callable, Coroutine]
-    ) -> None:
+    def add_event_handler(self, event: str, handler: AnyFunc) -> None:
         if event == "startup":
             self.on_startup.append(handler)
         elif event == "shutdown":
             self.on_shutdown.append(handler)
 
-    def on_event(self, event_type: str) -> typing.Callable:
-        def decorator(func: typing.Callable) -> typing.Callable:
+    def on_event(self, event_type: str) -> typing.Callable[..., Any]:
+        def decorator(func: AnyFunc) -> AnyFunc:
             self.add_event_handler(event_type, func)
             return func
 
@@ -214,7 +212,7 @@ class Squall:
     def add_exception_handler(
         self,
         exc_class_or_status_code: typing.Union[int, typing.Type[Exception]],
-        handler: typing.Callable,
+        handler: typing.Callable[..., Any],
     ) -> None:
         self.exception_handlers[exc_class_or_status_code] = handler
         self.middleware_stack = self.build_middleware_stack()
@@ -301,19 +299,19 @@ class Squall:
 
         scope["app"] = self
         if scope["type"] == "lifespan":
-            await lifespan(self.on_startup, self.on_shutdown, scope, receive, send)
+            await lifespan(self.lifespan_ctx, scope, receive, send)
             return
 
         async with AsyncExitStack() as stack:
             scope["squall_astack"] = stack
             await self.middleware_stack(scope, receive, send)
 
-    def middleware(self, middleware_type: str) -> typing.Callable:
+    def middleware(self, middleware_type: str) -> typing.Callable[..., Any]:
         assert (
             middleware_type == "http"
         ), 'Currently only middleware("http") is supported.'
 
-        def decorator(func: typing.Callable) -> typing.Callable:
+        def decorator(func: ASGIApp) -> ASGIApp:
             self.add_middleware(BaseHTTPMiddleware, dispatch=func)
             return func
 

@@ -1,54 +1,19 @@
 import asyncio
-import contextlib
-import functools
 import traceback
-import types
-import typing
+from typing import List, TypeVar
 
-from squall.types import Receive, Scope, Send
+from squall.types import AnyFunc, Receive, Scope, Send
 
-_T = typing.TypeVar("_T")
-
-
-class _AsyncLiftContextManager(typing.AsyncContextManager[_T]):
-    def __init__(self, cm: typing.ContextManager[_T]):
-        self._cm = cm
-
-    async def __aenter__(self) -> _T:
-        return self._cm.__enter__()
-
-    async def __aexit__(
-        self,
-        exc_type: typing.Optional[typing.Type[BaseException]],
-        exc_value: typing.Optional[BaseException],
-        traceback: typing.Optional[types.TracebackType],
-    ) -> typing.Optional[bool]:
-        return self._cm.__exit__(exc_type, exc_value, traceback)
+_T = TypeVar("_T")
 
 
-def _wrap_gen_lifespan_context(
-    lifespan_context: typing.Callable[[typing.Any], typing.Generator]
-) -> typing.Callable[[typing.Any], typing.AsyncContextManager]:
-    cmgr = contextlib.contextmanager(lifespan_context)
-
-    @functools.wraps(cmgr)
-    def wrapper(app: typing.Any) -> _AsyncLiftContextManager:
-        return _AsyncLiftContextManager(cmgr(app))
-
-    return wrapper
-
-
-class Lifespan:
-    def __init__(
-        self,
-        on_startup: typing.List[typing.Union[typing.Callable, typing.Coroutine]],
-        on_shutdown: typing.List[typing.Union[typing.Callable, typing.Coroutine]],
-    ):
+class LifespanContext:
+    def __init__(self, on_startup: List[AnyFunc], on_shutdown: List[AnyFunc]):
         self._on_startup = on_startup
         self._on_shutdown = on_shutdown
 
     @staticmethod
-    async def _run_handlers(handlers):
+    async def _run_handlers(handlers: List[AnyFunc]) -> None:
         for handler in handlers:
             if asyncio.iscoroutinefunction(handler):
                 await handler()
@@ -66,8 +31,7 @@ class Lifespan:
 
 
 async def lifespan(
-    on_startup: typing.List[typing.Union[typing.Callable, typing.Coroutine]],
-    on_shutdown: typing.List[typing.Union[typing.Callable, typing.Coroutine]],
+    ctx: LifespanContext,
     scope: Scope,
     receive: Receive,
     send: Send,
@@ -80,7 +44,7 @@ async def lifespan(
     scope.get("app")
     await receive()
     try:
-        async with Lifespan(on_startup, on_shutdown):
+        async with ctx:
             await send({"type": "lifespan.startup.complete"})
             started = True
             await receive()
