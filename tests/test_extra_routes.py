@@ -14,7 +14,7 @@ class Item:
     price: Optional[float] = None
 
 
-@app.router.add_api("/items/{item_id}", methods=["GET"])
+@app.add_api("/items/{item_id}", methods=["GET"])
 def get_items(item_id: str):
     return {"item_id": item_id}
 
@@ -23,7 +23,7 @@ def get_not_decorated(item_id: str):
     return {"item_id": item_id}
 
 
-app.router.add_api_route("/items-not-decorated/{item_id}", get_not_decorated)
+app.add_api_route("/items-not-decorated/{item_id}", get_not_decorated)
 
 
 @app.delete("/items/{item_id}")
@@ -31,12 +31,12 @@ def delete_item(item_id: str, item: Item):
     return {"item_id": item_id, "item": item}
 
 
-@app.router.head("/items/{item_id}")
+@app.head("/items/{item_id}")
 def head_item(item_id: str):
     return JSONResponse(headers={"x-squall-item-id": item_id})
 
 
-@app.router.options("/items/{item_id}")
+@app.options("/items/{item_id}")
 def options_item(item_id: str):
     return JSONResponse(headers={"x-squall-item-id": item_id})
 
@@ -46,7 +46,7 @@ def patch_item(item_id: str, item: Item):
     return {"item_id": item_id, "item": item}
 
 
-@app.router.trace("/items/{item_id}")
+@app.trace("/items/{item_id}")
 def trace_item(item_id: str):
     return JSONResponse(media_type="message/http")
 

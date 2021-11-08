@@ -6,7 +6,7 @@ from squall import Path, Query, Squall
 app = Squall()
 
 
-@app.router.add_api("/api_route")
+@app.add_api("/api_route")
 def non_operation():
     return {"message": "Hello World"}
 
@@ -15,7 +15,7 @@ def non_decorated_route():
     return {"message": "Hello World"}
 
 
-app.router.add_api_route("/non_decorated_route", non_decorated_route)
+app.add_api_route("/non_decorated_route", non_decorated_route)
 
 
 @app.get("/text")

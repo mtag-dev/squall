@@ -10,7 +10,7 @@ async def read_main():
     return {"msg": "Hello World"}
 
 
-@app.router.websocket("/ws")
+@app.websocket("/ws")
 async def websocket(websocket: WebSocket):
     await websocket.accept()
     await websocket.send_json({"msg": "Hello WebSocket"})

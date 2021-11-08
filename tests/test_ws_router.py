@@ -6,7 +6,7 @@
 # app = Squall()
 #
 #
-# @app.router.websocket_route("/")
+# @app.websocket_route("/")
 # async def index(websocket: WebSocket):
 #     await websocket.accept()
 #     await websocket.send_text("Hello, world!")

@@ -92,6 +92,9 @@ class Squall:
         self.include_router = self.router.include_router
         self.routes = self.router.routes
         self.add_route = self.router.add_route
+        self.add_api = self.router.add_api
+        self.add_api_route = self.router.add_api_route
+        self.websocket = self.router.websocket
 
         self.exception_handlers: Dict[
             Union[int, Type[Exception]],

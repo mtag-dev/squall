@@ -16,7 +16,7 @@ async def get_value_by_http(value: int = Depends(extract_value_from_http_connect
     return value
 
 
-@app.router.websocket("/ws")
+@app.websocket("/ws")
 async def get_value_by_ws(
     websocket: WebSocket, value: int = Depends(extract_value_from_http_connection)
 ):
