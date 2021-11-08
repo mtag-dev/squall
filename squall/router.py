@@ -48,7 +48,7 @@ class Router:
         self._tags = tags or []
         self._dependencies = list(dependencies or []) or []
         self._default_response_class = default_response_class
-        self._route_class = route_class
+        self.route_class = route_class
         self._deprecated = deprecated
         self._include_in_schema = include_in_schema
         self._responses = responses or {}
@@ -79,7 +79,7 @@ class Router:
         route_class_override: Optional[Type[APIRoute]] = None,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> None:
-        route_class = route_class_override or self._route_class
+        route_class = route_class_override or self.route_class
         responses = responses or {}
         combined_responses = {**self._responses, **responses}
         current_response_class = get_value_or_default(
@@ -135,7 +135,7 @@ class Router:
         route_class_override: Optional[Type[APIRoute]] = None,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> None:
-        route_class = route_class_override or self._route_class
+        route_class = route_class_override or self.route_class
         responses = responses or {}
         combined_responses = {**self._responses, **responses}
         current_response_class = get_value_or_default(
@@ -172,7 +172,7 @@ class Router:
     def route_register(self, route: Union[APIRoute, APIWebSocketRoute]) -> None:
         self._routes.append(route)
 
-    def api_route(
+    def add_api(
         self,
         path: str,
         *,
@@ -192,6 +192,16 @@ class Router:
         name: Optional[str] = None,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+        """Registrates API endpoint.
+
+        Examples:
+            >>> app = Squall()
+            >>>
+            >>> @app.add_api("/users/{username}", methods=["GET"])
+            >>> async def read_user(username: str):
+            >>>     return {"username": username}
+        """
+
         def decorator(func: DecoratedCallable) -> DecoratedCallable:
             self.add_api_route(
                 path,
@@ -241,9 +251,21 @@ class Router:
         )
         self.route_register(route)
 
-    def websocket_route(
+    def websocket(
         self, path: str, name: Optional[str] = None
     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+        """Registrates WebSocket endpoint.
+
+        Examples:
+            >>> app = Squall()
+            >>>
+            >>> @app.websocket("/ws")
+            >>> async def websocket(websocket: WebSocket):
+            >>>     await websocket.accept()
+            >>>     await websocket.send_json({"msg": "Hello WebSocket"})
+            >>>     await websocket.close()
+        """
+
         def decorator(func: DecoratedCallable) -> DecoratedCallable:
             self.add_ws_route(path, func, name=name)
             return func
@@ -251,6 +273,19 @@ class Router:
         return decorator
 
     def include_router(self, router: "Router") -> None:
+        """Includes child router
+
+        Examples:
+            >>> from squall import Squall, Router
+            >>> app = Squall()
+            >>> router = Router(prefix="/api")
+            >>>
+            >>> @router.get("/users/{username}")
+            >>> async def read_user(username: str):
+            >>>     return {"username": username}
+            >>>
+            >>> app.include_router(router)
+        """
         for route in router.routes:
             route.add_path_prefix(self._prefix)
             self.route_register(route)
@@ -278,7 +313,7 @@ class Router:
         name: Optional[str] = None,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
-        return self.api_route(
+        return self.add_api(
             path=path,
             response_model=response_model,
             status_code=status_code,
@@ -316,7 +351,7 @@ class Router:
         name: Optional[str] = None,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
-        return self.api_route(
+        return self.add_api(
             path=path,
             response_model=response_model,
             status_code=status_code,
@@ -354,7 +389,7 @@ class Router:
         name: Optional[str] = None,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
-        return self.api_route(
+        return self.add_api(
             path=path,
             response_model=response_model,
             status_code=status_code,
@@ -392,7 +427,7 @@ class Router:
         name: Optional[str] = None,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
-        return self.api_route(
+        return self.add_api(
             path=path,
             response_model=response_model,
             status_code=status_code,
@@ -430,7 +465,7 @@ class Router:
         name: Optional[str] = None,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
-        return self.api_route(
+        return self.add_api(
             path=path,
             response_model=response_model,
             status_code=status_code,
@@ -468,7 +503,7 @@ class Router:
         name: Optional[str] = None,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
-        return self.api_route(
+        return self.add_api(
             path=path,
             response_model=response_model,
             status_code=status_code,
@@ -506,7 +541,7 @@ class Router:
         name: Optional[str] = None,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
-        return self.api_route(
+        return self.add_api(
             path=path,
             response_model=response_model,
             status_code=status_code,
@@ -545,7 +580,7 @@ class Router:
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
 
-        return self.api_route(
+        return self.add_api(
             path=path,
             response_model=response_model,
             status_code=status_code,

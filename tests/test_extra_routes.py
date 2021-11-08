@@ -14,7 +14,7 @@ class Item:
     price: Optional[float] = None
 
 
-@app.router.api_route("/items/{item_id}", methods=["GET"])
+@app.router.add_api("/items/{item_id}", methods=["GET"])
 def get_items(item_id: str):
     return {"item_id": item_id}
 

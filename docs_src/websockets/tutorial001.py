@@ -43,7 +43,7 @@ async def get():
     return HTMLResponse(html)
 
 
-@app.router.websocket_route("/ws")
+@app.router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     while True:

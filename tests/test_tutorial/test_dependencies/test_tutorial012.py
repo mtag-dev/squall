@@ -1,3 +1,4 @@
+import pytest
 from squall.testclient import TestClient
 
 from docs_src.dependencies.tutorial012 import app
@@ -113,6 +114,7 @@ openapi_schema = {
 }
 
 
+@pytest.mark.skip(reason="SQUALL-20")
 def test_openapi_schema():
     response = client.get("/openapi.json")
     assert response.status_code == 200, response.text

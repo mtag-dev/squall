@@ -1,3 +1,4 @@
+import pytest
 from squall.testclient import TestClient
 
 from docs_src.path_params.tutorial004 import app
@@ -71,12 +72,14 @@ openapi_schema = {
 }
 
 
+@pytest.mark.skip(reason="SQUALL-19")
 def test_openapi():
     response = client.get("/openapi.json")
     assert response.status_code == 200, response.text
     assert response.json() == openapi_schema
 
 
+@pytest.mark.skip(reason="SQUALL-19")
 def test_file_path():
     response = client.get("/files/home/johndoe/myfile.txt")
     print(response.content)
@@ -84,6 +87,7 @@ def test_file_path():
     assert response.json() == {"file_path": "home/johndoe/myfile.txt"}
 
 
+@pytest.mark.skip(reason="SQUALL-19")
 def test_root_file_path():
     response = client.get("/files//home/johndoe/myfile.txt")
     print(response.content)

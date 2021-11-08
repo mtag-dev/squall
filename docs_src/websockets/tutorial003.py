@@ -70,7 +70,7 @@ async def get():
     return HTMLResponse(html)
 
 
-@app.router.websocket_route("/ws/{client_id}")
+@app.router.websocket("/ws/{client_id}")
 async def websocket_endpoint(websocket: WebSocket, client_id: int):
     await manager.connect(websocket)
     try:

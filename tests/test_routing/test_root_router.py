@@ -77,62 +77,21 @@ def test_fast_path_routing(mocker):
     )
 
     assert (
-        router.get_http_routes("GET", "/some/prefix1/item/1/1-suffix")[0].endpoint
+        router.get_http_routes("GET", "/some/prefix1/item/1/1-suffix")[0][0].endpoint
         == endpoint1
     )
     assert (
-        router.get_http_routes("POST", "/some/prefix1/item/1/1-suffix")[0].endpoint
+        router.get_http_routes("POST", "/some/prefix1/item/1/1-suffix")[0][0].endpoint
         == endpoint1
     )
     assert (
-        router.get_http_routes("PUT", "/some/prefix1/item/1/1-suffix")[0].endpoint
+        router.get_http_routes("PUT", "/some/prefix1/item/1/1-suffix")[0][0].endpoint
         == endpoint2
     )
     assert (
-        router.get_http_routes("DELETE", "/some/prefix1/item/1/1-suffix")[0].endpoint
+        router.get_http_routes("DELETE", "/some/prefix1/item/1/1-suffix")[0][0].endpoint
         == endpoint2
     )
     assert (
         router.get_ws_routes("/some/prefix1/item/1/1-suffix")[0].endpoint == endpoint_ws
     )
-
-
-# def test_get_handlers():
-#     router = MainRouter()
-#     route1 = APIRoute(
-#         "/some/prefix(?P<some>[^/]+)/item/(?P<item>[^/]+)/(?P<more>[^/]+)-suffix",
-#         endpoint=lambda *a: {},
-#         methods=["GET", "POST"],
-#     )
-#     route2 = APIRoute(
-#         "/some/prefix(?P<some>[^/]+)/item/(?P<item>[^/]+)/(?P<more>[^/]+)-suffix",
-#         endpoint=lambda *a: {},
-#         methods=["PATCH", "DELETE"],
-#     )
-#     router.add_api_route(route1)
-#     router.add_api_route(route2)
-#     assert route1 in router.get_http_handlers(
-#         "/some/prefixaaa/item/bbb/ccc-suffix", "GET"
-#     )
-#     assert route1 in router.get_http_handlers(
-#         "/some/prefixaaa/item/bbb/ccc-suffix", "POST"
-#     )
-#     assert route1 not in router.get_http_handlers(
-#         "/some/prefixaaa/item/bbb/ccc-suffix", "PATCH"
-#     )
-#     assert route1 not in router.get_http_handlers(
-#         "/some/prefixaaa/item/bbb/ccc-suffix", "DELETE"
-#     )
-#
-#     assert route2 not in router.get_http_handlers(
-#         "/some/prefixaaa/item/bbb/ccc-suffix", "GET"
-#     )
-#     assert route2 not in router.get_http_handlers(
-#         "/some/prefixaaa/item/bbb/ccc-suffix", "POST"
-#     )
-#     assert route2 in router.get_http_handlers(
-#         "/some/prefixaaa/item/bbb/ccc-suffix", "PATCH"
-#     )
-#     assert route2 in router.get_http_handlers(
-#         "/some/prefixaaa/item/bbb/ccc-suffix", "DELETE"
-#     )

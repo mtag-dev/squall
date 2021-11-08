@@ -29,6 +29,7 @@ def test_use_empty():
         assert response.json() == ["OK"]
 
 
+@pytest.mark.skip(reason="Should we raise an exception in such cases?")
 def test_include_empty():
     # if both include and router.path are empty - it should raise exception
     with pytest.raises(Exception):

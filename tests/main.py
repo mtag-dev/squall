@@ -6,7 +6,7 @@ from squall import Path, Query, Squall
 app = Squall()
 
 
-@app.router.api_route("/api_route")
+@app.router.add_api("/api_route")
 def non_operation():
     return {"message": "Hello World"}
 
