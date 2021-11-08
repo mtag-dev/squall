@@ -54,7 +54,6 @@ class Router:
         self._responses = responses or {}
         self.dependency_overrides_provider = dependency_overrides_provider
 
-        self._childs: List[Router] = []
         self._routes: List[Union[APIRoute, APIWebSocketRoute]] = routes or []
 
     def add_api_route(
@@ -232,16 +231,6 @@ class Router:
         endpoint: Callable[..., Any],
         *,
         name: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
-        summary: Optional[str] = None,
-        description: Optional[str] = None,
-        response_description: str = "Successful Response",
-        responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
-        deprecated: Optional[bool] = None,
-        operation_id: Optional[str] = None,
-        include_in_schema: bool = True,
-        openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> None:
         route = APIWebSocketRoute(
             self._prefix + path,

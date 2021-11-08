@@ -1,5 +1,5 @@
 import typing
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Sequence, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Type, Union
 
 from squall import router
 from squall.concurrency import AsyncExitStack
@@ -48,12 +48,7 @@ class Squall:
         swagger_ui_oauth2_redirect_url: Optional[str] = "/docs/oauth2-redirect",
         swagger_ui_init_oauth: Optional[Dict[str, Any]] = None,
         middleware: Optional[Sequence[Middleware]] = None,
-        exception_handlers: Optional[
-            Dict[
-                Union[int, Type[Exception]],
-                Callable[[Request, Any], Coroutine[Any, Any, Response]],
-            ]
-        ] = None,
+        exception_handlers: Optional[Dict[Union[int, Type[Exception]], AnyFunc]] = None,
         on_startup: Optional[Sequence[Callable[[], Any]]] = None,
         on_shutdown: Optional[Sequence[Callable[[], Any]]] = None,
         terms_of_service: Optional[str] = None,
@@ -96,10 +91,7 @@ class Squall:
         self.add_api_route = self.router.add_api_route
         self.websocket = self.router.websocket
 
-        self.exception_handlers: Dict[
-            Union[int, Type[Exception]],
-            Callable[[Request, Any], Coroutine[Any, Any, Response]],
-        ] = (
+        self.exception_handlers: Dict[Union[int, Type[Exception]], AnyFunc] = (
             {} if exception_handlers is None else dict(exception_handlers)
         )
         self.exception_handlers.setdefault(HTTPException, http_exception_handler)
@@ -221,7 +213,7 @@ class Squall:
             >>>         content={"message": "BackEnd error"}
             >>>     )
             >>>
-            >>> app.add_exception_handler(BackEndException, handle_backend_exception)
+            >>> app.add_exception_handler(BackEndException, backend_exception_handler)
         """
         self.exception_handlers[exc_class_or_status_code] = handler
         self.middleware_stack = self._build_middleware_stack()
@@ -304,7 +296,6 @@ class Squall:
 
     def _build_middleware_stack(self) -> ASGIApp:
         """Build stack for middlewares pipelining"""
-        debug = self.debug
         error_handler = None
         exception_handlers = {}
 
@@ -315,11 +306,11 @@ class Squall:
                 exception_handlers[key] = value
 
         middleware = (
-            [Middleware(ServerErrorMiddleware, handler=error_handler, debug=debug)]
+            [Middleware(ServerErrorMiddleware, handler=error_handler, debug=self.debug)]
             + self.user_middleware
             + [
                 Middleware(
-                    ExceptionMiddleware, handlers=exception_handlers, debug=debug
+                    ExceptionMiddleware, handlers=exception_handlers, debug=self.debug
                 )
             ]
         )

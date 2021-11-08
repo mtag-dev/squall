@@ -41,7 +41,6 @@ async def lifespan(
     startup and shutdown events.
     """
     started = False
-    scope.get("app")
     await receive()
     try:
         async with ctx:
