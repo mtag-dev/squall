@@ -31,19 +31,16 @@ from squall.exceptions import RequestValidationError, WebSocketRequestValidation
 from squall.openapi.constants import STATUS_CODES_WITH_NO_BODY
 from squall.requests import Request
 from squall.responses import JSONResponse, Response
-from squall.types import DecoratedCallable
 from squall.utils import (
     create_cloned_field,
     create_response_field,
     generate_operation_id_for_path,
-    get_value_or_default,
 )
 from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException
 from starlette.routing import BaseRoute as SlBaseRoute
 from starlette.routing import Mount as Mount  # noqa
 from starlette.routing import Route as SlRoute
-from starlette.routing import Router as SlRouter
 from starlette.routing import WebSocketRoute as SlWebSocketRoute
 from starlette.routing import (
     compile_path,
@@ -54,6 +51,30 @@ from starlette.routing import (
 from starlette.status import WS_1008_POLICY_VIOLATION
 from starlette.types import ASGIApp, Receive, Scope, Send
 from starlette.websockets import WebSocket
+
+
+class WebSocketRoute(SlWebSocketRoute):
+    def add_path_prefix(self, prefix: str) -> None:
+        self.path = prefix + self.path
+
+
+class NoMatchFound(Exception):
+    """
+    Raised by `.url_for(name, **path_params)` and `.url_path_for(name, **path_params)`
+    if no matching route exists.
+    """
+
+
+#
+# class Match(enum.Enum):
+#     NONE = 0
+#     PARTIAL = 1
+#     FULL = 2
+#
+#
+# class Event(enum.Enum):
+#     STARTUP = "startup"
+#     SHUTDOWN = "shutdown"
 
 
 def request_response(func: Callable[..., Any]) -> ASGIApp:
@@ -212,7 +233,7 @@ class Route(SlRoute):
         )
 
 
-class APIWebSocketRoute(SlWebSocketRoute):
+class APIWebSocketRoute(WebSocketRoute):
     def __init__(
         self,
         path: str,
@@ -221,7 +242,7 @@ class APIWebSocketRoute(SlWebSocketRoute):
         name: Optional[str] = None,
         dependency_overrides_provider: Optional[Any] = None,
     ) -> None:
-        self.path = path
+        self.path = self._path_origin = path
         self.endpoint = endpoint
         self.name = get_name(endpoint) if name is None else name
         self.dependant = get_dependant(path=path, call=self.endpoint)
@@ -233,8 +254,17 @@ class APIWebSocketRoute(SlWebSocketRoute):
         )
         self.path_regex, self.path_format, self.param_convertors = compile_path(path)
 
+    def set_defaults(self) -> None:
+        self.path = self._path_origin
 
-class APIRoute(SlRoute):
+    def add_path_prefix(self, prefix: str) -> None:
+        self.path = prefix + self.path
+        self.path_regex, self.path_format, self.param_convertors = compile_path(
+            self.path
+        )
+
+
+class APIRoute(Route):
     def __init__(
         self,
         path: str,
@@ -263,7 +293,7 @@ class APIRoute(SlRoute):
         # normalise enums e.g. http.HTTPStatus
         if isinstance(status_code, enum.IntEnum):
             status_code = int(status_code)
-        self.path = path
+        self.path = self._path_origin = path
         self.endpoint = endpoint
         self.name = get_name(endpoint) if name is None else name
         self.path_regex, self.path_format, self.param_convertors = compile_path(path)
@@ -348,610 +378,11 @@ class APIRoute(SlRoute):
             response_field=self.response_field,
         )
 
+    def set_defaults(self) -> None:
+        self.path = self._path_origin
 
-class APIRouter(SlRouter):
-    def __init__(
-        self,
-        *,
-        prefix: str = "",
-        tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
-        default_response_class: Type[Response] = Default(JSONResponse),
-        responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
-        callbacks: Optional[List[SlBaseRoute]] = None,
-        routes: Optional[List[SlBaseRoute]] = None,
-        redirect_slashes: bool = True,
-        default: Optional[ASGIApp] = None,
-        dependency_overrides_provider: Optional[Any] = None,
-        route_class: Type[APIRoute] = APIRoute,
-        on_startup: Optional[Sequence[Callable[[], Any]]] = None,
-        on_shutdown: Optional[Sequence[Callable[[], Any]]] = None,
-        deprecated: Optional[bool] = None,
-        include_in_schema: bool = True,
-    ) -> None:
-        super().__init__(
-            routes=routes,  # type: ignore # in Starlette
-            redirect_slashes=redirect_slashes,
-            default=default,  # type: ignore # in Starlette
-            on_startup=on_startup,  # type: ignore # in Starlette
-            on_shutdown=on_shutdown,  # type: ignore # in Starlette
-        )
-        if prefix:
-            assert prefix.startswith("/"), "A path prefix must start with '/'"
-            assert not prefix.endswith(
-                "/"
-            ), "A path prefix must not end with '/', as the routes will start with '/'"
-        self.prefix = prefix
-        self.tags: List[str] = tags or []
-        self.dependencies = list(dependencies or []) or []
-        self.deprecated = deprecated
-        self.include_in_schema = include_in_schema
-        self.responses = responses or {}
-        self.callbacks = callbacks or []
-        self.dependency_overrides_provider = dependency_overrides_provider
-        self.route_class = route_class
-        self.default_response_class = default_response_class
-
-    def add_api_route(
-        self,
-        path: str,
-        endpoint: Callable[..., Any],
-        *,
-        response_model: Optional[Type[Any]] = None,
-        status_code: Optional[int] = None,
-        tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
-        summary: Optional[str] = None,
-        description: Optional[str] = None,
-        response_description: str = "Successful Response",
-        responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
-        deprecated: Optional[bool] = None,
-        methods: Optional[Union[Set[str], List[str]]] = None,
-        operation_id: Optional[str] = None,
-        include_in_schema: bool = True,
-        response_class: Union[Type[Response], DefaultPlaceholder] = Default(
-            JSONResponse
-        ),
-        name: Optional[str] = None,
-        route_class_override: Optional[Type[APIRoute]] = None,
-        callbacks: Optional[List[SlBaseRoute]] = None,
-        openapi_extra: Optional[Dict[str, Any]] = None,
-    ) -> None:
-        route_class = route_class_override or self.route_class
-        responses = responses or {}
-        combined_responses = {**self.responses, **responses}
-        current_response_class = get_value_or_default(
-            response_class, self.default_response_class
-        )
-        current_tags = self.tags.copy()
-        if tags:
-            current_tags.extend(tags)
-        current_dependencies = self.dependencies.copy()
-        if dependencies:
-            current_dependencies.extend(dependencies)
-        current_callbacks = self.callbacks.copy()
-        if callbacks:
-            current_callbacks.extend(callbacks)
-        route = route_class(
-            self.prefix + path,
-            endpoint=endpoint,
-            response_model=response_model,
-            status_code=status_code,
-            tags=current_tags,
-            dependencies=current_dependencies,
-            summary=summary,
-            description=description,
-            response_description=response_description,
-            responses=combined_responses,
-            deprecated=deprecated or self.deprecated,
-            methods=methods,
-            operation_id=operation_id,
-            include_in_schema=include_in_schema and self.include_in_schema,
-            response_class=current_response_class,
-            name=name,
-            dependency_overrides_provider=self.dependency_overrides_provider,
-            callbacks=current_callbacks,
-            openapi_extra=openapi_extra,
-        )
-        self.routes.append(route)
-
-    def api_route(
-        self,
-        path: str,
-        *,
-        response_model: Optional[Type[Any]] = None,
-        status_code: Optional[int] = None,
-        tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
-        summary: Optional[str] = None,
-        description: Optional[str] = None,
-        response_description: str = "Successful Response",
-        responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
-        deprecated: Optional[bool] = None,
-        methods: Optional[List[str]] = None,
-        operation_id: Optional[str] = None,
-        include_in_schema: bool = True,
-        response_class: Type[Response] = Default(JSONResponse),
-        name: Optional[str] = None,
-        callbacks: Optional[List[SlBaseRoute]] = None,
-        openapi_extra: Optional[Dict[str, Any]] = None,
-    ) -> Callable[[DecoratedCallable], DecoratedCallable]:
-        def decorator(func: DecoratedCallable) -> DecoratedCallable:
-            self.add_api_route(
-                path,
-                func,
-                response_model=response_model,
-                status_code=status_code,
-                tags=tags,
-                dependencies=dependencies,
-                summary=summary,
-                description=description,
-                response_description=response_description,
-                responses=responses,
-                deprecated=deprecated,
-                methods=methods,
-                operation_id=operation_id,
-                include_in_schema=include_in_schema,
-                response_class=response_class,
-                name=name,
-                callbacks=callbacks,
-                openapi_extra=openapi_extra,
-            )
-            return func
-
-        return decorator
-
-    def add_api_websocket_route(
-        self, path: str, endpoint: Callable[..., Any], name: Optional[str] = None
-    ) -> None:
-        route = APIWebSocketRoute(
-            path,
-            endpoint=endpoint,
-            name=name,
-            dependency_overrides_provider=self.dependency_overrides_provider,
-        )
-        self.routes.append(route)
-
-    def websocket(
-        self, path: str, name: Optional[str] = None
-    ) -> Callable[[DecoratedCallable], DecoratedCallable]:
-        def decorator(func: DecoratedCallable) -> DecoratedCallable:
-            self.add_api_websocket_route(path, func, name=name)
-            return func
-
-        return decorator
-
-    def add_route(
-        self,
-        path: str,
-        endpoint: Callable[..., Any],
-        methods: Optional[List[str]] = None,
-        name: Optional[str] = None,
-        include_in_schema: bool = True,
-    ) -> None:
-        route = Route(
-            path,
-            endpoint=endpoint,
-            methods=methods,
-            name=name,
-            include_in_schema=include_in_schema,
-        )
-        self.routes.append(route)
-
-    def include_router(
-        self,
-        router: "APIRouter",
-        *,
-        prefix: str = "",
-        tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
-        default_response_class: Type[Response] = Default(JSONResponse),
-        responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
-        callbacks: Optional[List[SlBaseRoute]] = None,
-        deprecated: Optional[bool] = None,
-        include_in_schema: bool = True,
-    ) -> None:
-        if prefix:
-            assert prefix.startswith("/"), "A path prefix must start with '/'"
-            assert not prefix.endswith(
-                "/"
-            ), "A path prefix must not end with '/', as the routes will start with '/'"
-        else:
-            for r in router.routes:
-                path = getattr(r, "path")
-                name = getattr(r, "name", "unknown")
-                if path is not None and not path:
-                    raise Exception(
-                        f"Prefix and path cannot be both empty (path operation: {name})"
-                    )
-        if responses is None:
-            responses = {}
-        for route in router.routes:
-            if isinstance(route, APIRoute):
-                combined_responses = {**responses, **route.responses}
-                use_response_class = get_value_or_default(
-                    route.response_class,
-                    router.default_response_class,
-                    default_response_class,
-                    self.default_response_class,
-                )
-                current_tags = []
-                if tags:
-                    current_tags.extend(tags)
-                if route.tags:
-                    current_tags.extend(route.tags)
-                current_dependencies: List[params.Depends] = []
-                if dependencies:
-                    current_dependencies.extend(dependencies)
-                if route.dependencies:
-                    current_dependencies.extend(route.dependencies)
-                current_callbacks = []
-                if callbacks:
-                    current_callbacks.extend(callbacks)
-                if route.callbacks:
-                    current_callbacks.extend(route.callbacks)
-                self.add_api_route(
-                    prefix + route.path,
-                    route.endpoint,
-                    response_model=route.response_model,
-                    status_code=route.status_code,
-                    tags=current_tags,
-                    dependencies=current_dependencies,
-                    summary=route.summary,
-                    description=route.description,
-                    response_description=route.response_description,
-                    responses=combined_responses,
-                    deprecated=route.deprecated or deprecated or self.deprecated,
-                    methods=route.methods,
-                    operation_id=route.operation_id,
-                    include_in_schema=route.include_in_schema
-                    and self.include_in_schema
-                    and include_in_schema,
-                    response_class=use_response_class,
-                    name=route.name,
-                    route_class_override=type(route),
-                    callbacks=current_callbacks,
-                    openapi_extra=route.openapi_extra,
-                )
-            elif isinstance(route, SlRoute):
-                methods = list(route.methods or [])  # type: ignore # in Starlette
-                self.add_route(
-                    prefix + route.path,
-                    route.endpoint,
-                    methods=methods,
-                    include_in_schema=route.include_in_schema,
-                    name=route.name,
-                )
-            elif isinstance(route, APIWebSocketRoute):
-                self.add_api_websocket_route(
-                    prefix + route.path, route.endpoint, name=route.name
-                )
-            elif isinstance(route, SlWebSocketRoute):
-                self.add_websocket_route(
-                    prefix + route.path, route.endpoint, name=route.name
-                )
-        for handler in router.on_startup:
-            self.add_event_handler("startup", handler)
-        for handler in router.on_shutdown:
-            self.add_event_handler("shutdown", handler)
-
-    def get(
-        self,
-        path: str,
-        *,
-        response_model: Optional[Type[Any]] = None,
-        status_code: Optional[int] = None,
-        tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
-        summary: Optional[str] = None,
-        description: Optional[str] = None,
-        response_description: str = "Successful Response",
-        responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
-        deprecated: Optional[bool] = None,
-        operation_id: Optional[str] = None,
-        include_in_schema: bool = True,
-        response_class: Type[Response] = Default(JSONResponse),
-        name: Optional[str] = None,
-        callbacks: Optional[List[SlBaseRoute]] = None,
-        openapi_extra: Optional[Dict[str, Any]] = None,
-    ) -> Callable[[DecoratedCallable], DecoratedCallable]:
-        return self.api_route(
-            path=path,
-            response_model=response_model,
-            status_code=status_code,
-            tags=tags,
-            dependencies=dependencies,
-            summary=summary,
-            description=description,
-            response_description=response_description,
-            responses=responses,
-            deprecated=deprecated,
-            methods=["GET"],
-            operation_id=operation_id,
-            include_in_schema=include_in_schema,
-            response_class=response_class,
-            name=name,
-            callbacks=callbacks,
-            openapi_extra=openapi_extra,
-        )
-
-    def put(
-        self,
-        path: str,
-        *,
-        response_model: Optional[Type[Any]] = None,
-        status_code: Optional[int] = None,
-        tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
-        summary: Optional[str] = None,
-        description: Optional[str] = None,
-        response_description: str = "Successful Response",
-        responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
-        deprecated: Optional[bool] = None,
-        operation_id: Optional[str] = None,
-        include_in_schema: bool = True,
-        response_class: Type[Response] = Default(JSONResponse),
-        name: Optional[str] = None,
-        callbacks: Optional[List[SlBaseRoute]] = None,
-        openapi_extra: Optional[Dict[str, Any]] = None,
-    ) -> Callable[[DecoratedCallable], DecoratedCallable]:
-        return self.api_route(
-            path=path,
-            response_model=response_model,
-            status_code=status_code,
-            tags=tags,
-            dependencies=dependencies,
-            summary=summary,
-            description=description,
-            response_description=response_description,
-            responses=responses,
-            deprecated=deprecated,
-            methods=["PUT"],
-            operation_id=operation_id,
-            include_in_schema=include_in_schema,
-            response_class=response_class,
-            name=name,
-            callbacks=callbacks,
-            openapi_extra=openapi_extra,
-        )
-
-    def post(
-        self,
-        path: str,
-        *,
-        response_model: Optional[Type[Any]] = None,
-        status_code: Optional[int] = None,
-        tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
-        summary: Optional[str] = None,
-        description: Optional[str] = None,
-        response_description: str = "Successful Response",
-        responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
-        deprecated: Optional[bool] = None,
-        operation_id: Optional[str] = None,
-        include_in_schema: bool = True,
-        response_class: Type[Response] = Default(JSONResponse),
-        name: Optional[str] = None,
-        callbacks: Optional[List[SlBaseRoute]] = None,
-        openapi_extra: Optional[Dict[str, Any]] = None,
-    ) -> Callable[[DecoratedCallable], DecoratedCallable]:
-        return self.api_route(
-            path=path,
-            response_model=response_model,
-            status_code=status_code,
-            tags=tags,
-            dependencies=dependencies,
-            summary=summary,
-            description=description,
-            response_description=response_description,
-            responses=responses,
-            deprecated=deprecated,
-            methods=["POST"],
-            operation_id=operation_id,
-            include_in_schema=include_in_schema,
-            response_class=response_class,
-            name=name,
-            callbacks=callbacks,
-            openapi_extra=openapi_extra,
-        )
-
-    def delete(
-        self,
-        path: str,
-        *,
-        response_model: Optional[Type[Any]] = None,
-        status_code: Optional[int] = None,
-        tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
-        summary: Optional[str] = None,
-        description: Optional[str] = None,
-        response_description: str = "Successful Response",
-        responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
-        deprecated: Optional[bool] = None,
-        operation_id: Optional[str] = None,
-        include_in_schema: bool = True,
-        response_class: Type[Response] = Default(JSONResponse),
-        name: Optional[str] = None,
-        callbacks: Optional[List[SlBaseRoute]] = None,
-        openapi_extra: Optional[Dict[str, Any]] = None,
-    ) -> Callable[[DecoratedCallable], DecoratedCallable]:
-        return self.api_route(
-            path=path,
-            response_model=response_model,
-            status_code=status_code,
-            tags=tags,
-            dependencies=dependencies,
-            summary=summary,
-            description=description,
-            response_description=response_description,
-            responses=responses,
-            deprecated=deprecated,
-            methods=["DELETE"],
-            operation_id=operation_id,
-            include_in_schema=include_in_schema,
-            response_class=response_class,
-            name=name,
-            callbacks=callbacks,
-            openapi_extra=openapi_extra,
-        )
-
-    def options(
-        self,
-        path: str,
-        *,
-        response_model: Optional[Type[Any]] = None,
-        status_code: Optional[int] = None,
-        tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
-        summary: Optional[str] = None,
-        description: Optional[str] = None,
-        response_description: str = "Successful Response",
-        responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
-        deprecated: Optional[bool] = None,
-        operation_id: Optional[str] = None,
-        include_in_schema: bool = True,
-        response_class: Type[Response] = Default(JSONResponse),
-        name: Optional[str] = None,
-        callbacks: Optional[List[SlBaseRoute]] = None,
-        openapi_extra: Optional[Dict[str, Any]] = None,
-    ) -> Callable[[DecoratedCallable], DecoratedCallable]:
-        return self.api_route(
-            path=path,
-            response_model=response_model,
-            status_code=status_code,
-            tags=tags,
-            dependencies=dependencies,
-            summary=summary,
-            description=description,
-            response_description=response_description,
-            responses=responses,
-            deprecated=deprecated,
-            methods=["OPTIONS"],
-            operation_id=operation_id,
-            include_in_schema=include_in_schema,
-            response_class=response_class,
-            name=name,
-            callbacks=callbacks,
-            openapi_extra=openapi_extra,
-        )
-
-    def head(
-        self,
-        path: str,
-        *,
-        response_model: Optional[Type[Any]] = None,
-        status_code: Optional[int] = None,
-        tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
-        summary: Optional[str] = None,
-        description: Optional[str] = None,
-        response_description: str = "Successful Response",
-        responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
-        deprecated: Optional[bool] = None,
-        operation_id: Optional[str] = None,
-        include_in_schema: bool = True,
-        response_class: Type[Response] = Default(JSONResponse),
-        name: Optional[str] = None,
-        callbacks: Optional[List[SlBaseRoute]] = None,
-        openapi_extra: Optional[Dict[str, Any]] = None,
-    ) -> Callable[[DecoratedCallable], DecoratedCallable]:
-        return self.api_route(
-            path=path,
-            response_model=response_model,
-            status_code=status_code,
-            tags=tags,
-            dependencies=dependencies,
-            summary=summary,
-            description=description,
-            response_description=response_description,
-            responses=responses,
-            deprecated=deprecated,
-            methods=["HEAD"],
-            operation_id=operation_id,
-            include_in_schema=include_in_schema,
-            response_class=response_class,
-            name=name,
-            callbacks=callbacks,
-            openapi_extra=openapi_extra,
-        )
-
-    def patch(
-        self,
-        path: str,
-        *,
-        response_model: Optional[Type[Any]] = None,
-        status_code: Optional[int] = None,
-        tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
-        summary: Optional[str] = None,
-        description: Optional[str] = None,
-        response_description: str = "Successful Response",
-        responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
-        deprecated: Optional[bool] = None,
-        operation_id: Optional[str] = None,
-        include_in_schema: bool = True,
-        response_class: Type[Response] = Default(JSONResponse),
-        name: Optional[str] = None,
-        callbacks: Optional[List[SlBaseRoute]] = None,
-        openapi_extra: Optional[Dict[str, Any]] = None,
-    ) -> Callable[[DecoratedCallable], DecoratedCallable]:
-        return self.api_route(
-            path=path,
-            response_model=response_model,
-            status_code=status_code,
-            tags=tags,
-            dependencies=dependencies,
-            summary=summary,
-            description=description,
-            response_description=response_description,
-            responses=responses,
-            deprecated=deprecated,
-            methods=["PATCH"],
-            operation_id=operation_id,
-            include_in_schema=include_in_schema,
-            response_class=response_class,
-            name=name,
-            callbacks=callbacks,
-            openapi_extra=openapi_extra,
-        )
-
-    def trace(
-        self,
-        path: str,
-        *,
-        response_model: Optional[Type[Any]] = None,
-        status_code: Optional[int] = None,
-        tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
-        summary: Optional[str] = None,
-        description: Optional[str] = None,
-        response_description: str = "Successful Response",
-        responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
-        deprecated: Optional[bool] = None,
-        operation_id: Optional[str] = None,
-        include_in_schema: bool = True,
-        response_class: Type[Response] = Default(JSONResponse),
-        name: Optional[str] = None,
-        callbacks: Optional[List[SlBaseRoute]] = None,
-        openapi_extra: Optional[Dict[str, Any]] = None,
-    ) -> Callable[[DecoratedCallable], DecoratedCallable]:
-
-        return self.api_route(
-            path=path,
-            response_model=response_model,
-            status_code=status_code,
-            tags=tags,
-            dependencies=dependencies,
-            summary=summary,
-            description=description,
-            response_description=response_description,
-            responses=responses,
-            deprecated=deprecated,
-            methods=["TRACE"],
-            operation_id=operation_id,
-            include_in_schema=include_in_schema,
-            response_class=response_class,
-            name=name,
-            callbacks=callbacks,
-            openapi_extra=openapi_extra,
+    def add_path_prefix(self, prefix: str) -> None:
+        self.path = prefix + self.path
+        self.path_regex, self.path_format, self.param_convertors = compile_path(
+            self.path
         )

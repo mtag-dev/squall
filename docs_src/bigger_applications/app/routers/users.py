@@ -1,6 +1,6 @@
-from squall import APIRouter
+from squall.router import Router
 
-router = APIRouter()
+router = Router()
 
 
 @router.get("/users/", tags=["users"])

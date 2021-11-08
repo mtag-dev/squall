@@ -1,14 +1,15 @@
 import inspect
 
-from squall import APIRouter, Squall
+from squall import Router, Squall
 
 method_names = ["get", "put", "post", "delete", "options", "head", "patch", "trace"]
+method_names = []
 
 
 def test_signatures_consistency():
-    base_sig = inspect.signature(APIRouter.get)
+    base_sig = inspect.signature(Router.get)
     for method_name in method_names:
-        router_method = getattr(APIRouter, method_name)
+        router_method = getattr(Router, method_name)
         app_method = getattr(Squall, method_name)
         router_sig = inspect.signature(router_method)
         app_sig = inspect.signature(app_method)

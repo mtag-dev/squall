@@ -1,7 +1,7 @@
 import time
 from typing import Callable
 
-from squall import APIRouter, Request, Response, Squall
+from squall import Request, Response, Router, Squall
 from squall.routing import APIRoute
 
 
@@ -23,7 +23,7 @@ class TimedRoute(APIRoute):
 
 
 app = Squall()
-router = APIRouter(route_class=TimedRoute)
+router = Router(route_class=TimedRoute)
 
 
 @app.get("/")

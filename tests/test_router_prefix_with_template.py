@@ -1,9 +1,10 @@
-from squall import APIRouter, Squall
+from squall import Squall
+from squall.router import Router
 from squall.testclient import TestClient
 
 app = Squall()
 
-router = APIRouter()
+router = Router(prefix="/{segment}")
 
 
 @router.get("/users/{id}")
@@ -11,7 +12,7 @@ def read_user(segment: str, id: str):
     return {"segment": segment, "id": id}
 
 
-app.include_router(router, prefix="/{segment}")
+app.include_router(router)
 
 
 client = TestClient(app)

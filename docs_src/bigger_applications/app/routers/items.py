@@ -1,8 +1,9 @@
-from squall import APIRouter, Depends, HTTPException
+from squall import Depends, HTTPException
+from squall.router import Router
 
 from ..dependencies import get_token_header
 
-router = APIRouter(
+router = Router(
     prefix="/items",
     tags=["items"],
     dependencies=[Depends(get_token_header)],
