@@ -2,12 +2,10 @@ import ast
 import typing
 from ast import (
     Assign,
-    Attribute,
     Call,
     Compare,
     Constant,
     Dict,
-    Expr,
     ExceptHandler,
     FunctionDef,
     Gt,
@@ -22,7 +20,6 @@ from ast import (
     Pass,
     Return,
     Store,
-    Subscript,
     Try,
     Tuple,
     UnaryOp,
@@ -30,11 +27,12 @@ from ast import (
     fix_missing_locations,
 )
 from types import CodeType, FunctionType
+from squall.validators.ast_helpers import *
 
 
 class Validator:
     def __init__(self, args: typing.List[str]):
-        self.args = args + ['convert']
+        self.args = args + ["convert"]
         assert len(self.args) > 1, "No input parameters names configured."
         self.rules = []
 
@@ -47,7 +45,6 @@ class Validator:
         optional: bool = False,
         convert: typing.Optional[typing.Any] = None,
         # Both
-        # eq: typing.Optional[typing.Any] = None,
         # Numeric arguments
         gt: typing.Optional[float] = None,
         ge: typing.Optional[float] = None,
@@ -56,16 +53,16 @@ class Validator:
         # String arguments
         min_length: typing.Optional[int] = None,
         max_length: typing.Optional[int] = None,
-        default: typing.Optional[typing.Any] = None
+        default: typing.Optional[typing.Any] = None,
     ):
         assert source in self.args
-        name = Constant(value=name) if name else Constant(value=key)
+        name = Constant(value=name if name else key)
         on_none = []
         if default is not None:
-            on_none.append(self._set_default(name, default))
+            on_none.append(setitem("results", name, Constant(value=default)))
         else:
             on_none.append(
-                Pass() if optional else self._violated(source, key, "Can't be None")
+                Pass() if optional else self.add_violate(source, key, "Can't be None")
             )
 
         if check == "integer":
@@ -73,21 +70,13 @@ class Validator:
             if convert is not None:
                 rule = self._try_convert(source, key, convert, than=rule)
         elif check == "string":
-            rule = self.string(source, key, name, min_length=min_length, max_length=max_length)
+            rule = self.string(
+                source, key, name, min_length=min_length, max_length=max_length
+            )
             if convert is not None:
                 rule = self._try_convert(source, key, convert, than=rule)
         if rule is not None:
             self.rules.append(self._if_none(source, key, on_none, rule))
-
-    def _set_default(self, name, default):
-        return Assign(
-            targets=[
-                Subscript(
-                    value=Name(id='results', ctx=Load()),
-                    slice=name,
-                    ctx=Store())],
-            value=Constant(value=default)
-        )
 
     def _try_convert(self, source, key, func, than):
         _try = Try()
@@ -95,47 +84,35 @@ class Validator:
         _try.finalbody = []
         _try.handlers = [
             ExceptHandler(
-                body=[self._violated(source, key, f'Cast of `{func}` failed')]
+                body=[self.add_violate(source, key, f"Cast of `{func}` failed")]
             )
         ]
         _try.body = [
-            Assign(
-                targets=[
-                    Subscript(
-                        value=Name(id=source, ctx=Load()),
-                        slice=Constant(value=key),
-                        ctx=Store())],
+            setitem(
+                entity_name=source,
+                key=Constant(value=key),
                 value=Call(
-                    func=Subscript(
-                        value=Name(id='convert', ctx=Load()),
-                        slice=Constant(value=func),
-                        ctx=Load()
-                    ),
-                    args=[
-                        Subscript(
-                            value=Name(id=source, ctx=Load()),
-                            slice=Constant(value=key),
-                            ctx=Load())],
-                    keywords=[]))
-            ,
-            *than
+                    func=getitem("convert", Constant(value=func)),
+                    args=[getitem(source, Constant(value=key))],
+                    keywords=[],
+                ),
+            ),
+            *than,
         ]
         return [_try]
 
-    def _if_none(self, source, key, on_true, on_false):
-        return If(
-            test=Compare(
-                left=Call(
-                    func=Attribute(
-                        value=Name(id=source, ctx=Load()),
-                        attr="get",
-                        ctx=Load()
-                    ),
-                    args=[Constant(value=key)],
-                    keywords=[],
-                ),
+    def _if_none(
+        self,
+        source: str,
+        key: str,
+        on_true: typing.List[typing.Any],
+        on_false: typing.List[typing.Any],
+    ) -> ast.If:
+        return ast.If(
+            test=ast.Compare(
+                left=call(source, attribute="get", args=[ast.Constant(value=key)]),
                 ops=[Is()],
-                comparators=[Constant(value=None)],
+                comparators=[ast.Constant(value=None)],
             ),
             body=on_true,
             orelse=on_false,
@@ -143,14 +120,11 @@ class Validator:
 
     def _copy(self, source, key, name):
         """"""
-        target = Subscript(
-            value=Name(id='results', ctx=Load()), slice=name, ctx=Store()
+        return setitem(
+            "results",
+            key=name,
+            value=getitem(entity_name=source, key=Constant(value=key)),
         )
-        source = Subscript(
-            value=Name(id=source, ctx=Load()), slice=Constant(value=key), ctx=Load()
-        )
-
-        return Assign(targets=[target], value=source)
 
     def integer(
         self,
@@ -170,11 +144,7 @@ class Validator:
             comparators.append(Constant(value=le))
             ops.append(GtE())
 
-        comparators.append(
-            Subscript(
-                value=Name(id=source, ctx=Load()), slice=Constant(value=key), ctx=Load()
-            )
-        )
+        comparators.append(getitem(source, Constant(value=key)))
 
         if gt is not None:
             comparators.append(Constant(value=gt))
@@ -186,11 +156,13 @@ class Validator:
         if ops:
             compare = Compare(left=comparators[0], ops=ops, comparators=comparators[1:])
             produce = self._copy(source, key, name)
-            return [If(
-                test=UnaryOp(op=Not(), operand=compare),
-                body=[self._violated(source, key, 'Validation error')],
-                orelse=[produce],
-            )]
+            return [
+                If(
+                    test=UnaryOp(op=Not(), operand=compare),
+                    body=[self.add_violate(source, key, "Validation error")],
+                    orelse=[produce],
+                )
+            ]
 
     def string(
         self,
@@ -201,16 +173,12 @@ class Validator:
         max_length: typing.Optional[int] = None,
     ):
         get_length = Assign(
-            targets=[
-                Name(id=f'{name}_len', ctx=Store())],
+            targets=[Name(id=f"{name}_len", ctx=Store())],
             value=Call(
-                func=Name(id='len', ctx=Load()),
-                args=[
-                    Subscript(
-                        value=Name(id=source, ctx=Load()), slice=Constant(value=key), ctx=Load()
-                    )
-                ],
-                keywords=[])
+                func=Name(id="len", ctx=Load()),
+                args=[getitem(source, Constant(value=key))],
+                keywords=[],
+            ),
         )
 
         ops, comparators = [], []
@@ -218,7 +186,7 @@ class Validator:
             comparators.append(Constant(value=max_length))
             ops.append(GtE())
 
-        comparators.append(Name(id=f'{name}_len', ctx=Load()))
+        comparators.append(Name(id=f"{name}_len", ctx=Load()))
 
         if min_length is not None:
             comparators.append(Constant(value=min_length))
@@ -231,57 +199,50 @@ class Validator:
                 get_length,
                 If(
                     test=UnaryOp(op=Not(), operand=compare),
-                    body=[self._violated(source, key, 'Validation error')],
+                    body=[self.add_violate(source, key, "Validation error")],
                     orelse=[produce],
-                )
+                ),
             ]
 
-    def _violated(self, source, key, reason):
-        return Expr(
-            value=Call(
-                func=Attribute(
-                    value=Name(id="violates", ctx=Load()), attr="append", ctx=Load()
-                ),
-                args=[
-                    Tuple(
-                        elts=[Constant(value=source), Constant(value=key), Constant(value=reason)], ctx=Load()
-                    )
-                ],
-                keywords=[],
-            ),
+    @staticmethod
+    def add_violate(source: str, key: str, reason: str) -> ast.Expr:
+        """Writes record to violations list
+
+        Produce following code: `violates.append(source, key, reason)`
+        Example:
+            >>> add_violate('header', 'content-length', 'Cast of `int` failed')
+        """
+        message = ast.Tuple(
+            elts=[
+                ast.Constant(value=source),
+                ast.Constant(value=key),
+                ast.Constant(value=reason),
+            ],
+            ctx=ast.Load(),
         )
+        return append("violates", value=message)
 
     def build(self):
         rows = []
         defs = [
-            {
-                "name": "results",
-                "exp": Dict(keys=[], values=[]),
-                "returns": True
-            },
-            {
-                "name": "violates",
-                "exp": List(elts=[], ctx=Load()),
-                "returns": True
-            }
+            {"name": "results", "exp": Dict(keys=[], values=[]), "returns": True},
+            {"name": "violates", "exp": List(elts=[], ctx=Load()), "returns": True},
         ]
         assign = Assign()
         assign.targets = [
-            Tuple(
-                elts=[Name(id=i['name'], ctx=Store()) for i in defs],
-                ctx=Store()
-            )
+            Tuple(elts=[Name(id=i["name"], ctx=Store()) for i in defs], ctx=Store())
         ]
-        assign.value = Tuple(
-            elts=[i['exp'] for i in defs],
-            ctx=Load()
-        )
+        assign.value = Tuple(elts=[i["exp"] for i in defs], ctx=Load())
         rows.append(assign)
         rows.extend(self.rules)
-        rows.append(Return(value=Tuple(
-            elts=[Name(id=i['name'], ctx=Load()) for i in defs if i['returns']],
-            ctx=Load()
-        )))
+        rows.append(
+            Return(
+                value=Tuple(
+                    elts=[Name(id=i["name"], ctx=Load()) for i in defs if i["returns"]],
+                    ctx=Load(),
+                )
+            )
+        )
 
         function_ast = FunctionDef(
             name="validator",
@@ -305,22 +266,28 @@ class Validator:
         module_code = compile(module_ast, "<not_a_file>", "exec")
         function_code = [c for c in module_code.co_consts if isinstance(c, CodeType)][0]
 
-#        return FunctionType(function_code, globals={'len': globals()['__builtins__']['len']})
-        return FunctionType(function_code, globals={'__builtins__': {
-            "len": len
-        }})
+        #        return FunctionType(function_code, globals={'len': globals()['__builtins__']['len']})
+        return FunctionType(function_code, globals={"__builtins__": {"len": len}})
 
 
 if __name__ == "__main__":
-    validator = Validator(args=['param'])
+    validator = Validator(args=["param"])
     validator.add_rule("integer", "param", "orders", name="my_orders", gt=20)
-    validator.add_rule("string", "param", "items", min_length=3, max_length=5, default="1", convert="str")
+    validator.add_rule(
+        "string",
+        "param",
+        "items",
+        min_length=3,
+        max_length=5,
+        default="1",
+        convert="str",
+    )
     validator.add_rule("integer", "param", "limit", ge=0, default=0, convert="int")
     validation_handler = validator.build()
 
     import timeit
 
-    NUMBER = 500_000
+    NUMBER = 10_000
 
     # a = "a"
     # print("FUNC", timeit.timeit(lambda: len(a), number=NUMBER))
@@ -338,24 +305,26 @@ if __name__ == "__main__":
     }
     convertors = {
         "int": int,
-        "str": lambda a: a.decode('utf-8') if type(a) == bytes else str(a),
-        "bytes": lambda a: a.encode('utf-8') if type(a) == str else a
+        "str": lambda a: a.decode("utf-8") if type(a) == bytes else str(a),
+        "bytes": lambda a: a.encode("utf-8") if type(a) == str else a,
     }
     print(validation_handler(a, convert=convertors))
     print(a)
 
     base = timeit.timeit(lambda: 1, number=NUMBER)
-    asted = timeit.timeit(lambda: validation_handler(a, convert=convertors), number=NUMBER) - base
+    asted = (
+        timeit.timeit(lambda: validation_handler(a, convert=convertors), number=NUMBER)
+        - base
+    )
     print("NEW (ast)", asted)
 
-    from pydantic import BaseModel, validator, dataclasses
+    from pydantic import BaseModel, dataclasses, validator
 
     @dataclasses.dataclass
     class ParamsDC:
         orders: int
         items: typing.Optional[int] = None
         limit: int = 1
-
 
     class Params(BaseModel):
         orders: int
@@ -393,7 +362,6 @@ if __name__ == "__main__":
     #
     # pydanted = timeit.timeit(lambda: ParamsDC(**a), number=NUMBER) - base
     # print("Old (PydanticDC model init", pydanted)
-
 
     # NEW(ast)
     # 0.0374231
