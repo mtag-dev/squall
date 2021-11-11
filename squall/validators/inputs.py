@@ -78,7 +78,7 @@ class Validator:
         :param max_length: String only. Checked value length should be less than or equal
         """
         assert source in self.args
-        name = name if name else key
+        name = name or key
         on_none: typing.List[typing.Union[ast.Expr, ast.Pass, ast.Assign]] = []
         if default is not None:
             on_none.append(setitem("results", name, ast.Constant(value=default)))
