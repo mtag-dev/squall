@@ -4,7 +4,7 @@ import typing
 
 def setitem(
     entity_name: str,
-    key: typing.Union[ast.Constant, ast.Subscript, ast.Call],
+    key: str,
     value: typing.Any,
 ) -> ast.Assign:
     """Set dictionary item value.
@@ -12,7 +12,9 @@ def setitem(
     Generates following code: `entity_name[key] = value`
     """
     subscript = ast.Subscript(
-        value=ast.Name(id=entity_name, ctx=ast.Load()), slice=key, ctx=ast.Store()
+        value=ast.Name(id=entity_name, ctx=ast.Load()),
+        slice=ast.Constant(value=key),
+        ctx=ast.Store(),
     )
 
     return ast.Assign(targets=[subscript], value=value)
@@ -72,7 +74,8 @@ def append(list_name: str, value: typing.Any) -> ast.Expr:
 
     Generates following code: `list_name.append(value)`
     """
-    expr: ast.Expr = call(
+    expr = call(
         entity_name=list_name, attribute="append", args=[value], is_expression=True
     )
+    assert isinstance(expr, ast.Expr)  # MyPy hack
     return expr

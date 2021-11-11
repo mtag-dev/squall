@@ -4,6 +4,8 @@ from types import CodeType, FunctionType
 
 from squall.validators.ast_helpers import append, call, getitem, setitem
 
+Number = typing.Union[int, float]
+
 
 class Validator:
     """Provides interface for building validation function.
@@ -30,12 +32,14 @@ class Validator:
     """
 
     def __init__(
-        self, args: typing.List[str], convertors: typing.Dict[str, typing.Callable]
+        self,
+        args: typing.List[str],
+        convertors: typing.Dict[str, typing.Callable[..., typing.Any]],
     ) -> None:
         self.args = args
         assert len(self.args) > 0, "No input parameters names configured."
         self.convertors = convertors
-        self.rules = []
+        self.rules: typing.List[typing.Any] = []
 
     def add_rule(
         self,
@@ -47,10 +51,10 @@ class Validator:
         convert: typing.Optional[typing.Any] = None,
         default: typing.Optional[typing.Any] = None,
         # Numeric arguments
-        gt: typing.Optional[float] = None,
-        ge: typing.Optional[float] = None,
-        lt: typing.Optional[float] = None,
-        le: typing.Optional[float] = None,
+        gt: typing.Optional[Number] = None,
+        ge: typing.Optional[Number] = None,
+        lt: typing.Optional[Number] = None,
+        le: typing.Optional[Number] = None,
         # String arguments
         min_length: typing.Optional[int] = None,
         max_length: typing.Optional[int] = None,
@@ -74,8 +78,8 @@ class Validator:
         :param max_length: String only. Checked value length should be less than or equal
         """
         assert source in self.args
-        name = ast.Constant(value=name if name else key)
-        on_none = []
+        name = name if name else key
+        on_none: typing.List[typing.Union[ast.Expr, ast.Pass, ast.Assign]] = []
         if default is not None:
             on_none.append(setitem("results", name, ast.Constant(value=default)))
         else:
@@ -84,18 +88,17 @@ class Validator:
                 if optional
                 else self.add_violate(source, key, "Can't be None")
             )
+        rule: typing.Optional[typing.List[typing.Any]]
 
         if check == "numeric":
             rule = self.handle_numeric(source, key, name, gt=gt, ge=ge, lt=lt, le=le)
-            if convert is not None:
-                rule = [self.try_convert(source, key, convert, than=rule)]
         elif check == "string":
             rule = self.handle_string(
                 source, key, name, min_length=min_length, max_length=max_length
             )
+        if rule is not None:
             if convert is not None:
                 rule = [self.try_convert(source, key, convert, than=rule)]
-        if rule is not None:
             self.rules.append(self.if_none(source, key, on_none, rule))
 
     def try_convert(
@@ -119,7 +122,7 @@ class Validator:
         _try.body = [
             setitem(
                 entity_name=source,
-                key=ast.Constant(value=key),
+                key=key,
                 value=call(func, args=[getitem(source, ast.Constant(value=key))]),
             ),
         ]
@@ -156,7 +159,7 @@ class Validator:
         )
 
     @staticmethod
-    def copy_to_results(source, key, name):
+    def copy_to_results(source: str, key: str, name: str) -> ast.Assign:
         """
         Copy item value form source dict to results.
         Represents following code `results[name] = source[key]`
@@ -175,12 +178,12 @@ class Validator:
         self,
         source: str,
         key: str,
-        name: ast.Constant,
-        gt: typing.Optional[int] = None,
-        ge: typing.Optional[int] = None,
-        lt: typing.Optional[int] = None,
-        le: typing.Optional[int] = None,
-    ):
+        name: str,
+        gt: typing.Optional[Number] = None,
+        ge: typing.Optional[Number] = None,
+        lt: typing.Optional[Number] = None,
+        le: typing.Optional[Number] = None,
+    ) -> typing.Optional[typing.List[ast.If]]:
         """
         Numeric validator
 
@@ -192,7 +195,8 @@ class Validator:
         :param lt: value must be less than
         :param le: value must be less than or equal
         """
-        ops, comparators = [], []
+        ops: typing.List[typing.Union[ast.Gt, ast.GtE]] = []
+        comparators: typing.List[typing.Union[ast.Constant, ast.Subscript]] = []
         if lt is not None:
             comparators.append(ast.Constant(value=lt))
             ops.append(ast.Gt())
@@ -209,27 +213,27 @@ class Validator:
             comparators.append(ast.Constant(value=ge))
             ops.append(ast.GtE())
 
-        if ops:
-            compare = ast.Compare(
-                left=comparators[0], ops=ops, comparators=comparators[1:]
+        if not ops:
+            return None
+
+        compare = ast.Compare(left=comparators[0], ops=ops, comparators=comparators[1:])
+        produce = self.copy_to_results(source, key, name)
+        return [
+            ast.If(
+                test=ast.UnaryOp(op=ast.Not(), operand=compare),
+                body=[self.add_violate(source, key, "Validation error")],
+                orelse=[produce],
             )
-            produce = self.copy_to_results(source, key, name)
-            return [
-                ast.If(
-                    test=ast.UnaryOp(op=ast.Not(), operand=compare),
-                    body=[self.add_violate(source, key, "Validation error")],
-                    orelse=[produce],
-                )
-            ]
+        ]
 
     def handle_string(
         self,
         source: str,
         key: str,
-        name: ast.Constant,
+        name: str,
         min_length: typing.Optional[int] = None,
         max_length: typing.Optional[int] = None,
-    ):
+    ) -> typing.Optional[typing.List[typing.Union[ast.If, ast.Assign]]]:
         """
         String validator
 
@@ -248,7 +252,8 @@ class Validator:
             ),
         )
 
-        ops, comparators = [], []
+        ops: typing.List[typing.Union[ast.Gt, ast.GtE]] = []
+        comparators: typing.List[typing.Union[ast.Constant, ast.Name]] = []
         if max_length is not None:
             comparators.append(ast.Constant(value=max_length))
             ops.append(ast.GtE())
@@ -259,19 +264,19 @@ class Validator:
             comparators.append(ast.Constant(value=min_length))
             ops.append(ast.GtE())
 
-        if ops:
-            compare = ast.Compare(
-                left=comparators[0], ops=ops, comparators=comparators[1:]
-            )
-            produce = self.copy_to_results(source, key, name)
-            return [
-                get_length,
-                ast.If(
-                    test=ast.UnaryOp(op=ast.Not(), operand=compare),
-                    body=[self.add_violate(source, key, "Validation error")],
-                    orelse=[produce],
-                ),
-            ]
+        if not ops:
+            return None
+
+        compare = ast.Compare(left=comparators[0], ops=ops, comparators=comparators[1:])
+        produce = self.copy_to_results(source, key, name)
+        return [
+            get_length,
+            ast.If(
+                test=ast.UnaryOp(op=ast.Not(), operand=compare),
+                body=[self.add_violate(source, key, "Validation error")],
+                orelse=[produce],
+            ),
+        ]
 
     @staticmethod
     def add_violate(source: str, key: str, reason: str) -> ast.Expr:
@@ -297,7 +302,7 @@ class Validator:
 
     def build(self) -> FunctionType:
         """Builds validator function"""
-        rows = []
+        rows: typing.List[typing.Union[ast.Return, ast.Assign, ast.If]] = []
         defs = [
             {"name": "results", "exp": ast.Dict(keys=[], values=[]), "returns": True},
             {
@@ -353,169 +358,3 @@ class Validator:
         return FunctionType(
             function_code, globals={"__builtins__": {"len": len, **self.convertors}}
         )
-
-#
-# if __name__ == "__main__":
-#     v = Validator(
-#         args=["param"],
-#         convertors={
-#             "int": int,
-#             "str": lambda a: a.decode("utf-8") if type(a) == bytes else str(a),
-#         },
-#     )
-#     v.add_rule("numeric", "param", "orders", name="my_orders", gt=20)
-#     v.add_rule(
-#         "string",
-#         "param",
-#         "items",
-#         min_length=3,
-#         max_length=5,
-#         default="anon",
-#         convert="str",
-#     )
-#     validator = v.build()
-#     param = {"orders": 30, "items": b"403", "useles1": 1, "useles2": 40}
-#     print(validator(param))
-#     param = {"orders": 20, "useles1": 1, "useles2": 40}
-#     print(validator(param))
-#
-#     convertor = {
-#         "int": int,
-#         "str": lambda a: a.decode("utf-8") if type(a) == bytes else str(a),
-#         "bytes": lambda a: a.encode("utf-8") if type(a) == str else a,
-#     }
-#
-#     validator = Validator(args=["param"], convertors=convertor)
-#     validator.add_rule("numeric", "param", "orders", name="my_orders", gt=20)
-#     validator.add_rule(
-#         "string",
-#         "param",
-#         "items",
-#         min_length=3,
-#         max_length=5,
-#         default="1",
-#         convert="str",
-#     )
-#     validator.add_rule("numeric", "param", "limit", ge=0, default=0, convert="int")
-#     validation_handler = validator.build()
-#
-#     import timeit
-#
-#     NUMBER = 10_000
-#
-#     # a = "a"
-#     # print("FUNC", timeit.timeit(lambda: len(a), number=NUMBER))
-#     # print("METHOD", timeit.timeit(lambda: a.__len__(), number=NUMBER))
-#
-#     a = {
-#         "orders": 30,
-#         "items": b"403",
-#         "limit": 1,
-#         "items3": 40,
-#         "items4": 40,
-#         "items5": 40,
-#         "items6": 40,
-#         "items7": 40,
-#     }
-#     convertor = {
-#         "int": int,
-#         "str": lambda a: a.decode("utf-8") if type(a) == bytes else str(a),
-#         "bytes": lambda a: a.encode("utf-8") if type(a) == str else a,
-#     }
-#     print(validation_handler(a))
-#     print(a)
-#
-#     base = timeit.timeit(lambda: 1, number=NUMBER)
-#     asted = timeit.timeit(lambda: validation_handler(a), number=NUMBER) - base
-#     print("NEW (ast)", asted)
-#
-#     from pydantic import BaseModel, dataclasses, validator
-#
-#     @dataclasses.dataclass
-#     class ParamsDC:
-#         orders: int
-#         items: typing.Optional[int] = None
-#         limit: int = 1
-#
-#     class Params(BaseModel):
-#         orders: int
-#         items: typing.Optional[int] = None
-#         limit: int = 1
-#
-#         @validator("orders", pre=True, always=True)
-#         def set_orders(cls, v):
-#             if v <= 20:
-#                 raise ValueError()
-#             return v
-#
-#         @validator("items", pre=True, always=True)
-#         def set_items(cls, v):
-#             v = int(v)
-#             if v is not None and v <= 20:
-#                 raise ValueError()
-#             return v
-#
-#         @validator("limit", pre=True, always=True)
-#         def set_limit(cls, v):
-#             if v is None:
-#                 return 0
-#             return int(v)
-#
-#     #
-#     pydanted = timeit.timeit(lambda: Params.validate(a), number=NUMBER) - base
-#     print("Old (Pydantic metod)", pydanted)
-#
-#     pydanted = timeit.timeit(lambda: Params(**a), number=NUMBER) - base
-#     print("Old (Pydantic model init", pydanted)
-#     #
-#     # pydanted = timeit.timeit(lambda: ParamsDC.validate(a), number=NUMBER) - base
-#     # print("Old (PydanticDC metod)", pydanted)
-#     #
-#     # pydanted = timeit.timeit(lambda: ParamsDC(**a), number=NUMBER) - base
-#     # print("Old (PydanticDC model init", pydanted)
-#
-#     # NEW(ast)
-#     # 0.0374231
-#     # Old(Pydantic)
-#     # 0.8141576
-
-#
-# class Param(Input):
-#     pass
-#
-#
-# class Path(Input):
-#     pass
-#
-#
-# class Query(Input):
-#     pass
-#
-#
-# class Header(Input):
-#     pass
-#
-#
-# class Cookie(Input):
-#     pass
-#
-#
-# class Body(Input):
-#     pass
-#
-#
-# class Form(Input):
-#     pass
-#
-#
-# class File(Input):
-#     pass
-#
-#
-# def get_default_args(func):
-#     signature = inspect.signature(func)
-#     return {
-#         k: v.default
-#         for k, v in signature.parameters.items()
-#         if v.default is not inspect.Parameter.empty
-#     }
