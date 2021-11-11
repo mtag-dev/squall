@@ -84,54 +84,47 @@ class Validator:
             on_none.append(setitem("results", name, ast.Constant(value=default)))
         else:
             on_none.append(
-                ast.Pass()
-                if optional
-                else self.add_violate(source, key, "Can't be None")
+                ast.Pass() if optional else self.add_violate(name, "Can't be None")
             )
         rule: typing.Optional[typing.List[typing.Any]]
+        self.rules.append(self.copy_to_results(source, key, name))
 
         if check == "numeric":
-            rule = self.handle_numeric(source, key, name, gt=gt, ge=ge, lt=lt, le=le)
+            rule = self.handle_numeric(name, gt=gt, ge=ge, lt=lt, le=le)
         elif check == "string":
             rule = self.handle_string(
-                source, key, name, min_length=min_length, max_length=max_length
+                name, min_length=min_length, max_length=max_length
             )
         if rule is not None:
             if convert is not None:
-                rule = [self.try_convert(source, key, convert, than=rule)]
-            self.rules.append(self.if_none(source, key, on_none, rule))
+                rule = [self.try_convert(name, convert, than=rule)]
+            self.rules.append(self.if_none(name, on_none, rule))
 
-    def try_convert(
-        self, source: str, key: str, func: str, than: typing.Any
-    ) -> ast.Try:
+    def try_convert(self, name: str, func: str, than: typing.Any) -> ast.Try:
         """
         Builds code for conversion with try, except, else logic.
         In case of exception prevents further checks and writes violate record
 
-        :param source: source dict name from validator parameters
-        :param key: key of source dict to retrieve the checked value
+        :param name: target parameter name
         :param func: convertor function name. Must be defined during instance initialisation.
         :param than: code part for execution after success conversion
         """
         _try = ast.Try(finalbody=[], orelse=than)
         _try.handlers = [
-            ast.ExceptHandler(
-                body=[self.add_violate(source, key, f"Cast of `{func}` failed")]
-            )
+            ast.ExceptHandler(body=[self.add_violate(name, f"Cast of `{func}` failed")])
         ]
         _try.body = [
             setitem(
-                entity_name=source,
-                key=key,
-                value=call(func, args=[getitem(source, ast.Constant(value=key))]),
+                entity_name="results",
+                key=name,
+                value=call(func, args=[getitem("results", ast.Constant(value=name))]),
             ),
         ]
         return _try
 
     def if_none(
         self,
-        source: str,
-        key: str,
+        name: str,
         on_true: typing.List[typing.Any],
         on_false: typing.List[typing.Any],
     ) -> ast.If:
@@ -143,14 +136,13 @@ class Validator:
             else:
                 on_false
             ```
-        :param source: source dict name from validator parameters
-        :param key: key of source dict to retrieve the checked value
+        :param name: target parameter name
         :param on_true: list of expressions for execute if value is None
         :param on_false: list of expressions for execute if value is not None
         """
         return ast.If(
             test=ast.Compare(
-                left=call(source, attribute="get", args=[ast.Constant(value=key)]),
+                left=call("results", attribute="get", args=[ast.Constant(value=name)]),
                 ops=[ast.Is()],
                 comparators=[ast.Constant(value=None)],
             ),
@@ -171,13 +163,15 @@ class Validator:
         return setitem(
             "results",
             key=name,
-            value=getitem(entity_name=source, key=ast.Constant(value=key)),
+            value=call(
+                entity_name=source,
+                attribute="get",
+                args=[ast.Constant(value=key), ast.Constant(value=None)],
+            ),
         )
 
     def handle_numeric(
         self,
-        source: str,
-        key: str,
         name: str,
         gt: typing.Optional[Number] = None,
         ge: typing.Optional[Number] = None,
@@ -187,8 +181,6 @@ class Validator:
         """
         Numeric validator
 
-        :param source: source dict name from validator parameters
-        :param key: key of source dict to retrieve the checked value
         :param name: key name for results dict
         :param gt: value must be grater than
         :param ge: value must be grater than or equal
@@ -204,7 +196,7 @@ class Validator:
             comparators.append(ast.Constant(value=le))
             ops.append(ast.GtE())
 
-        comparators.append(getitem(source, ast.Constant(value=key)))
+        comparators.append(getitem("results", ast.Constant(value=name)))
 
         if gt is not None:
             comparators.append(ast.Constant(value=gt))
@@ -217,19 +209,17 @@ class Validator:
             return None
 
         compare = ast.Compare(left=comparators[0], ops=ops, comparators=comparators[1:])
-        produce = self.copy_to_results(source, key, name)
+        #        produce = self.copy_to_results(source, key, name)
         return [
             ast.If(
                 test=ast.UnaryOp(op=ast.Not(), operand=compare),
-                body=[self.add_violate(source, key, "Validation error")],
-                orelse=[produce],
+                body=[self.add_violate(name, "Validation error")],
+                orelse=[],
             )
         ]
 
     def handle_string(
         self,
-        source: str,
-        key: str,
         name: str,
         min_length: typing.Optional[int] = None,
         max_length: typing.Optional[int] = None,
@@ -237,8 +227,6 @@ class Validator:
         """
         String validator
 
-        :param source: source dict name from validator parameters
-        :param key: key of source dict to retrieve the checked value
         :param name: key name for results dict
         :param min_length: value length must be grater than or equal
         :param max_length: value length must be less than or equal
@@ -247,7 +235,7 @@ class Validator:
             targets=[ast.Name(id=f"{name}_len", ctx=ast.Store())],
             value=ast.Call(
                 func=ast.Name(id="len", ctx=ast.Load()),
-                args=[getitem(source, ast.Constant(value=key))],
+                args=[getitem("results", ast.Constant(value=name))],
                 keywords=[],
             ),
         )
@@ -268,32 +256,29 @@ class Validator:
             return None
 
         compare = ast.Compare(left=comparators[0], ops=ops, comparators=comparators[1:])
-        produce = self.copy_to_results(source, key, name)
         return [
             get_length,
             ast.If(
                 test=ast.UnaryOp(op=ast.Not(), operand=compare),
-                body=[self.add_violate(source, key, "Validation error")],
-                orelse=[produce],
+                body=[self.add_violate(name, "Validation error")],
+                orelse=[],
             ),
         ]
 
     @staticmethod
-    def add_violate(source: str, key: str, reason: str) -> ast.Expr:
+    def add_violate(name: str, reason: str) -> ast.Expr:
         """Writes record to violations list
 
         Produce following code: `violates.append(source, key, reason)`
         Example:
-            >>> add_violate('header', 'content-length', 'Cast of `int` failed')
+            >>> add_violate('content_length', 'Cast of `int` failed')
 
-        :param source: source dict name from validator parameters
-        :param key: key of source dict to retrieve the checked value
+        :param name: target parameter name
         :param reason: violation reason
         """
         message = ast.Tuple(
             elts=[
-                ast.Constant(value=source),
-                ast.Constant(value=key),
+                ast.Constant(value=name),
                 ast.Constant(value=reason),
             ],
             ctx=ast.Load(),

@@ -21,21 +21,21 @@ def test_numeric_with_conversion():
 
     param = {"numeric1": 19, "numeric2": 19, "numeric3": 19}
     assert validator(param) == (
-        {},
+        {"numeric1": Decimal("19"), "numeric2": 19, "numeric3": 19.0},
         [
-            ("param", "numeric1", "Validation error"),
-            ("param", "numeric2", "Validation error"),
-            ("param", "numeric3", "Validation error"),
+            ("numeric1", "Validation error"),
+            ("numeric2", "Validation error"),
+            ("numeric3", "Validation error"),
         ],
     )
 
     param = {"numeric1": 51, "numeric2": 51, "numeric3": 51}
     assert validator(param) == (
-        {},
+        {"numeric1": 51, "numeric2": 51, "numeric3": 51},
         [
-            ("param", "numeric1", "Validation error"),
-            ("param", "numeric2", "Validation error"),
-            ("param", "numeric3", "Validation error"),
+            ("numeric1", "Validation error"),
+            ("numeric2", "Validation error"),
+            ("numeric3", "Validation error"),
         ],
     )
 
@@ -58,31 +58,31 @@ def test_numeric_without_conversion():
 
     param = {"numeric1": 19, "numeric2": 19, "numeric3": 19}
     assert validator(param) == (
-        {},
+        {"numeric1": 19, "numeric2": 19, "numeric3": 19},
         [
-            ("param", "numeric1", "Validation error"),
-            ("param", "numeric2", "Validation error"),
-            ("param", "numeric3", "Validation error"),
+            ("numeric1", "Validation error"),
+            ("numeric2", "Validation error"),
+            ("numeric3", "Validation error"),
         ],
     )
 
     param = {"numeric1": 51, "numeric2": 51, "numeric3": 51}
     assert validator(param) == (
-        {},
+        {"numeric1": 51, "numeric2": 51, "numeric3": 51},
         [
-            ("param", "numeric1", "Validation error"),
-            ("param", "numeric2", "Validation error"),
-            ("param", "numeric3", "Validation error"),
+            ("numeric1", "Validation error"),
+            ("numeric2", "Validation error"),
+            ("numeric3", "Validation error"),
         ],
     )
 
     param = {}
     assert validator(param) == (
-        {},
+        {"numeric1": None, "numeric2": None, "numeric3": None},
         [
-            ("param", "numeric1", "Can't be None"),
-            ("param", "numeric2", "Can't be None"),
-            ("param", "numeric3", "Can't be None"),
+            ("numeric1", "Can't be None"),
+            ("numeric2", "Can't be None"),
+            ("numeric3", "Can't be None"),
         ],
     )
 
@@ -109,17 +109,17 @@ def test_strings():
 
     param = {"string1": "aa", "string2": "aaaaaa"}
     assert validator(param) == (
-        {},
+        {"string1": "aa", "string2": b"aaaaaa"},
         [
-            ("param", "string1", "Validation error"),
-            ("param", "string2", "Validation error"),
+            ("string1", "Validation error"),
+            ("string2", "Validation error"),
         ],
     )
 
     param = {}
     assert validator(param) == (
-        {},
-        [("param", "string1", "Can't be None"), ("param", "string2", "Can't be None")],
+        {"string1": None, "string2": None},
+        [("string1", "Can't be None"), ("string2", "Can't be None")],
     )
 
 
@@ -145,6 +145,6 @@ def test_multiple_sources():
     param = {"numeric1": 20}
     header = {"string1": "str"}
     assert validator(param, header) == (
-        {"string1": "str"},
-        [("param", "numeric1", "Validation error")],
+        {"numeric1": Decimal("20"), "string1": "str"},
+        [("numeric1", "Validation error")],
     )
