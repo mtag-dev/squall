@@ -36,10 +36,10 @@ def getattribute(entity_name: str, attribute: str) -> ast.Attribute:
     Generates following code: `entity_name.attribute`
     """
     return ast.Attribute(
-            value=ast.Name(id=entity_name, ctx=ast.Load()),
-            attr=attribute,
-            ctx=ast.Load(),
-        )
+        value=ast.Name(id=entity_name, ctx=ast.Load()),
+        attr=attribute,
+        ctx=ast.Load(),
+    )
 
 
 def call(
@@ -56,6 +56,7 @@ def call(
     With attribute and args: `entity_name.attribute(args)`
     """
     args = args or []
+    func: typing.Union[ast.Name, ast.Attribute]
     if attribute is None:
         func = ast.Name(id=entity_name, ctx=ast.Load())
     else:
@@ -63,7 +64,6 @@ def call(
 
     if is_expression:
         return ast.Expr(value=ast.Call(func=func, args=args, keywords=[]))
-
     return ast.Call(func=func, args=args, keywords=[])
 
 
@@ -72,6 +72,7 @@ def append(list_name: str, value: typing.Any) -> ast.Expr:
 
     Generates following code: `list_name.append(value)`
     """
-    return call(
+    expr: ast.Expr = call(
         entity_name=list_name, attribute="append", args=[value], is_expression=True
     )
+    return expr
