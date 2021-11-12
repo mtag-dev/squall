@@ -21,7 +21,6 @@ from squall.routing import APIRoute, APIWebSocketRoute
 from squall.types import ASGIApp, DecoratedCallable, Receive, Scope, Send
 from squall.utils import get_value_or_default
 from starlette.datastructures import URL
-from starlette.routing import Match as SlMatch
 from starlette.websockets import WebSocketClose
 
 
@@ -643,14 +642,15 @@ class RootRouter(Router):
             # Determine if any route matches the incoming scope,
             # and hand over to the matching route if found.
             match, child_scope = route.matches(scope)
-            if match == SlMatch.FULL:
+            # raise ValueError(child_scope)
+            if match:
                 scope.update(child_scope)
                 await route.handle(scope, receive, send)
                 return
 
         # for location in reversed(_locations):
         #     match, child_scope = location.matches(scope)
-        #     if match == SlMatch.FULL:
+        #     if match:
         #         scope.update(child_scope)
         #         await location.handle(scope, receive, send)
         #         return
@@ -667,7 +667,7 @@ class RootRouter(Router):
             )
             for route in routes:
                 match, child_scope = route.matches(redirect_scope)
-                if match != SlMatch.NONE:
+                if match:
                     redirect_url = URL(scope=redirect_scope)
                     response = RedirectResponse(url=str(redirect_url))
                     await response(scope, receive, send)

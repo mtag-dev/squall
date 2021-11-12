@@ -3,6 +3,7 @@ import email.message
 import enum
 import inspect
 import json
+import re
 from typing import (
     Any,
     Callable,
@@ -10,8 +11,10 @@ from typing import (
     Dict,
     List,
     Optional,
+    Pattern,
     Sequence,
     Set,
+    Tuple,
     Type,
     Union,
 )
@@ -36,6 +39,7 @@ from squall.utils import (
     create_response_field,
     generate_operation_id_for_path,
 )
+from squall.validators.inputs import Validator
 from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException
 from starlette.routing import BaseRoute as SlBaseRoute
@@ -43,7 +47,6 @@ from starlette.routing import Mount as Mount  # noqa
 from starlette.routing import Route as SlRoute
 from starlette.routing import WebSocketRoute as SlWebSocketRoute
 from starlette.routing import (
-    compile_path,
     get_name,
     iscoroutinefunction_or_partial,
     websocket_session,
@@ -63,6 +66,60 @@ class NoMatchFound(Exception):
     Raised by `.url_for(name, **path_params)` and `.url_path_for(name, **path_params)`
     if no matching route exists.
     """
+
+
+from starlette.convertors import CONVERTOR_TYPES, Convertor
+
+# Match parameters in URL paths, eg. '{param}', and '{param:int}'
+PARAM_REGEX = re.compile("{([a-zA-Z_][a-zA-Z0-9_]*)(:[a-zA-Z_][a-zA-Z0-9_]*)?}")
+
+
+def compile_path(
+    path: str,
+) -> Tuple[Pattern, str, Dict[str, Convertor]]:
+    """
+    Given a path string, like: "/{username:str}", return a three-tuple
+    of (regex, format, {param_name:convertor}).
+    regex:      "/(?P<username>[^/]+)"
+    format:     "/{username}"
+    convertors: {"username": StringConvertor()}
+    """
+    path_regex = "^"
+    path_format = ""
+    duplicated_params = set()
+
+    idx = 0
+    param_convertors = {}
+    for match in PARAM_REGEX.finditer(path):
+        param_name, convertor_type = match.groups("str")
+        convertor_type = convertor_type.lstrip(":")
+        assert (
+            convertor_type in CONVERTOR_TYPES
+        ), f"Unknown path convertor '{convertor_type}'"
+        convertor = CONVERTOR_TYPES[convertor_type]
+
+        path_regex += re.escape(path[idx : match.start()])
+        path_regex += f"(?P<{param_name}>{convertor.regex})"
+
+        path_format += path[idx : match.start()]
+        path_format += "{%s}" % param_name
+
+        if param_name in param_convertors:
+            duplicated_params.add(param_name)
+
+        param_convertors[param_name] = convertor
+
+        idx = match.end()
+
+    if duplicated_params:
+        names = ", ".join(sorted(duplicated_params))
+        ending = "s" if len(duplicated_params) > 1 else ""
+        raise ValueError(f"Duplicated param name{ending} {names} at path {path}")
+
+    path_regex += re.escape(path[idx:]) + "$"
+    path_format += path[idx:]
+
+    return re.compile(path_regex), path_format, param_convertors
 
 
 #
@@ -154,6 +211,9 @@ def get_request_handler(
             raise HTTPException(
                 status_code=400, detail="There was an error parsing the body"
             ) from e
+
+        # !HERE
+
         solved_result = await solve_dependencies(
             request=request,
             dependant=dependant,
@@ -164,6 +224,13 @@ def get_request_handler(
         if errors:
             raise RequestValidationError(errors, body=body)
         else:
+            # values = dependant.validator(
+            #     request.path_params,
+            #     request.query_params,
+            #     request.headers,
+            #     request.cookies
+            # )
+            #
             raw_response = await run_endpoint_function(
                 dependant=dependant, values=values, is_coroutine=is_coroutine
             )
@@ -214,6 +281,17 @@ def get_websocket_app(
     return app
 
 
+def build_validator(handler: Callable[..., Any]):
+    v = Validator(
+        args=["param"],
+        convertors={"int": int, "float": float, "decimal": Decimal},
+    )
+    v.add_rule("numeric", "param", "numeric1", gt=20, le=50, convert="decimal")
+    v.add_rule("numeric", "param", "numeric2", gt=20, le=50, convert="int")
+    v.add_rule("numeric", "param", "numeric3", gt=20, le=50, convert="float")
+    return v.build()
+
+
 class Route(SlRoute):
     def __init__(
         self,
@@ -231,6 +309,12 @@ class Route(SlRoute):
             name=name,  # type: ignore
             include_in_schema=include_in_schema,
         )
+
+    def matches(self, scope: Scope) -> Tuple[bool, Scope]:
+        match = self.path_regex.match(scope["path"])
+        if match:
+            return True, match.groupdict()
+        return False, {}
 
 
 class APIWebSocketRoute(WebSocketRoute):
@@ -262,6 +346,12 @@ class APIWebSocketRoute(WebSocketRoute):
         self.path_regex, self.path_format, self.param_convertors = compile_path(
             self.path
         )
+
+    def matches(self, scope: Scope) -> Tuple[bool, Scope]:
+        match = self.path_regex.match(scope["path"])
+        if match:
+            return True, match.groupdict()
+        return False, {}
 
 
 class APIRoute(Route):

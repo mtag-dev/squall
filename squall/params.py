@@ -18,7 +18,7 @@ class Param(FieldInfo):
         self,
         default: Any,
         *,
-        alias: Optional[str] = None,
+        origin: Optional[str] = None,
         title: Optional[str] = None,
         description: Optional[str] = None,
         gt: Optional[float] = None,
@@ -36,9 +36,9 @@ class Param(FieldInfo):
         self.deprecated = deprecated
         self.example = example
         self.examples = examples
+        self.origin = origin
         super().__init__(
             default,
-            alias=alias,
             title=title,
             description=description,
             gt=gt,
@@ -62,7 +62,7 @@ class Path(Param):
         self,
         default: Any,
         *,
-        alias: Optional[str] = None,
+        origin: Optional[str] = None,
         title: Optional[str] = None,
         description: Optional[str] = None,
         gt: Optional[float] = None,
@@ -80,7 +80,7 @@ class Path(Param):
         self.in_ = self.in_
         super().__init__(
             ...,
-            alias=alias,
+            origin=origin,
             title=title,
             description=description,
             gt=gt,
@@ -104,7 +104,7 @@ class Query(Param):
         self,
         default: Any,
         *,
-        alias: Optional[str] = None,
+        origin: Optional[str] = None,
         title: Optional[str] = None,
         description: Optional[str] = None,
         gt: Optional[float] = None,
@@ -121,7 +121,7 @@ class Query(Param):
     ):
         super().__init__(
             default,
-            alias=alias,
+            origin=origin,
             title=title,
             description=description,
             gt=gt,
@@ -145,7 +145,7 @@ class Header(Param):
         self,
         default: Any,
         *,
-        alias: Optional[str] = None,
+        origin: Optional[str] = None,
         convert_underscores: bool = True,
         title: Optional[str] = None,
         description: Optional[str] = None,
@@ -164,7 +164,7 @@ class Header(Param):
         self.convert_underscores = convert_underscores
         super().__init__(
             default,
-            alias=alias,
+            origin=origin,
             title=title,
             description=description,
             gt=gt,
@@ -188,7 +188,7 @@ class Cookie(Param):
         self,
         default: Any,
         *,
-        alias: Optional[str] = None,
+        origin: Optional[str] = None,
         title: Optional[str] = None,
         description: Optional[str] = None,
         gt: Optional[float] = None,
@@ -205,7 +205,7 @@ class Cookie(Param):
     ):
         super().__init__(
             default,
-            alias=alias,
+            origin=origin,
             title=title,
             description=description,
             gt=gt,
@@ -229,7 +229,7 @@ class Body(FieldInfo):
         *,
         embed: bool = False,
         media_type: str = "application/json",
-        alias: Optional[str] = None,
+        origin: Optional[str] = None,
         title: Optional[str] = None,
         description: Optional[str] = None,
         gt: Optional[float] = None,
@@ -249,7 +249,7 @@ class Body(FieldInfo):
         self.examples = examples
         super().__init__(
             default,
-            alias=alias,
+            origin=origin,
             title=title,
             description=description,
             gt=gt,
@@ -272,7 +272,7 @@ class Form(Body):
         default: Any,
         *,
         media_type: str = "application/x-www-form-urlencoded",
-        alias: Optional[str] = None,
+        origin: Optional[str] = None,
         title: Optional[str] = None,
         description: Optional[str] = None,
         gt: Optional[float] = None,
@@ -290,7 +290,7 @@ class Form(Body):
             default,
             embed=True,
             media_type=media_type,
-            alias=alias,
+            origin=origin,
             title=title,
             description=description,
             gt=gt,
@@ -312,7 +312,7 @@ class File(Form):
         default: Any,
         *,
         media_type: str = "multipart/form-data",
-        alias: Optional[str] = None,
+        origin: Optional[str] = None,
         title: Optional[str] = None,
         description: Optional[str] = None,
         gt: Optional[float] = None,
@@ -329,7 +329,7 @@ class File(Form):
         super().__init__(
             default,
             media_type=media_type,
-            alias=alias,
+            origin=origin,
             title=title,
             description=description,
             gt=gt,
