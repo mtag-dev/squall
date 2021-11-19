@@ -6,9 +6,10 @@ from squall.concurrency import AsyncExitStack
 from squall.datastructures import Default
 from squall.exception_handlers import (
     http_exception_handler,
-    request_validation_exception_handler,
+    request_head_validation_exception_handler,
+    request_payload_validation_exception_handler,
 )
-from squall.exceptions import RequestValidationError
+from squall.exceptions import RequestHeadValidationError, RequestPayloadValidationError
 from squall.lifespan import LifespanContext, lifespan
 from squall.logger import logger
 from squall.openapi.docs import (
@@ -16,8 +17,9 @@ from squall.openapi.docs import (
     get_swagger_ui_html,
     get_swagger_ui_oauth2_redirect_html,
 )
-from squall.openapi.utils import get_openapi
-from squall.params import Depends
+
+# from squall.openapi.utils import get_openapi
+# from squall.params import Depends
 from squall.requests import Request
 from squall.responses import HTMLResponse, JSONResponse, Response
 from squall.routing import APIRoute, APIWebSocketRoute
@@ -41,7 +43,6 @@ class Squall:
         openapi_url: Optional[str] = "/openapi.json",
         openapi_tags: Optional[List[Dict[str, Any]]] = None,
         servers: Optional[List[Dict[str, Union[str, Any]]]] = None,
-        dependencies: Optional[Sequence[Depends]] = None,
         default_response_class: Type[Response] = Default(JSONResponse),
         docs_url: Optional[str] = "/docs",
         redoc_url: Optional[str] = "/redoc",
@@ -68,11 +69,11 @@ class Squall:
         self.router: router.RootRouter = router.RootRouter(
             routes=routes,
             default_response_class=default_response_class,
-            dependencies=dependencies,
+            # dependencies=dependencies,
             deprecated=deprecated,
             include_in_schema=include_in_schema,
             responses=responses,
-            dependency_overrides_provider=self,
+            # dependency_overrides_provider=self,
         )
         # Router methods linking for better user experience like having
         # @app.get(...) instead of @app.get(...)
@@ -96,7 +97,10 @@ class Squall:
         )
         self.exception_handlers.setdefault(HTTPException, http_exception_handler)
         self.exception_handlers.setdefault(
-            RequestValidationError, request_validation_exception_handler
+            RequestPayloadValidationError, request_payload_validation_exception_handler
+        )
+        self.exception_handlers.setdefault(
+            RequestHeadValidationError, request_head_validation_exception_handler
         )
 
         self.user_middleware: List[Middleware] = (
@@ -128,7 +132,7 @@ class Squall:
         self.swagger_ui_oauth2_redirect_url = swagger_ui_oauth2_redirect_url
         self.swagger_ui_init_oauth = swagger_ui_init_oauth
         self.extra = extra
-        self.dependency_overrides: Dict[Callable[..., Any], Callable[..., Any]] = {}
+        # self.dependency_overrides: Dict[Callable[..., Any], Callable[..., Any]] = {}
 
         self.openapi_version = "3.0.2"
 
@@ -289,7 +293,6 @@ class Squall:
         if scope["type"] == "lifespan":
             await lifespan(self.lifespan_ctx, scope, receive, send)
             return
-
         async with AsyncExitStack() as stack:
             scope["squall_astack"] = stack
             await self.middleware_stack(scope, receive, send)
@@ -315,29 +318,33 @@ class Squall:
             ]
         )
 
+        # middleware = self.user_middleware
+        #
         app = self.router
         for cls, options in reversed(middleware):
             app = cls(app=app, **options)
         return app
 
     def openapi(self) -> Dict[str, Any]:
-        if not self.openapi_schema:
-            self.openapi_schema = get_openapi(
-                title=self.title,
-                version=self.version,
-                openapi_version=self.openapi_version,
-                description=self.description,
-                terms_of_service=self.terms_of_service,
-                contact=self.contact,
-                license_info=self.license_info,
-                routes=self.routes,
-                tags=self.openapi_tags,
-                servers=self.servers,
-            )
-        return self.openapi_schema
+        return {}
+        # if not self.openapi_schema:
+        #     self.openapi_schema = get_openapi(
+        #         title=self.title,
+        #         version=self.version,
+        #         openapi_version=self.openapi_version,
+        #         description=self.description,
+        #         terms_of_service=self.terms_of_service,
+        #         contact=self.contact,
+        #         license_info=self.license_info,
+        #         routes=self.routes,
+        #         tags=self.openapi_tags,
+        #         servers=self.servers,
+        #     )
+        # return self.openapi_schema
 
     def _setup(self) -> None:
         """Setups OpenAPI functionality"""
+        return
         if self.openapi_url:
             urls = (server_data.get("url") for server_data in self.servers)
             server_urls = {url for url in urls if url}

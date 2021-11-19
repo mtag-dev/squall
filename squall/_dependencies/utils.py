@@ -122,11 +122,11 @@ def get_param_sub_dependant(
     )
 
 
-def get_parameterless_sub_dependant(*, depends: params.Depends, path: str) -> Dependant:
-    assert callable(
-        depends.dependency
-    ), "A parameter-less dependency must have a callable dependency"
-    return get_sub_dependant(depends=depends, dependency=depends.dependency, path=path)
+# def get_parameterless_sub_dependant(*, depends: params.Depends, path: str) -> Dependant:
+#     assert callable(
+#         depends.dependency
+#     ), "A parameter-less dependency must have a callable dependency"
+#     return get_sub_dependant(depends=depends, dependency=depends.dependency, path=path)
 
 
 def get_sub_dependant(
@@ -395,10 +395,11 @@ def add_param_to_fields(*, field: ModelField, dependant: Dependant) -> None:
     elif field_info.in_ == params.ParamTypes.header:
         dependant.header_params.append(field)
     else:
-        assert (
-            field_info.in_ == params.ParamTypes.cookie
-        ), f"non-body parameters must be in path, query, header or cookie: {field.name}"
-        dependant.cookie_params.append(field)
+        pass
+        # assert (
+        #     field_info.in_ == params.ParamTypes.cookie
+        # ), f"non-body parameters must be in path, query, header or cookie: {field.name}"
+        # dependant.cookie_params.append(field)
 
 
 def is_coroutine_callable(call: Callable[..., Any]) -> bool:

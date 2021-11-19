@@ -1,13 +1,15 @@
 from pydantic import Field, dataclasses
 from squall import Request, Squall, status
-from squall.exceptions import RequestValidationError
+from squall.exceptions import RequestPayloadValidationError
 from squall.responses import JSONResponse
 
 app = Squall()
 
 
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
+@app.exception_handler(RequestPayloadValidationError)
+async def validation_exception_handler(
+    request: Request, exc: RequestPayloadValidationError
+):
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={"detail": exc.errors(), "body": exc.body},

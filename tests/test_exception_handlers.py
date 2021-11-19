@@ -1,5 +1,5 @@
 from squall import HTTPException, Squall
-from squall.exceptions import RequestValidationError
+from squall.exceptions import RequestPayloadValidationError
 from squall.testclient import TestClient
 from starlette.responses import JSONResponse
 
@@ -15,7 +15,7 @@ def request_validation_exception_handler(request, exception):
 app = Squall(
     exception_handlers={
         HTTPException: http_exception_handler,
-        RequestValidationError: request_validation_exception_handler,
+        RequestPayloadValidationError: request_validation_exception_handler,
     }
 )
 

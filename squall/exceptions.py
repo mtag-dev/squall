@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Sequence, Type
+from typing import Any, Dict, Optional, Sequence, Tuple, Type
 
 from pydantic import BaseModel, ValidationError, create_model
 from pydantic.error_wrappers import ErrorList
@@ -26,10 +26,23 @@ class SquallError(RuntimeError):
     """
 
 
-class RequestValidationError(ValidationError):
+class RequestPayloadValidationError(ValidationError):
     def __init__(self, errors: Sequence[ErrorList], *, body: Any = None) -> None:
         self.body = body
         super().__init__(errors, RequestErrorModel)
+
+
+class RequestHeadValidationError(Exception):
+    def __init__(self, errors: Sequence[Tuple[str, str, str, Any]]) -> None:
+        self.errors = []
+        for source, field, reason, value in errors:
+            error = {
+                "loc": [source, field],
+                "msg": reason,
+            }
+            if value != Ellipsis:
+                error["val"] = value
+            self.errors.append(error)
 
 
 class WebSocketRequestValidationError(ValidationError):

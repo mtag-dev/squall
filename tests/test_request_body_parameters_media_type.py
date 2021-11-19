@@ -1,5 +1,6 @@
 import typing
 
+import pytest
 from pydantic import BaseModel
 from squall import Body, Squall
 from squall.testclient import TestClient
@@ -54,6 +55,7 @@ create_shop_request_body = {
 client = TestClient(app)
 
 
+@pytest.mark.skip("Fix OpenAPI required")
 def test_openapi_schema():
     response = client.get("/openapi.json")
     assert response.status_code == 200, response.text

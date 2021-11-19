@@ -1,4 +1,3 @@
-import enum
 import re
 from typing import (
     Any,
@@ -13,7 +12,6 @@ from typing import (
     Union,
 )
 
-from squall import params
 from squall.datastructures import Default
 from squall.exceptions import HTTPException
 from squall.responses import JSONResponse, PlainTextResponse, RedirectResponse, Response
@@ -23,10 +21,8 @@ from squall.utils import get_value_or_default
 from starlette.datastructures import URL
 from starlette.websockets import WebSocketClose
 
-
-class PathPlaceholder(enum.Enum):
-    DYNAMIC = "*"
-    LOCATION = "**"
+PLACEHOLDER_DYNAMIC = "*"
+PLACEHOLDER_LOCATION = "**"
 
 
 class Router:
@@ -34,24 +30,24 @@ class Router:
         self,
         prefix: str = "",
         tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
+        # dependencies: Optional[Sequence[params.Depends]] = None,
         default_response_class: Type[Response] = Default(JSONResponse),
         responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
         routes: Optional[List[Union[APIRoute, APIWebSocketRoute]]] = None,
         route_class: Type[APIRoute] = APIRoute,
         deprecated: Optional[bool] = None,
         include_in_schema: bool = True,
-        dependency_overrides_provider: Optional[Any] = None,
+        # dependency_overrides_provider: Optional[Any] = None,
     ) -> None:
         self._prefix = prefix
         self._tags = tags or []
-        self._dependencies = list(dependencies or []) or []
+        # self._dependencies = list(dependencies or []) or []
         self._default_response_class = default_response_class
         self.route_class = route_class
         self._deprecated = deprecated
         self._include_in_schema = include_in_schema
         self._responses = responses or {}
-        self.dependency_overrides_provider = dependency_overrides_provider
+        # self.dependency_overrides_provider = dependency_overrides_provider
 
         self._routes: List[Union[APIRoute, APIWebSocketRoute]] = routes or []
 
@@ -63,7 +59,7 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
+        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -86,16 +82,16 @@ class Router:
         current_tags = self._tags.copy()
         if tags:
             current_tags.extend(tags)
-        current_dependencies = self._dependencies.copy()
-        if dependencies:
-            current_dependencies.extend(dependencies)
+        # current_dependencies = self._dependencies.copy()
+        # if dependencies:
+        #     current_dependencies.extend(dependencies)
         route = route_class(
             self._prefix + path,
             endpoint=endpoint,
             response_model=response_model,
             status_code=status_code,
             tags=current_tags,
-            dependencies=current_dependencies,
+            # dependencies=current_dependencies,
             summary=summary,
             description=description,
             response_description=response_description,
@@ -107,7 +103,7 @@ class Router:
             response_class=current_response_class,
             name=name,
             openapi_extra=openapi_extra,
-            dependency_overrides_provider=self.dependency_overrides_provider,
+            # dependency_overrides_provider=self.dependency_overrides_provider,
         )
         self.route_register(route)
 
@@ -119,7 +115,7 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
+        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -142,16 +138,16 @@ class Router:
         current_tags = self._tags.copy()
         if tags:
             current_tags.extend(tags)
-        current_dependencies = self._dependencies.copy()
-        if dependencies:
-            current_dependencies.extend(dependencies)
+        # current_dependencies = self._dependencies.copy()
+        # if dependencies:
+        #     current_dependencies.extend(dependencies)
         route = route_class(
             self._prefix + path,
             endpoint=endpoint,
             response_model=response_model,
             status_code=status_code,
             tags=current_tags,
-            dependencies=current_dependencies,
+            # dependencies=current_dependencies,
             summary=summary,
             description=description,
             response_description=response_description,
@@ -177,7 +173,7 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
+        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -207,7 +203,7 @@ class Router:
                 response_model=response_model,
                 status_code=status_code,
                 tags=tags,
-                dependencies=dependencies,
+                # dependencies=dependencies,
                 summary=summary,
                 description=description,
                 response_description=response_description,
@@ -289,7 +285,7 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
+        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -306,7 +302,7 @@ class Router:
             response_model=response_model,
             status_code=status_code,
             tags=tags,
-            dependencies=dependencies,
+            # dependencies=dependencies,
             summary=summary,
             description=description,
             response_description=response_description,
@@ -327,7 +323,7 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
+        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -344,7 +340,7 @@ class Router:
             response_model=response_model,
             status_code=status_code,
             tags=tags,
-            dependencies=dependencies,
+            # dependencies=dependencies,
             summary=summary,
             description=description,
             response_description=response_description,
@@ -365,7 +361,7 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
+        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -382,7 +378,7 @@ class Router:
             response_model=response_model,
             status_code=status_code,
             tags=tags,
-            dependencies=dependencies,
+            # dependencies=dependencies,
             summary=summary,
             description=description,
             response_description=response_description,
@@ -403,7 +399,7 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
+        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -420,7 +416,7 @@ class Router:
             response_model=response_model,
             status_code=status_code,
             tags=tags,
-            dependencies=dependencies,
+            # dependencies=dependencies,
             summary=summary,
             description=description,
             response_description=response_description,
@@ -441,7 +437,7 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
+        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -458,7 +454,7 @@ class Router:
             response_model=response_model,
             status_code=status_code,
             tags=tags,
-            dependencies=dependencies,
+            # dependencies=dependencies,
             summary=summary,
             description=description,
             response_description=response_description,
@@ -479,7 +475,7 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
+        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -496,7 +492,7 @@ class Router:
             response_model=response_model,
             status_code=status_code,
             tags=tags,
-            dependencies=dependencies,
+            # dependencies=dependencies,
             summary=summary,
             description=description,
             response_description=response_description,
@@ -517,7 +513,7 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
+        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -534,7 +530,7 @@ class Router:
             response_model=response_model,
             status_code=status_code,
             tags=tags,
-            dependencies=dependencies,
+            # dependencies=dependencies,
             summary=summary,
             description=description,
             response_description=response_description,
@@ -555,7 +551,7 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
+        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -573,7 +569,7 @@ class Router:
             response_model=response_model,
             status_code=status_code,
             tags=tags,
-            dependencies=dependencies,
+            # dependencies=dependencies,
             summary=summary,
             description=description,
             response_description=response_description,
@@ -593,7 +589,7 @@ class RootRouter(Router):
         self,
         prefix: str = "",
         tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
+        # dependencies: Optional[Sequence[params.Depends]] = None,
         default_response_class: Type[Response] = Default(JSONResponse),
         responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
         routes: Optional[List[Union[APIRoute, APIWebSocketRoute]]] = None,
@@ -608,14 +604,14 @@ class RootRouter(Router):
         super(RootRouter, self).__init__(
             prefix=prefix,
             tags=tags,
-            dependencies=dependencies,
+            # dependencies=dependencies,
             default_response_class=default_response_class,
             routes=routes,
             route_class=route_class,
             deprecated=deprecated,
             include_in_schema=include_in_schema,
             responses=responses,
-            dependency_overrides_provider=dependency_overrides_provider,
+            # dependency_overrides_provider=dependency_overrides_provider,
         )
         self.redirect_slashes = redirect_slashes
         self.default = default or self.not_found
@@ -693,15 +689,11 @@ class RootRouter(Router):
 
     @staticmethod
     def _get_fast_path_octets(path: str) -> List[str]:
-        no_regex = re.sub(r"(\([^)]*\))", PathPlaceholder.DYNAMIC.value, path)
-        no_format = re.sub(r"{([^}]*)}", PathPlaceholder.DYNAMIC.value, no_regex)
+        no_regex = re.sub(r"(\([^)]*\))", PLACEHOLDER_DYNAMIC, path)
+        no_format = re.sub(r"{([^}]*)}", PLACEHOLDER_DYNAMIC, no_regex)
         result = []
         for i in no_format.strip("/").split("/"):
-            value = (
-                PathPlaceholder.DYNAMIC.value
-                if PathPlaceholder.DYNAMIC.value in i
-                else i
-            )
+            value = PLACEHOLDER_DYNAMIC if PLACEHOLDER_DYNAMIC in i else i
             result.append(value)
         return result
 
@@ -713,8 +705,8 @@ class RootRouter(Router):
         for octet in self._get_fast_path_octets(route.path):
             if octet not in layer:
                 layer[octet] = {}
-                if octet != "*":
-                    layer[octet]["*"] = {}
+                if octet != PLACEHOLDER_DYNAMIC:
+                    layer[octet][PLACEHOLDER_DYNAMIC] = {}
             layer = layer[octet]
 
         if "#routes#" not in layer:
@@ -748,9 +740,9 @@ class RootRouter(Router):
         locations = []
         try:
             for key in path.strip("/").split("/"):
-                last = last.get(key) or last[PathPlaceholder.DYNAMIC.value]
-                if PathPlaceholder.LOCATION.value in last:
-                    locations.append(last[PathPlaceholder.LOCATION.value])
+                last = last.get(key) or last[PLACEHOLDER_DYNAMIC]
+                if PLACEHOLDER_LOCATION in last:
+                    locations.append(last[PLACEHOLDER_LOCATION])
         except KeyError:
             return [], locations
         routes: List[APIRoute] = last.get("#routes#", {}).get(method, [])
@@ -760,7 +752,7 @@ class RootRouter(Router):
         last = self._fast_path_route_ws
         try:
             for key in path.strip("/").split("/"):
-                last = last.get(key) or last[PathPlaceholder.DYNAMIC.value]
+                last = last.get(key) or last[PLACEHOLDER_DYNAMIC]
         except KeyError:
             return []
         return last.get("#routes#", [])

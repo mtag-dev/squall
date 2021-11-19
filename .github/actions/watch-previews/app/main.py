@@ -57,7 +57,7 @@ if __name__ == "__main__":
     artifacts_response = ArtifactResponse.parse_obj(data)
     for pr in prs:
         logging.info("-----")
-        logging.info(f"Processing PR #{pr.number}: {pr.title}")
+        logging.info(f"Processing PR #{pr.numeric}: {pr.title}")
         pr_comments = list(pr.get_issue_comments())
         pr_commits = list(pr.get_commits())
         last_commit = pr_commits[0]
@@ -89,7 +89,7 @@ if __name__ == "__main__":
                     json={
                         "ref": "master",
                         "inputs": {
-                            "pr": f"{pr.number}",
+                            "pr": f"{pr.numeric}",
                             "name": artifact_name,
                             "commit": commit,
                         },

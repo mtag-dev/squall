@@ -1,5 +1,5 @@
 from squall import HTTPException, Squall
-from squall.exceptions import RequestValidationError
+from squall.exceptions import RequestPayloadValidationError
 from squall.responses import PlainTextResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -11,7 +11,7 @@ async def http_exception_handler(request, exc):
     return PlainTextResponse(str(exc.detail), status_code=exc.status_code)
 
 
-@app.exception_handler(RequestValidationError)
+@app.exception_handler(RequestPayloadValidationError)
 async def validation_exception_handler(request, exc):
     return PlainTextResponse(str(exc), status_code=400)
 
