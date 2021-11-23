@@ -1,6 +1,7 @@
 import re
 from typing import (
     Any,
+    Awaitable,
     Callable,
     Dict,
     List,
@@ -159,7 +160,7 @@ class Router:
             response_class=current_response_class,
             name=name,
             openapi_extra=openapi_extra,
-            dependency_overrides_provider=self.dependency_overrides_provider,
+            # dependency_overrides_provider=self.dependency_overrides_provider,
         )
         self.route_register(route)
 
@@ -231,7 +232,6 @@ class Router:
             self._prefix + path,
             endpoint=endpoint,
             name=name,
-            dependency_overrides_provider=self.dependency_overrides_provider,
         )
         self.route_register(route)
 
@@ -619,7 +619,7 @@ class RootRouter(Router):
         self._fast_path_route_ws: Dict[str, Any] = {}
         # self.lifespan_context: Callable[[Any], AsyncContextManager] = RouterLifespan(self)
 
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+    def __call__(self, scope: Scope, receive: Receive, send: Send) -> Awaitable[Any]:
         """
         The main entry point to the Router class.
         """
@@ -641,8 +641,9 @@ class RootRouter(Router):
             # raise ValueError(child_scope)
             if match:
                 scope.update(child_scope)
-                await route.handle(scope, receive, send)
-                return
+                # await route.handle(scope, receive, send)
+                return route.app(scope, receive, send)
+                # return
 
         # for location in reversed(_locations):
         #     match, child_scope = location.matches(scope)
@@ -666,10 +667,10 @@ class RootRouter(Router):
                 if match:
                     redirect_url = URL(scope=redirect_scope)
                     response = RedirectResponse(url=str(redirect_url))
-                    await response(scope, receive, send)
-                    return
+                    return response(scope, receive, send)
+                    # return
 
-        await self.default(scope, receive, send)
+        return self.default(scope, receive, send)
 
     @staticmethod
     async def not_found(scope: Scope, receive: Receive, send: Send) -> None:

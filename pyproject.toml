@@ -10,7 +10,6 @@ authors = [
     {name = "Stanislav Dubrovskyi", email = "s.dubrovskyi@cleverdec.com"},
 ]
 maintainers = [
-    {name = "Anton Kuzmenko", email = "hotk@hey.com"},
     {name = "Vitalii Kovalchuk", email = "naviot96@gmail.com"},
 ]
 

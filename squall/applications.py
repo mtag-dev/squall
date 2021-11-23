@@ -1,8 +1,7 @@
 import typing
-from typing import Any, Callable, Dict, List, Optional, Sequence, Type, Union
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Sequence, Type, Union
 
 from squall import router
-from squall.concurrency import AsyncExitStack
 from squall.datastructures import Default
 from squall.exception_handlers import (
     http_exception_handler,
@@ -17,8 +16,8 @@ from squall.openapi.docs import (
     get_swagger_ui_html,
     get_swagger_ui_oauth2_redirect_html,
 )
+from squall.openapi.utils import get_openapi
 
-# from squall.openapi.utils import get_openapi
 # from squall.params import Depends
 from squall.requests import Request
 from squall.responses import HTMLResponse, JSONResponse, Response
@@ -284,18 +283,17 @@ class Squall:
 
         return decorator
 
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+    def scoped(self, scope: Scope, receive: Receive, send: Send) -> Awaitable[Any]:
+        if scope["type"] == "lifespan":
+            return lifespan(self.lifespan_ctx, scope, receive, send)
+        return self.middleware_stack(scope, receive, send)
+
+    def __call__(self, scope: Scope) -> Callable[..., Awaitable[Any]]:
         """ASGI calls entrypoint."""
         if self.root_path:
             scope["root_path"] = self.root_path
-
         scope["app"] = self
-        if scope["type"] == "lifespan":
-            await lifespan(self.lifespan_ctx, scope, receive, send)
-            return
-        async with AsyncExitStack() as stack:
-            scope["squall_astack"] = stack
-            await self.middleware_stack(scope, receive, send)
+        return lambda receive, send: self.scoped(scope, receive, send)
 
     def _build_middleware_stack(self) -> ASGIApp:
         """Build stack for middlewares pipelining"""
@@ -326,25 +324,24 @@ class Squall:
         return app
 
     def openapi(self) -> Dict[str, Any]:
-        return {}
-        # if not self.openapi_schema:
-        #     self.openapi_schema = get_openapi(
-        #         title=self.title,
-        #         version=self.version,
-        #         openapi_version=self.openapi_version,
-        #         description=self.description,
-        #         terms_of_service=self.terms_of_service,
-        #         contact=self.contact,
-        #         license_info=self.license_info,
-        #         routes=self.routes,
-        #         tags=self.openapi_tags,
-        #         servers=self.servers,
-        #     )
-        # return self.openapi_schema
+        if not self.openapi_schema:
+            self.openapi_schema = get_openapi(
+                title=self.title,
+                version=self.version,
+                openapi_version=self.openapi_version,
+                description=self.description,
+                terms_of_service=self.terms_of_service,
+                contact=self.contact,
+                license_info=self.license_info,
+                routes=self.routes,
+                tags=self.openapi_tags,
+                servers=self.servers,
+            )
+        return self.openapi_schema
 
     def _setup(self) -> None:
         """Setups OpenAPI functionality"""
-        return
+        # return
         if self.openapi_url:
             urls = (server_data.get("url") for server_data in self.servers)
             server_urls = {url for url in urls if url}

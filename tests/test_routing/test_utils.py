@@ -15,14 +15,46 @@ def test_get_handler_args_no_annotation():
     def handler(a, b=Query(...), c=Param(...), d=Header(...), e=Cookie(...)):
         pass
 
-    common = {}
-    assert get_handler_head_params(handler) == [
-        {"name": "a", "source": "param"},
-        {"name": "b", "source": "query", **common},
-        {"name": "c", "source": "param", **common},
-        {"name": "d", "source": "header", **common},
-        {"name": "e", "source": "cookie", **common},
-    ]
+    params = get_handler_head_params(handler)
+    assert params[0].convertor == "str"
+    assert params[0].default == Ellipsis
+    assert params[0].statements == {}
+    assert params[0].name == "a"
+    assert params[0].origin == "a"
+    assert params[0].source == "path_params"
+    assert params[0].validate is None
+
+    assert params[1].convertor == "str"
+    assert params[1].default == Ellipsis
+    assert params[1].statements == {}
+    assert params[1].name == "b"
+    assert params[1].origin == "b"
+    assert params[1].source == "query_params"
+    assert params[1].validate is None
+
+    assert params[2].convertor == "str"
+    assert params[2].default == Ellipsis
+    assert params[2].statements == {}
+    assert params[2].name == "c"
+    assert params[2].origin == "c"
+    assert params[2].source == "path_params"
+    assert params[2].validate is None
+
+    assert params[3].convertor == "str"
+    assert params[3].default == Ellipsis
+    assert params[3].statements == {}
+    assert params[3].name == "d"
+    assert params[3].origin == "d"
+    assert params[3].source == "headers"
+    assert params[3].validate is None
+
+    assert params[4].convertor == "str"
+    assert params[4].default == Ellipsis
+    assert params[4].statements == {}
+    assert params[4].name == "e"
+    assert params[4].origin == "e"
+    assert params[4].source == "cookies"
+    assert params[4].validate is None
 
 
 def test_get_handler_args_origin():
@@ -34,25 +66,72 @@ def test_get_handler_args_origin():
     ):
         pass
 
-    common = {}
-    assert get_handler_head_params(handler) == [
-        {"name": "b", "source": "query", "origin": "from_b", **common},
-        {"name": "c", "source": "param", "origin": "from_c", **common},
-        {"name": "d", "source": "header", "origin": "from_d", **common},
-        {"name": "e", "source": "cookie", "origin": "from_e", **common},
-    ]
+    params = get_handler_head_params(handler)
+    assert params[0].convertor == "str"
+    assert params[0].default == Ellipsis
+    assert params[0].statements == {}
+    assert params[0].name == "b"
+    assert params[0].origin == "from_b"
+    assert params[0].source == "query_params"
+    assert params[0].validate is None
+
+    assert params[1].convertor == "str"
+    assert params[1].default == Ellipsis
+    assert params[1].statements == {}
+    assert params[1].name == "c"
+    assert params[1].origin == "from_c"
+    assert params[1].source == "path_params"
+    assert params[1].validate is None
+
+    assert params[2].convertor == "str"
+    assert params[2].default == Ellipsis
+    assert params[2].statements == {}
+    assert params[2].name == "d"
+    assert params[2].origin == "from_d"
+    assert params[2].source == "headers"
+    assert params[2].validate is None
+
+    assert params[3].convertor == "str"
+    assert params[3].default == Ellipsis
+    assert params[3].statements == {}
+    assert params[3].name == "e"
+    assert params[3].origin == "from_e"
+    assert params[3].source == "cookies"
+    assert params[3].validate is None
 
 
 def test_get_handler_args_annotations():
     def handler(b: int, c: str, d: bytes, e: float):
         pass
 
-    assert get_handler_head_params(handler) == [
-        {"name": "b", "source": "param", "validate": "numeric", "convert": "int"},
-        {"name": "c", "source": "param", "validate": "string", "convert": "str"},
-        {"name": "d", "source": "param", "validate": "string", "convert": "bytes"},
-        {"name": "e", "source": "param", "validate": "numeric", "convert": "float"},
-    ]
+    params = get_handler_head_params(handler)
+    assert params[0].convertor == "int"
+    assert params[0].default == Ellipsis
+    assert params[0].statements == {}
+    assert params[0].name == "b"
+    assert params[0].source == "path_params"
+    assert params[0].validate is None
+
+    assert params[1].convertor == "str"
+    assert params[1].default == Ellipsis
+    assert params[1].statements == {}
+    assert params[1].name == "c"
+    assert params[1].source == "path_params"
+    assert params[1].validate is None
+
+    assert params[2].convertor == "bytes"
+    assert params[2].default == Ellipsis
+    assert params[2].statements == {}
+    assert params[2].name == "d"
+    assert params[2].source == "path_params"
+    assert params[2].validate is None
+
+    assert params[3].convertor == "float"
+    assert params[3].default == Ellipsis
+    assert params[3].statements == {}
+    assert params[3].name == "e"
+    assert params[3].source == "path_params"
+    assert params[3].validate is None
 
 
 def test_get_handler_args_direct_defaults():
@@ -65,44 +144,41 @@ def test_get_handler_args_direct_defaults():
     ):
         pass
 
-    assert get_handler_head_params(handler) == [
-        {
-            "name": "a",
-            "source": "param",
-            "convert": "str",
-            "validate": "string",
-            "default": None,
-            "optional": True,
-        },
-        {
-            "name": "b",
-            "source": "param",
-            "validate": "numeric",
-            "convert": "int",
-            "default": 1,
-        },
-        {
-            "name": "c",
-            "source": "param",
-            "validate": "string",
-            "convert": "str",
-            "default": "Hey",
-        },
-        {
-            "name": "d",
-            "source": "param",
-            "validate": "string",
-            "convert": "bytes",
-            "default": b"Hey",
-        },
-        {
-            "name": "e",
-            "source": "param",
-            "validate": "numeric",
-            "convert": "float",
-            "default": 3.14,
-        },
-    ]
+    params = get_handler_head_params(handler)
+    assert params[0].convertor == "str"
+    assert params[0].default is None
+    assert params[0].statements == {}
+    assert params[0].name == "a"
+    assert params[0].source == "path_params"
+    assert params[0].validate is None
+
+    assert params[1].convertor == "int"
+    assert params[1].default == 1
+    assert params[1].statements == {}
+    assert params[1].name == "b"
+    assert params[1].source == "path_params"
+    assert params[1].validate is None
+
+    assert params[2].convertor == "str"
+    assert params[2].default == "Hey"
+    assert params[2].statements == {}
+    assert params[2].name == "c"
+    assert params[2].source == "path_params"
+    assert params[2].validate is None
+
+    assert params[3].convertor == "bytes"
+    assert params[3].default == b"Hey"
+    assert params[3].statements == {}
+    assert params[3].name == "d"
+    assert params[3].source == "path_params"
+    assert params[3].validate is None
+
+    assert params[4].convertor == "float"
+    assert params[4].default == 3.14
+    assert params[4].statements == {}
+    assert params[4].name == "e"
+    assert params[4].source == "path_params"
+    assert params[4].validate is None
 
 
 def test_get_handler_args_assigned_instance_defaults():
@@ -115,44 +191,41 @@ def test_get_handler_args_assigned_instance_defaults():
     ):
         pass
 
-    assert get_handler_head_params(handler) == [
-        {
-            "name": "a",
-            "source": "param",
-            "validate": "string",
-            "convert": "str",
-            "default": None,
-            "optional": True,
-        },
-        {
-            "name": "b",
-            "source": "param",
-            "validate": "numeric",
-            "convert": "int",
-            "default": 1,
-        },
-        {
-            "name": "c",
-            "source": "query",
-            "validate": "string",
-            "convert": "str",
-            "default": "Hey",
-        },
-        {
-            "name": "d",
-            "source": "header",
-            "validate": "string",
-            "convert": "bytes",
-            "default": b"Hey",
-        },
-        {
-            "name": "e",
-            "source": "cookie",
-            "validate": "numeric",
-            "convert": "float",
-            "default": 3.14,
-        },
-    ]
+    params = get_handler_head_params(handler)
+    assert params[0].convertor == "str"
+    assert params[0].default is None
+    assert params[0].statements == {}
+    assert params[0].name == "a"
+    assert params[0].source == "path_params"
+    assert params[0].validate is None
+
+    assert params[1].convertor == "int"
+    assert params[1].default == 1
+    assert params[1].statements == {}
+    assert params[1].name == "b"
+    assert params[1].source == "path_params"
+    assert params[1].validate is None
+
+    assert params[2].convertor == "str"
+    assert params[2].default == "Hey"
+    assert params[2].statements == {}
+    assert params[2].name == "c"
+    assert params[2].source == "query_params"
+    assert params[2].validate is None
+
+    assert params[3].convertor == "bytes"
+    assert params[3].default == b"Hey"
+    assert params[3].statements == {}
+    assert params[3].name == "d"
+    assert params[3].source == "headers"
+    assert params[3].validate is None
+
+    assert params[4].convertor == "float"
+    assert params[4].default == 3.14
+    assert params[4].statements == {}
+    assert params[4].name == "e"
+    assert params[4].source == "cookies"
+    assert params[4].validate is None
 
 
 def test_get_handler_args_validation_parameters():
@@ -165,50 +238,38 @@ def test_get_handler_args_validation_parameters():
     ):
         pass
 
-    assert get_handler_head_params(handler) == [
-        {
-            "name": "a",
-            "source": "param",
-            "convert": "str",
-            "default": None,
-            "optional": True,
-            "validate": "string",
-            "min_length": 2,
-        },
-        {
-            "name": "b",
-            "source": "param",
-            "convert": "int",
-            "default": 1,
-            "ge": 1,
-            "le": 2,
-            "validate": "numeric",
-        },
-        {
-            "name": "c",
-            "source": "query",
-            "convert": "str",
-            "default": "Hey",
-            "validate": "string",
-            "min_length": 2,
-            "max_length": 5,
-        },
-        {
-            "name": "d",
-            "source": "header",
-            "convert": "bytes",
-            "default": b"Hey",
-            "validate": "string",
-            "min_length": 2,
-            "max_length": 5,
-        },
-        {
-            "name": "e",
-            "source": "cookie",
-            "convert": "float",
-            "default": 3.14,
-            "ge": 3.14,
-            "le": 3.15,
-            "validate": "numeric",
-        },
-    ]
+    params = get_handler_head_params(handler)
+    assert params[0].convertor == "str"
+    assert params[0].default is None
+    assert params[0].statements['min_length'] == 2
+    assert params[0].name == "a"
+    assert params[0].source == "path_params"
+    assert params[0].validate == "string"
+
+    assert params[1].convertor == "int"
+    assert params[1].default == 1
+    assert params[1].statements == {"ge": 1, "le": 2}
+    assert params[1].name == "b"
+    assert params[1].source == "path_params"
+    assert params[1].validate == "numeric"
+
+    assert params[2].convertor == "str"
+    assert params[2].default == "Hey"
+    assert params[2].statements == {"max_length": 5, "min_length": 2}
+    assert params[2].name == "c"
+    assert params[2].source == "query_params"
+    assert params[2].validate == "string"
+
+    assert params[3].convertor == "bytes"
+    assert params[3].default == b"Hey"
+    assert params[3].statements == {"max_length": 5, "min_length": 2}
+    assert params[3].name == "d"
+    assert params[3].source == "headers"
+    assert params[3].validate == "string"
+
+    assert params[4].convertor == "float"
+    assert params[4].default == 3.14
+    assert params[4].statements == {"ge": 3.14, "le": 3.15}
+    assert params[4].name == "e"
+    assert params[4].source == "cookies"
+    assert params[4].validate == "numeric"

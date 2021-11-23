@@ -2,76 +2,182 @@ import inspect
 import typing
 from dataclasses import is_dataclass
 from decimal import Decimal
-from typing import Any, Callable, Dict, List, Union, get_args, get_origin
+from enum import Enum
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    Union,
+    get_args,
+    get_origin,
+)
 
 from pydantic import BaseModel
+from pydantic.fields import FieldInfo, Undefined
 from squall.params import Body, CommonParam, File, Form, Num, Str
 from squall.requests import Request
-from pydantic.fields import FieldInfo
 
 
-def get_handler_head_params(func: Callable[..., Any]) -> List[Dict[str, Any]]:
-    """Reads meta information from callable inspection.
-    Filter out only parameters that appear from HEAD.
-    Provides all necessary data for build validation.
+class ParameterSourceType(Enum):
+    query = "query"
+    header = "header"
+    path = "path"
+    cookie = "cookie"
 
-    :param func: callable for inspection
-    """
-    signature = inspect.signature(func)
-    results = []
-    for k, v in signature.parameters.items():
-        param: Dict[str, Any] = {"name": k}
-        args, origin = get_args(v.annotation), get_origin(v.annotation)
+
+# class ParameterVariableType(Enum):
+#     int = "integer"
+#     Decimal = "number"
+#     float = "number"
+#     bool = "boolean"
+#     str = "string"
+#     bytes = "string"
+
+
+type_mapping: Dict[str, str] = {
+    "int": "integer",
+    "Decimal": "number",
+    "float": "number",
+    "bool": "boolean",
+    "str": "string",
+    "bytes": "string",
+}
+
+
+class HeadParam:
+    def __init__(self, name: str, value: inspect.Parameter, source: str) -> None:
+        self._annotation = value.annotation
+        self._default = value.default
+        self._empty = value.empty
+
+        self.name = name
+        self.source = source
+        self.is_array, self.convertor = self.get_convertor()
+        self.validate, self.statements = self.get_validation_statements()
+
+    @property
+    def origin(self) -> str:
+        return getattr(self._default, "origin", None) or self.name
+
+    @property
+    def default(self) -> Any:
+        default = Ellipsis
+        if isinstance(self._default, CommonParam):
+            default = self._default.default
+        elif type(self._default) in (int, float, Decimal, str, bytes, type(None)):
+            default = self._default
+        return default
+
+    def get_validation_statements(self) -> Tuple[Optional[str], Dict[str, Any]]:
+        validate, statements = None, {}
+        if hasattr(self._default, "valid") and isinstance(
+            self._default.valid, (Num, Str)
+        ):
+            validate = self._default.valid.in_.value
+            for constraint in self._default.valid.get_constraints():
+                value = getattr(self._default.valid, constraint)
+                if value is not None:
+                    statements[constraint] = value
+        return validate, statements
+
+    def get_convertor(self) -> Tuple[bool, str]:
+        is_array, convertor = False, "str"
+        args, origin = get_args(self._annotation), get_origin(self._annotation)
         if origin is Union:
             if type(None) in args:
                 if get_origin(args[0]) == list:
-                    param["as_list"] = True
-                    convertor = get_args(args[0])[0]
+                    is_array, _convertor = True, get_args(args[0])[0]
                 else:
-                    convertor = args[0]
-
-                param["convert"] = getattr(convertor, "__name__", None)
-
+                    is_array, _convertor = False, args[0]
+                convertor = getattr(_convertor, "__name__", None)
         elif origin == list:
             try:
-                param["convert"] = args[0].__name__
+                is_array, convertor = True, args[0].__name__
             except Exception:
                 """List[Any] should be implemented"""
-            else:
-                param["as_list"] = True
+        elif (
+            hasattr(self._annotation, "__name__")
+            and self._annotation.__name__ != "_empty"
+        ):
+            convertor = self._annotation.__name__
+        return is_array, convertor
 
-        elif hasattr(v.annotation, "__name__") and v.annotation.__name__ != "_empty":
-            param["convert"] = v.annotation.__name__
+    @property
+    def spec(self) -> Dict[str, Any]:
+        source_mapping = {
+            "path_params": "path",
+            "query_params": "query",
+            "headers": "header",
+            "cookies": "cookie",
+        }
 
-        if param.get("convert") in ("int", "float", "Decimal"):
-            param["validate"] = "numeric"
-        elif param.get("convert") in ("str", "bytes"):
-            param["validate"] = "string"
+        item: Dict[str, Any] = {}
+        item["type"] = type_mapping.get(self.convertor, "string")
 
+        schema: Dict[str, Any]
+        if self.is_array:
+            schema = {"type": "array", "items": item}
+        else:
+            schema = item
+            if self.statements.get("ge") is not None:
+                schema["minimum"] = self.statements["ge"]
+                schema["exclusiveMinimum"] = False
+            elif self.statements.get("gt") is not None:
+                schema["minimum"] = self.statements["gt"]
+                schema["exclusiveMinimum"] = True
+
+            if self.statements.get("le") is not None:
+                schema["maximum"] = self.statements["le"]
+                schema["exclusiveMaximum"] = False
+            elif self.statements.get("lt") is not None:
+                schema["maximum"] = self.statements["lt"]
+                schema["exclusiveMaximum"] = True
+
+        result = {
+            "required": self.default == Ellipsis,
+            "schema": schema,
+            "name": self.origin or self.name,
+            "in": source_mapping[self.source],
+        }
+
+        description = getattr(self._default, "description", None)
+        if description is not None:
+            result["description"] = description
+
+        example = getattr(self._default, "example", None)
+        if example != Undefined and example:
+            result["example"] = example
+
+        examples = getattr(self._default, "examples", None)
+        if examples:
+            result["examples"] = examples
+
+        deprecated = getattr(self._default, "deprecated", None)
+        if deprecated:
+            result["deprecated"] = True
+
+        return result
+
+
+def get_handler_head_params(func: Callable[..., Any]) -> List[HeadParam]:
+    signature = inspect.signature(func)
+    results = []
+    for k, v in signature.parameters.items():
+        source = None
         if isinstance(v.default, CommonParam):
-            param["source"] = v.default.in_.value
-            if v.default.default != Ellipsis:
-                param["default"] = v.default.default
+            source = v.default.in_.value
         elif v.default is v.empty:
             res = get_annotation_affiliation(v.annotation)
             if res is None:
-                param["source"] = "path_params"
+                source = "path_params"
         elif type(v.default) in (int, float, Decimal, str, bytes, type(None)):
-            param["source"] = "path_params"
-            param["default"] = v.default
+            source = "path_params"
 
-        if hasattr(v.default, "valid") and isinstance(v.default.valid, (Num, Str)):
-            param["validate"] = v.default.valid.in_.value
-            for constraint in v.default.valid.get_constraints():
-                value = getattr(v.default.valid, constraint)
-                if value is not None:
-                    param[constraint] = value
-
-        if getattr(v.default, "origin", None) is not None:
-            param["origin"] = v.default.origin
-
-        if param.get("source") is not None:
-            results.append(param)
+        if source is not None:
+            results.append(HeadParam(name=k, value=v, source=source))
 
     return results
 
@@ -137,8 +243,10 @@ class MyModel(BaseModel):
 
 
 if __name__ == "__main__":
+
     def func(req: Request, a: MyModel) -> None:
         pass
 
     from pprint import pprint
+
     pprint(get_handler_body_params(func))

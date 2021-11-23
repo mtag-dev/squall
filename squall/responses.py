@@ -1,6 +1,6 @@
 import decimal
 import typing
-from typing import Any
+from typing import Any, Dict, List, Optional, Tuple
 
 import orjson
 from pydantic import BaseModel
@@ -27,7 +27,12 @@ def default(obj: Any) -> Any:
     raise TypeError
 
 
-def init_headers(body, media_type, charset, headers: typing.Mapping[str, str] = None):
+def init_headers(
+    body: bytes,
+    charset: str,
+    media_type: Optional[str] = None,
+    headers: Optional[typing.Mapping[str, str]] = None,
+) -> List[Tuple[bytes, bytes]]:
     if headers is None:
         raw_headers: typing.List[typing.Tuple[bytes, bytes]] = []
         populate_content_length = True
@@ -45,9 +50,9 @@ def init_headers(body, media_type, charset, headers: typing.Mapping[str, str] = 
     if body and populate_content_length:
         append((b"content-length", str(len(body)).encode()))
 
-    content_type = media_type
     if media_type is not None and populate_content_type:
-        if content_type[:5] == "text/":
+        content_type = media_type
+        if media_type[:5] == "text/":
             content_type += "; charset=" + charset
         append((b"content-type", content_type.encode()))
 
@@ -56,21 +61,21 @@ def init_headers(body, media_type, charset, headers: typing.Mapping[str, str] = 
 
 class Response(StarletteResponse):
     media_type = None
-    charset = "utf-8"
+    charset: str = "utf-8"
 
     def __init__(
         self,
         content: typing.Any = None,
         status_code: int = 200,
-        headers: dict = None,
-        media_type: str = None,
+        headers: Optional[Dict[str, str]] = None,
+        media_type: Optional[str] = None,
     ) -> None:
         self.status_code = status_code
         if media_type is not None:
             self.media_type = media_type
         self.body = body = self.render(content)
         self.raw_headers = raw_headers = init_headers(
-            body, media_type, self.charset, headers
+            body, self.charset, media_type, headers
         )
         self.send_start = {
             "type": "http.response.start",

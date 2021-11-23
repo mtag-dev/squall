@@ -29,7 +29,11 @@ from squall.exceptions import (
 from squall.openapi.constants import STATUS_CODES_WITH_NO_BODY
 from squall.requests import Request
 from squall.responses import JSONResponse, Response
-from squall.routing_.utils import get_handler_body_params, get_handler_head_params
+from squall.routing_.utils import (
+    HeadParam,
+    get_handler_body_params,
+    get_handler_head_params,
+)
 from squall.utils import (
     create_cloned_field,
     create_response_field,
@@ -65,7 +69,7 @@ PARAM_REGEX = re.compile("{([a-zA-Z_][a-zA-Z0-9_]*)(:[a-zA-Z_][a-zA-Z0-9_]*)?}")
 
 def compile_path(
     path: str,
-) -> Tuple[Pattern, str, Dict[str, Convertor]]:
+) -> Tuple[Pattern[str], str, Dict[str, Convertor]]:
     """
     Given a path string, like: "/{username:str}", return a three-tuple
     of (regex, format, {param_name:convertor}).
@@ -290,7 +294,7 @@ def get_websocket_app(
     return app
 
 
-def build_head_validator(handler: Callable[..., Any]):
+def build_head_validator(head_params: List[HeadParam]) -> Callable[..., Any]:
     v = Validator(
         args=["request"],
         convertors={
@@ -301,37 +305,33 @@ def build_head_validator(handler: Callable[..., Any]):
             "bytes": lambda a: a.encode("utf-8"),
         },
     )
-    for rule in get_handler_head_params(handler):
+    for param in head_params:
         v.add_rule(
-            attribute=rule["source"],
-            name=rule["name"],
-            key=rule.get("origin", rule["name"]),
-            check=rule.get("validate"),
-            convert=rule.get("convert"),
-            as_list=rule.get("as_list", False),
-            default=rule.get("default", Ellipsis),
-            gt=rule.get("gt"),
-            ge=rule.get("ge"),
-            lt=rule.get("lt"),
-            le=rule.get("le"),
-            min_length=rule.get("min_length"),
-            max_length=rule.get("max_length"),
+            attribute=param.source,
+            name=param.name,
+            key=param.origin,
+            check=param.validate,
+            convert=param.convertor,
+            as_list=param.is_array,
+            default=param.default,
+            **param.statements
+            # gt=param.get("gt"),
+            # ge=param.get("ge"),
+            # lt=param.get("lt"),
+            # le=param.get("le"),
+            # min_length=param.get("min_length"),
+            # max_length=param.get("max_length"),
         )
         print(
             dict(
-                source=rule["source"],
-                name=rule["name"],
-                key=rule.get("origin", rule["name"]),
-                check=rule.get("validate"),
-                convert=rule.get("convert"),
-                default=rule.get("default", "..."),
-                as_list=rule.get("as_list", False),
-                gt=rule.get("gt"),
-                ge=rule.get("ge"),
-                lt=rule.get("lt"),
-                le=rule.get("le"),
-                min_length=rule.get("min_length"),
-                max_length=rule.get("max_length"),
+                attribute=param.source,
+                name=param.name,
+                key=param.origin,
+                check=param.validate,
+                convert=param.convertor,
+                as_list=param.is_array,
+                default=param.default,
+                **param.statements,
             )
         )
     return v.build()
@@ -378,8 +378,8 @@ class APIWebSocketRoute(WebSocketRoute):
         # self.dependant = get_dependant(path=path, call=self.endpoint)
         self.app = websocket_session(
             get_websocket_app(
-                dependant=self.dependant,
-                dependency_overrides_provider=dependency_overrides_provider,
+                # dependant=self.dependant,
+                # dependency_overrides_provider=dependency_overrides_provider,
             )
         )
         self.path_regex, self.path_format, self.param_convertors = compile_path(path)
@@ -431,7 +431,8 @@ class APIRoute(Route):
             status_code = int(status_code)
         self.path = self._path_origin = path
         self.endpoint = endpoint
-        self.head_validator = build_head_validator(endpoint)
+        self.head_params = get_handler_head_params(endpoint)
+        self.head_validator = build_head_validator(self.head_params)
         self.body_fields = get_handler_body_params(endpoint)
         self.name = get_name(endpoint) if name is None else name
         self.path_regex, self.path_format, self.param_convertors = compile_path(path)

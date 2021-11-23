@@ -13,8 +13,9 @@ from pydantic.schema import (
 from pydantic.utils import lenient_issubclass
 from squall import routing
 from squall.datastructures import DefaultPlaceholder
-from squall.dependencies.models import Dependant
-from squall.dependencies.utils import get_flat_dependant, get_flat_params
+
+# from squall.dependencies.models import Dependant
+# from squall.dependencies.utils import get_flat_dependant, get_flat_params
 from squall.openapi.constants import (
     METHODS_WITH_BODY,
     REF_PREFIX,
@@ -64,17 +65,17 @@ status_code_ranges: Dict[str, str] = {
 }
 
 
-def get_openapi_security_definitions(
-    flat_dependant: Dependant,
-) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
-    security_definitions = {}
-    operation_security = []
-    for security_requirement in flat_dependant.security_requirements:
-        security_definition = (security_requirement.security_scheme.model,)
-        security_name = security_requirement.security_scheme.scheme_name
-        security_definitions[security_name] = security_definition
-        operation_security.append({security_name: security_requirement.scopes})
-    return security_definitions, operation_security
+# def get_openapi_security_definitions(
+#     flat_dependant: Dependant,
+# ) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
+#     security_definitions = {}
+#     operation_security = []
+#     for security_requirement in flat_dependant.security_requirements:
+#         security_definition = (security_requirement.security_scheme.model,)
+#         security_name = security_requirement.security_scheme.scheme_name
+#         security_definitions[security_name] = security_definition
+#         operation_security.append({security_name: security_requirement.scopes})
+#     return security_definitions, operation_security
 
 
 def get_openapi_operation_parameters(
@@ -173,21 +174,26 @@ def get_openapi_path(
         current_response_class = route.response_class
     assert current_response_class, "A response class is needed to generate OpenAPI"
     route_response_media_type: Optional[str] = current_response_class.media_type
+
     if route.include_in_schema:
         for method in route.methods:
             operation = get_openapi_operation_metadata(route=route, method=method)
             parameters: List[Dict[str, Any]] = []
-            flat_dependant = get_flat_dependant(route.dependant, skip_repeats=True)
-            security_definitions, operation_security = get_openapi_security_definitions(
-                flat_dependant=flat_dependant
-            )
-            if operation_security:
-                operation.setdefault("security", []).extend(operation_security)
-            if security_definitions:
-                security_schemes.update(security_definitions)
-            all_route_params = get_flat_params(route.dependant)
+            for param in route.head_params:
+                parameters.append(param.spec)
+
+            # flat_dependant = get_flat_dependant(route.dependant, skip_repeats=True)
+            # security_definitions, operation_security = get_openapi_security_definitions(
+            #     flat_dependant=flat_dependant
+            # )
+            # if operation_security:
+            #     operation.setdefault("security", []).extend(operation_security)
+            # if security_definitions:
+            #     security_schemes.update(security_definitions)
+            # all_route_params = get_flat_params(route.dependant)
+
             operation_parameters = get_openapi_operation_parameters(
-                all_route_params=all_route_params, model_name_map=model_name_map
+                all_route_params=[], model_name_map=model_name_map
             )
             parameters.extend(operation_parameters)
             if parameters:
@@ -195,11 +201,12 @@ def get_openapi_path(
                     {param["name"]: param for param in parameters}.values()
                 )
             if method in METHODS_WITH_BODY:
-                request_body_oai = get_openapi_operation_request_body(
-                    body_field=route.body_field, model_name_map=model_name_map
-                )
-                if request_body_oai:
-                    operation["requestBody"] = request_body_oai
+                pass
+                # request_body_oai = get_openapi_operation_request_body(
+                #     body_field=route.body_field, model_name_map=model_name_map
+                # )
+                # if request_body_oai:
+                #     operation["requestBody"] = request_body_oai
             if route.callbacks:
                 callbacks = {}
                 for callback in route.callbacks:
@@ -289,28 +296,28 @@ def get_openapi_path(
                     )
                     deep_dict_update(openapi_response, process_response)
                     openapi_response["description"] = description
-            http422 = str(HTTP_422_UNPROCESSABLE_ENTITY)
-            if (all_route_params or route.body_field) and not any(
-                [
-                    status in operation["responses"]
-                    for status in [http422, "4XX", "default"]
-                ]
-            ):
-                operation["responses"][http422] = {
-                    "description": "Validation Error",
-                    "content": {
-                        "application/json": {
-                            "schema": {"$ref": REF_PREFIX + "HTTPValidationError"}
-                        }
-                    },
-                }
-                if "ValidationError" not in definitions:
-                    definitions.update(
-                        {
-                            "ValidationError": validation_error_definition,
-                            "HTTPValidationError": validation_error_response_definition,
-                        }
-                    )
+            str(HTTP_422_UNPROCESSABLE_ENTITY)
+            # if (all_route_params or route.body_field) and not any(
+            #     [
+            #         status in operation["responses"]
+            #         for status in [http422, "4XX", "default"]
+            #     ]
+            # ):
+            #     operation["responses"][http422] = {
+            #         "description": "Validation Error",
+            #         "content": {
+            #             "application/json": {
+            #                 "schema": {"$ref": REF_PREFIX + "HTTPValidationError"}
+            #             }
+            #         },
+            #     }
+            #     if "ValidationError" not in definitions:
+            #         definitions.update(
+            #             {
+            #                 "ValidationError": validation_error_definition,
+            #                 "HTTPValidationError": validation_error_response_definition,
+            #             }
+            #         )
             if route.openapi_extra:
                 deep_dict_update(operation, route.openapi_extra)
             path[method.lower()] = operation
@@ -328,19 +335,29 @@ def get_flat_models_from_routes(
         if getattr(route, "include_in_schema", None) and isinstance(
             route, routing.APIRoute
         ):
-            if route.body_field:
-                assert isinstance(
-                    route.body_field, ModelField
-                ), "A request body must be a Pydantic Field"
-                body_fields_from_routes.append(route.body_field)
-            if route.response_field:
-                responses_from_routes.append(route.response_field)
-            if route.response_fields:
-                responses_from_routes.extend(route.response_fields.values())
-            if route.callbacks:
-                callback_flat_models |= get_flat_models_from_routes(route.callbacks)
-            params = get_flat_params(route.dependant)
-            request_fields_from_routes.extend(params)
+            # if route.body_field:
+            #     assert isinstance(
+            #         route.body_field, ModelField
+            #     ), "A request body must be a Pydantic Field"
+            #     body_fields_from_routes.append(route.body_field)
+            # if route.response_field:
+            #     responses_from_routes.append(route.response_field)
+            # if route.response_fields:
+            #     responses_from_routes.extend(route.response_fields.values())
+            # if route.callbacks:
+            #     callback_flat_models |= get_flat_models_from_routes(route.callbacks)
+            # params = get_flat_params(route.dependant)
+            # request_fields_from_routes.extend(params)
+            request_fields_from_routes.extend(
+                [
+                    # {
+                    #     "required": True,
+                    #     "schema": {"title": "Item Id", "type": "string"},
+                    #     "name": "item_id",
+                    #     "in": "path",
+                    # }
+                ]
+            )
 
     flat_models = callback_flat_models | get_flat_models_from_fields(
         body_fields_from_routes + responses_from_routes + request_fields_from_routes,

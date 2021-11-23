@@ -1,6 +1,7 @@
 import typing
 from collections.abc import Mapping
 from http import cookies as http_cookies
+from typing import Any, Dict, Optional
 
 import anyio
 import orjson
@@ -48,7 +49,7 @@ def cookie_parser(cookie_string: str) -> typing.Dict[str, str]:
         key, val = key.strip(), val.strip()
         if key or val:
             # unquote using Python's algorithm.
-            cookie_dict[key] = http_cookies._unquote(val)  # type: ignore
+            cookie_dict[key] = http_cookies._unquote(val)
     return cookie_dict
 
 
@@ -137,7 +138,7 @@ class HTTPConnection(Mapping):
         return Address(host=host, port=port)
 
     @property
-    def session(self) -> dict:
+    def session(self) -> Any:
         assert (
             "session" in self.scope
         ), "SessionMiddleware must be installed to access request.session"
@@ -167,11 +168,6 @@ class HTTPConnection(Mapping):
             self._state = State(self.scope["state"])
         return self._state
 
-    def url_for(self, name: str, **path_params: typing.Any) -> str:
-        router = self.scope["router"]
-        url_path = router.url_path_for(name, **path_params)
-        return url_path.make_absolute_url(base_url=self.base_url)
-
 
 async def empty_receive() -> Message:
     raise RuntimeError("Receive channel has not been made available")
@@ -182,6 +178,8 @@ async def empty_send(message: Message) -> None:
 
 
 class Request(HTTPConnection):
+    _json: Dict[str, Any]
+
     def __init__(
         self, scope: Scope, receive: Receive = empty_receive, send: Send = empty_send
     ):
@@ -194,7 +192,8 @@ class Request(HTTPConnection):
 
     @property
     def method(self) -> str:
-        return self.scope["method"]
+        method: str = self.scope["method"]
+        return method
 
     @property
     def receive(self) -> Receive:
@@ -225,15 +224,15 @@ class Request(HTTPConnection):
         yield b""
 
     async def body(self) -> bytes:
-        body = getattr(self, "_body", None)
+        body: Optional[bytes] = getattr(self, "_body", None)
         if body is not None:
             return body
 
         chunks = []
         async for chunk in self.stream():
             chunks.append(chunk)
-        self._body = _body = b"".join(chunks)
-        return _body
+        self._body = body = b"".join(chunks)
+        return body
 
     async def json(self) -> typing.Any:
         if hasattr(self, "_json"):
