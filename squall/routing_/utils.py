@@ -103,6 +103,8 @@ class HeadParam:
             and self._annotation.__name__ != "_empty"
         ):
             convertor = self._annotation.__name__
+        else:
+            assert not origin, f"Convertor for {self.name} unknown"
         return is_array, convertor
 
     @property
@@ -188,6 +190,10 @@ def get_annotation_affiliation(annotation: Any) -> typing.Optional[Any]:
     :param annotation: annotation record
     :returns: classified value or None
     """
+    args, origin = get_args(annotation), get_origin(annotation)
+    if origin and origin == list:
+        annotation = args[0]
+
     if annotation == Request:
         return "request"
     elif inspect.isclass(annotation) and issubclass(annotation, BaseModel):
@@ -213,6 +219,7 @@ def get_handler_body_params(func: Callable[..., Any]) -> List[Dict[str, Any]]:
     for k, v in signature.parameters.items():
         param: Dict[str, Any] = {"name": k}
         annotation = v.annotation
+
         if annotation == Request:
             param["kind"] = "request"
         elif inspect.isclass(annotation) and issubclass(annotation, BaseModel):

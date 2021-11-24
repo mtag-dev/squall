@@ -356,10 +356,9 @@ class Route(SlRoute):
         )
 
     def matches(self, scope: Scope) -> Tuple[bool, Scope]:
-        _match, endpoint = self.match_hack
-        match = _match(scope["path"])
+        match = self.path_regex.match(scope["path"])
         if match:
-            return True, {"endpoint": endpoint, "path_params": match.groupdict()}
+            return True, {"endpoint": self.endpoint, "path_params": match.groupdict()}
         return False, {}
 
 
@@ -509,7 +508,7 @@ class APIRoute(Route):
         self.app = self.get_route_handler()
         self.openapi_extra = openapi_extra
 
-        self.match_hack = (self.path_regex.match, self.endpoint)
+        # self.match_hack = (self.path_regex.match, self.endpoint)
 
     def get_route_handler(self) -> Callable[[Request], Coroutine[Any, Any, Response]]:
         return get_request_handler(

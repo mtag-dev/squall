@@ -638,12 +638,9 @@ class RootRouter(Router):
             # Determine if any route matches the incoming scope,
             # and hand over to the matching route if found.
             match, child_scope = route.matches(scope)
-            # raise ValueError(child_scope)
             if match:
                 scope.update(child_scope)
-                # await route.handle(scope, receive, send)
                 return route.app(scope, receive, send)
-                # return
 
         # for location in reversed(_locations):
         #     match, child_scope = location.matches(scope)

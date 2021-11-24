@@ -85,6 +85,9 @@ class Validator:
         """
         self.getters.add((attribute, as_list))
         name = name or key
+        assert (
+            not convert or convert in self.convertors
+        ), f"Convertor for {name} unknown"
         # Adds code: `candidate = <attribute>_<get|getlist>(key, Ellipsis)`
         getter = f"{attribute}_getlist" if as_list else f"{attribute}_get"
         args = [ast.Constant(value=key)]

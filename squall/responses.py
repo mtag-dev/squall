@@ -55,7 +55,6 @@ def init_headers(
         if media_type[:5] == "text/":
             content_type += "; charset=" + charset
         append((b"content-type", content_type.encode()))
-
     return raw_headers
 
 
@@ -75,7 +74,7 @@ class Response(StarletteResponse):
             self.media_type = media_type
         self.body = body = self.render(content)
         self.raw_headers = raw_headers = init_headers(
-            body, self.charset, media_type, headers
+            body, self.charset, self.media_type, headers
         )
         self.send_start = {
             "type": "http.response.start",

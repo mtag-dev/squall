@@ -241,7 +241,7 @@ def test_get_handler_args_validation_parameters():
     params = get_handler_head_params(handler)
     assert params[0].convertor == "str"
     assert params[0].default is None
-    assert params[0].statements['min_length'] == 2
+    assert params[0].statements["min_length"] == 2
     assert params[0].name == "a"
     assert params[0].source == "path_params"
     assert params[0].validate == "string"
