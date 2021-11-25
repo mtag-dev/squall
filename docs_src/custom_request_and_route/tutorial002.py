@@ -1,7 +1,7 @@
 from typing import Callable, List
 
 from squall import Body, HTTPException, Request, Response, Squall
-from squall.exceptions import RequestValidationError
+from squall.exceptions import RequestPayloadValidationError
 from squall.routing import APIRoute
 
 
@@ -12,7 +12,7 @@ class ValidationErrorLoggingRoute(APIRoute):
         async def custom_route_handler(request: Request) -> Response:
             try:
                 return await original_route_handler(request)
-            except RequestValidationError as exc:
+            except RequestPayloadValidationError as exc:
                 body = await request.body()
                 detail = {"errors": exc.errors(), "body": body.decode()}
                 raise HTTPException(status_code=422, detail=detail)

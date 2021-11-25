@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, Optional, Sequence
+from typing import Any, Dict, Optional
 
 from pydantic.fields import Undefined
 from squall import params
@@ -7,7 +7,7 @@ from squall import params
 def Path(  # noqa: N802
     default: Any,
     *,
-    alias: Optional[str] = None,
+    origin: Optional[str] = None,
     title: Optional[str] = None,
     description: Optional[str] = None,
     gt: Optional[float] = None,
@@ -24,7 +24,7 @@ def Path(  # noqa: N802
 ) -> Any:
     return params.Path(
         default=default,
-        alias=alias,
+        origin=origin,
         title=title,
         description=description,
         gt=gt,
@@ -44,7 +44,7 @@ def Path(  # noqa: N802
 def Query(  # noqa: N802
     default: Any,
     *,
-    alias: Optional[str] = None,
+    origin: Optional[str] = None,
     title: Optional[str] = None,
     description: Optional[str] = None,
     gt: Optional[float] = None,
@@ -61,7 +61,7 @@ def Query(  # noqa: N802
 ) -> Any:
     return params.Query(
         default,
-        alias=alias,
+        origin=origin,
         title=title,
         description=description,
         gt=gt,
@@ -81,7 +81,7 @@ def Query(  # noqa: N802
 def Header(  # noqa: N802
     default: Any,
     *,
-    alias: Optional[str] = None,
+    origin: Optional[str] = None,
     convert_underscores: bool = True,
     title: Optional[str] = None,
     description: Optional[str] = None,
@@ -99,7 +99,7 @@ def Header(  # noqa: N802
 ) -> Any:
     return params.Header(
         default,
-        alias=alias,
+        origin=origin,
         convert_underscores=convert_underscores,
         title=title,
         description=description,
@@ -120,7 +120,7 @@ def Header(  # noqa: N802
 def Cookie(  # noqa: N802
     default: Any,
     *,
-    alias: Optional[str] = None,
+    origin: Optional[str] = None,
     title: Optional[str] = None,
     description: Optional[str] = None,
     gt: Optional[float] = None,
@@ -137,7 +137,7 @@ def Cookie(  # noqa: N802
 ) -> Any:
     return params.Cookie(
         default,
-        alias=alias,
+        origin=origin,
         title=title,
         description=description,
         gt=gt,
@@ -159,7 +159,7 @@ def Body(  # noqa: N802
     *,
     embed: bool = False,
     media_type: str = "application/json",
-    alias: Optional[str] = None,
+    origin: Optional[str] = None,
     title: Optional[str] = None,
     description: Optional[str] = None,
     gt: Optional[float] = None,
@@ -177,7 +177,7 @@ def Body(  # noqa: N802
         default,
         embed=embed,
         media_type=media_type,
-        alias=alias,
+        origin=origin,
         title=title,
         description=description,
         gt=gt,
@@ -197,7 +197,7 @@ def Form(  # noqa: N802
     default: Any,
     *,
     media_type: str = "application/x-www-form-urlencoded",
-    alias: Optional[str] = None,
+    origin: Optional[str] = None,
     title: Optional[str] = None,
     description: Optional[str] = None,
     gt: Optional[float] = None,
@@ -214,7 +214,7 @@ def Form(  # noqa: N802
     return params.Form(
         default,
         media_type=media_type,
-        alias=alias,
+        origin=origin,
         title=title,
         description=description,
         gt=gt,
@@ -234,7 +234,7 @@ def File(  # noqa: N802
     default: Any,
     *,
     media_type: str = "multipart/form-data",
-    alias: Optional[str] = None,
+    origin: Optional[str] = None,
     title: Optional[str] = None,
     description: Optional[str] = None,
     gt: Optional[float] = None,
@@ -251,7 +251,7 @@ def File(  # noqa: N802
     return params.File(
         default,
         media_type=media_type,
-        alias=alias,
+        origin=origin,
         title=title,
         description=description,
         gt=gt,
@@ -267,16 +267,16 @@ def File(  # noqa: N802
     )
 
 
-def Depends(  # noqa: N802
-    dependency: Optional[Callable[..., Any]] = None, *, use_cache: bool = True
-) -> Any:
-    return params.Depends(dependency=dependency, use_cache=use_cache)
-
-
-def Security(  # noqa: N802
-    dependency: Optional[Callable[..., Any]] = None,
-    *,
-    scopes: Optional[Sequence[str]] = None,
-    use_cache: bool = True,
-) -> Any:
-    return params.Security(dependency=dependency, scopes=scopes, use_cache=use_cache)
+# def Depends(  # noqa: N802
+#     dependency: Optional[Callable[..., Any]] = None, *, use_cache: bool = True
+# ) -> Any:
+#     return params.Depends(dependency=dependency, use_cache=use_cache)
+#
+#
+# def Security(  # noqa: N802
+#     dependency: Optional[Callable[..., Any]] = None,
+#     *,
+#     scopes: Optional[Sequence[str]] = None,
+#     use_cache: bool = True,
+# ) -> Any:
+#     return params.Security(dependency=dependency, scopes=scopes, use_cache=use_cache)

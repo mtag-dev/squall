@@ -1,8 +1,8 @@
 import asyncio
-import email.message
 import enum
 import inspect
-import json
+import re
+from decimal import Decimal
 from typing import (
     Any,
     Callable,
@@ -10,46 +10,42 @@ from typing import (
     Dict,
     List,
     Optional,
-    Sequence,
+    Pattern,
     Set,
+    Tuple,
     Type,
     Union,
 )
 
+from orjson import JSONDecodeError
 from pydantic.error_wrappers import ErrorWrapper, ValidationError
-from pydantic.fields import ModelField, Undefined
-from squall import params
+from pydantic.fields import ModelField
 from squall.datastructures import Default, DefaultPlaceholder
-from squall.dependencies.models import Dependant
-from squall.dependencies.utils import (
-    get_body_field,
-    get_dependant,
-    get_parameterless_sub_dependant,
-    solve_dependencies,
+from squall.exceptions import (
+    HTTPException,
+    RequestHeadValidationError,
+    RequestPayloadValidationError,
 )
-from squall.exceptions import RequestValidationError, WebSocketRequestValidationError
 from squall.openapi.constants import STATUS_CODES_WITH_NO_BODY
 from squall.requests import Request
 from squall.responses import JSONResponse, Response
+from squall.routing_.utils import (
+    HeadParam,
+    get_handler_body_params,
+    get_handler_head_params,
+)
 from squall.utils import (
     create_cloned_field,
     create_response_field,
     generate_operation_id_for_path,
 )
+from squall.validators.head import Validator
 from starlette.concurrency import run_in_threadpool
-from starlette.exceptions import HTTPException
 from starlette.routing import BaseRoute as SlBaseRoute
-from starlette.routing import Mount as Mount  # noqa
 from starlette.routing import Route as SlRoute
 from starlette.routing import WebSocketRoute as SlWebSocketRoute
-from starlette.routing import (
-    compile_path,
-    get_name,
-    iscoroutinefunction_or_partial,
-    websocket_session,
-)
-from starlette.status import WS_1008_POLICY_VIOLATION
-from starlette.types import ASGIApp, Receive, Scope, Send
+from starlette.routing import get_name, websocket_session
+from starlette.types import Receive, Scope, Send
 from starlette.websockets import WebSocket
 
 
@@ -65,153 +61,280 @@ class NoMatchFound(Exception):
     """
 
 
-#
-# class Match(enum.Enum):
-#     NONE = 0
-#     PARTIAL = 1
-#     FULL = 2
-#
-#
-# class Event(enum.Enum):
-#     STARTUP = "startup"
-#     SHUTDOWN = "shutdown"
+from starlette.convertors import CONVERTOR_TYPES, Convertor
+
+# Match parameters in URL paths, eg. '{param}', and '{param:int}'
+PARAM_REGEX = re.compile("{([a-zA-Z_][a-zA-Z0-9_]*)(:[a-zA-Z_][a-zA-Z0-9_]*)?}")
 
 
-def request_response(func: Callable[..., Any]) -> ASGIApp:
+def compile_path(
+    path: str,
+) -> Tuple[Pattern[str], str, Dict[str, Convertor]]:
     """
-    Takes a function or coroutine `func(request) -> response`,
-    and returns an ASGI application.
+    Given a path string, like: "/{username:str}", return a three-tuple
+    of (regex, format, {param_name:convertor}).
+    regex:      "/(?P<username>[^/]+)"
+    format:     "/{username}"
+    convertors: {"username": StringConvertor()}
     """
-    is_coroutine = iscoroutinefunction_or_partial(func)
+    path_regex = "^"
+    path_format = ""
+    duplicated_params = set()
 
-    async def app(scope: Scope, receive: Receive, send: Send) -> None:
-        request = Request(scope, receive=receive, send=send)
-        if is_coroutine:
-            response = await func(request)
-        else:
-            response = await run_in_threadpool(func, request)
-        await response(scope, receive, send)
+    idx = 0
+    param_convertors = {}
+    for match in PARAM_REGEX.finditer(path):
+        param_name, convertor_type = match.groups("str")
+        convertor_type = convertor_type.lstrip(":")
+        assert (
+            convertor_type in CONVERTOR_TYPES
+        ), f"Unknown path convertor '{convertor_type}'"
+        convertor = CONVERTOR_TYPES[convertor_type]
 
-    return app
+        path_regex += re.escape(path[idx : match.start()])
+        path_regex += f"(?P<{param_name}>{convertor.regex})"
 
+        path_format += path[idx : match.start()]
+        path_format += "{%s}" % param_name
 
-async def run_endpoint_function(
-    *, dependant: Dependant, values: Dict[str, Any], is_coroutine: bool
-) -> Any:
-    # Only called by get_request_handler. Has been split into its own function to
-    # facilitate profiling endpoints, since inner functions are harder to profile.
-    assert dependant.call is not None, "dependant.call must be a function"
+        if param_name in param_convertors:
+            duplicated_params.add(param_name)
 
-    if is_coroutine:
-        return await dependant.call(**values)
-    else:
-        return await run_in_threadpool(dependant.call, **values)
+        param_convertors[param_name] = convertor
+
+        idx = match.end()
+
+    if duplicated_params:
+        names = ", ".join(sorted(duplicated_params))
+        ending = "s" if len(duplicated_params) > 1 else ""
+        raise ValueError(f"Duplicated param name{ending} {names} at path {path}")
+
+    path_regex += re.escape(path[idx:]) + "$"
+    path_format += path[idx:]
+
+    return re.compile(path_regex), path_format, param_convertors
 
 
 def get_request_handler(
-    dependant: Dependant,
-    body_field: Optional[ModelField] = None,
+    endpoint: Callable[..., Any],
+    head_validator: Callable[..., Any],
+    body_fields: List[Any],
+    # body_field: Optional[ModelField] = None,
     status_code: Optional[int] = None,
     response_class: Union[Type[Response], DefaultPlaceholder] = Default(JSONResponse),
     dependency_overrides_provider: Optional[Any] = None,
     response_field: Optional[ModelField] = None,
 ) -> Callable[[Request], Coroutine[Any, Any, Response]]:
-    assert dependant.call is not None, "dependant.call must be a function"
-    is_coroutine = asyncio.iscoroutinefunction(dependant.call)
-    is_body_form = body_field and isinstance(body_field.field_info, params.Form)
+    is_coroutine = asyncio.iscoroutinefunction(endpoint)
+    # is_body_form = body_field and isinstance(body_field.field_info, params.Form)
     if isinstance(response_class, DefaultPlaceholder):
         actual_response_class: Type[Response] = response_class.value
     else:
         actual_response_class = response_class
 
-    async def app(request: Request) -> Response:
+    async def app(scope: Scope, receive: Receive, send: Send) -> None:
+        request = Request(scope, receive=receive, send=send)
+
+        # Head validation
+        kwargs, errors = head_validator(request)
+        if errors:
+            raise RequestHeadValidationError(errors)
+
+        # Body fields and request object
+        form = None
         try:
-            body: Any = None
-            if body_field:
-                if is_body_form:
-                    body = await request.form()
-                else:
-                    body_bytes = await request.body()
-                    if body_bytes:
-                        json_body: Any = Undefined
-                        content_type_value = request.headers.get("content-type")
-                        if not content_type_value:
-                            json_body = await request.json()
-                        else:
-                            message = email.message.Message()
-                            message["content-type"] = content_type_value
-                            if message.get_content_maintype() == "application":
-                                subtype = message.get_content_subtype()
-                                if subtype == "json" or subtype.endswith("+json"):
-                                    json_body = await request.json()
-                        if json_body != Undefined:
-                            body = json_body
-                        else:
-                            body = body_bytes
-        except json.JSONDecodeError as e:
-            raise RequestValidationError([ErrorWrapper(e, ("body", e.pos))], body=e.doc)
+            for field in body_fields:
+                kind = field["kind"]
+                if kind == "request":
+                    kwargs[field["name"]] = request
+                elif kind == "model":
+                    body = await request.json()
+                    kwargs[field["name"]] = field["model_class"](**body)
+                elif kind == "body":
+                    ct = request.headers.get("content-type")
+                    if ct is not None and ct[-4:] == "json":
+                        kwargs[field["name"]] = await request.json()
+                    else:
+                        kwargs[field["name"]] = await request.body()
+                elif kind == "form":
+                    if form is None:
+                        form = await request.form()
+                    kwargs[field["name"]] = form.get(field["name"])
+
+        except JSONDecodeError as e:
+            raise RequestPayloadValidationError(
+                [ErrorWrapper(e, ("body", e.pos))], body=e.doc
+            )
+        except ValidationError as e:
+            raise RequestPayloadValidationError([ErrorWrapper(e, ("body",))])
         except Exception as e:
             raise HTTPException(
                 status_code=400, detail="There was an error parsing the body"
             ) from e
-        solved_result = await solve_dependencies(
-            request=request,
-            dependant=dependant,
-            body=body,
-            dependency_overrides_provider=dependency_overrides_provider,
-        )
-        values, errors, background_tasks, sub_response, _ = solved_result
-        if errors:
-            raise RequestValidationError(errors, body=body)
+
+        if is_coroutine:
+            raw_response = await endpoint(**kwargs)
         else:
-            raw_response = await run_endpoint_function(
-                dependant=dependant, values=values, is_coroutine=is_coroutine
+            raw_response = await run_in_threadpool(endpoint, **kwargs)
+
+        if isinstance(raw_response, Response):
+            await raw_response(scope, receive, send)
+            return
+            # return raw_response
+
+        response_args: Dict[str, Any] = {}
+        # If status_code was set, use it, otherwise use the default from the
+        # response class, in the case of redirect it's 307
+        if response_field is not None:
+            response_value, response_errors = response_field.validate(
+                raw_response, {}, loc=("response",)
             )
-            if isinstance(raw_response, Response):
-                if raw_response.background is None:
-                    raw_response.background = background_tasks
-                return raw_response
+            if response_errors:
+                raise ValidationError([response_errors], response_field.type_)
+        else:
+            response_value = raw_response
 
-            response_args: Dict[str, Any] = {"background": background_tasks}
-            # If status_code was set, use it, otherwise use the default from the
-            # response class, in the case of redirect it's 307
-            if response_field is not None:
-                response_value, response_errors = response_field.validate(
-                    raw_response, {}, loc=("response",)
-                )
-                if response_errors:
-                    raise ValidationError([response_errors], response_field.type_)
-            else:
-                response_value = raw_response
+        if status_code is not None:
+            response_args["status_code"] = status_code
+        response = actual_response_class(response_value, **response_args)
+        await response(scope, receive, send)
 
-            if status_code is not None:
-                response_args["status_code"] = status_code
-            response = actual_response_class(response_value, **response_args)
-            response.headers.raw.extend(sub_response.headers.raw)
-            if sub_response.status_code:
-                response.status_code = sub_response.status_code
-            return response
+        # try:
+        #     body: Any = None
+        #     if True: # body_field:
+        #         if False: # is_body_form:
+        #             body = await request.form()
+        #         else:
+        #             body_bytes = await request.body()
+        #             if body_bytes:
+        #                 json_body: Any = Undefined
+        #                 content_type_value = request.headers.get("content-type")
+        #                 if not content_type_value:
+        #                     json_body = await request.json()
+        #                 else:
+        #                     message = email.message.Message()
+        #                     message["content-type"] = content_type_value
+        #                     if message.get_content_maintype() == "application":
+        #                         subtype = message.get_content_subtype()
+        #                         if subtype == "json" or subtype.endswith("+json"):
+        #                             json_body = await request.json()
+        #                 if json_body != Undefined:
+        #                     body = json_body
+        #                 else:
+        #                     body = body_bytes
+        # except json.JSONDecodeError as e:
+        #     raise RequestPayloadValidationError([ErrorWrapper(e, ("body", e.pos))], body=e.doc)
+        # except Exception as e:
+        #     raise HTTPException(
+        #         status_code=400, detail="There was an error parsing the body"
+        #     ) from e
+
+        # # solved_result = await solve_dependencies(
+        # #     request=request,
+        # #     dependant=dependant,
+        # #     body=body,
+        # #     dependency_overrides_provider=dependency_overrides_provider,
+        # # )
+        # values, errors, background_tasks, sub_response, _ = solved_result
+        # if errors:
+        #     raise RequestPayloadValidationError(errors, body=body)
+        # else:
+        # if True:
+        #     if is_coroutine:
+        #         raw_response = await endpoint(**kwargs)
+        #     else:
+        #         raw_response = await run_in_threadpool(endpoint, **kwargs)
+        #
+        #     if isinstance(raw_response, Response):
+        #         await raw_response(scope, receive, send)
+        #         return
+        #         # return raw_response
+        #
+        #     response_args: Dict[str, Any] = {}
+        #     # If status_code was set, use it, otherwise use the default from the
+        #     # response class, in the case of redirect it's 307
+        #     if response_field is not None:
+        #         response_value, response_errors = response_field.validate(
+        #             raw_response, {}, loc=("response",)
+        #         )
+        #         if response_errors:
+        #             raise ValidationError([response_errors], response_field.type_)
+        #     else:
+        #         response_value = raw_response
+        #
+        #     if status_code is not None:
+        #         response_args["status_code"] = status_code
+        #     response = actual_response_class(response_value, **response_args)
+        #     # response.headers.raw.extend(sub_response.headers.raw)
+        #     # if sub_response.status_code:
+        #     #     response.status_code = sub_response.status_code
+        #     await response(scope, receive, send)
 
     return app
 
 
 def get_websocket_app(
-    dependant: Dependant, dependency_overrides_provider: Optional[Any] = None
+    # dependant: Dependant,
+    # dependency_overrides_provider: Optional[Any] = None
 ) -> Callable[[WebSocket], Coroutine[Any, Any, Any]]:
     async def app(websocket: WebSocket) -> None:
-        solved_result = await solve_dependencies(
-            request=websocket,
-            dependant=dependant,
-            dependency_overrides_provider=dependency_overrides_provider,
-        )
-        values, errors, _, _2, _3 = solved_result
-        if errors:
-            await websocket.close(code=WS_1008_POLICY_VIOLATION)
-            raise WebSocketRequestValidationError(errors)
-        assert dependant.call is not None, "dependant.call must be a function"
-        await dependant.call(**values)
+        pass
+        # solved_result = await solve_dependencies(
+        #     request=websocket,
+        #     dependant=dependant,
+        #     dependency_overrides_provider=dependency_overrides_provider,
+        # )
+        # values, errors, _, _2, _3 = solved_result
+        # if errors:
+        #     await websocket.close(code=WS_1008_POLICY_VIOLATION)
+        #     raise WebSocketRequestValidationError(errors)
+        # assert dependant.call is not None, "dependant.call must be a function"
+        # await dependant.call(**values)
 
     return app
+
+
+def build_head_validator(head_params: List[HeadParam]) -> Callable[..., Any]:
+    v = Validator(
+        args=["request"],
+        convertors={
+            "int": int,
+            "float": float,
+            "Decimal": Decimal,
+            "str": str,
+            "bytes": lambda a: a.encode("utf-8"),
+        },
+    )
+    for param in head_params:
+        v.add_rule(
+            attribute=param.source,
+            name=param.name,
+            key=param.origin,
+            check=param.validate,
+            convert=param.convertor,
+            as_list=param.is_array,
+            default=param.default,
+            **param.statements
+            # gt=param.get("gt"),
+            # ge=param.get("ge"),
+            # lt=param.get("lt"),
+            # le=param.get("le"),
+            # min_length=param.get("min_length"),
+            # max_length=param.get("max_length"),
+        )
+        print(
+            dict(
+                attribute=param.source,
+                name=param.name,
+                key=param.origin,
+                check=param.validate,
+                convert=param.convertor,
+                as_list=param.is_array,
+                default=param.default,
+                **param.statements,
+            )
+        )
+    return v.build()
 
 
 class Route(SlRoute):
@@ -232,6 +355,12 @@ class Route(SlRoute):
             include_in_schema=include_in_schema,
         )
 
+    def matches(self, scope: Scope) -> Tuple[bool, Scope]:
+        match = self.path_regex.match(scope["path"])
+        if match:
+            return True, {"endpoint": self.endpoint, "path_params": match.groupdict()}
+        return False, {}
+
 
 class APIWebSocketRoute(WebSocketRoute):
     def __init__(
@@ -245,11 +374,11 @@ class APIWebSocketRoute(WebSocketRoute):
         self.path = self._path_origin = path
         self.endpoint = endpoint
         self.name = get_name(endpoint) if name is None else name
-        self.dependant = get_dependant(path=path, call=self.endpoint)
+        # self.dependant = get_dependant(path=path, call=self.endpoint)
         self.app = websocket_session(
             get_websocket_app(
-                dependant=self.dependant,
-                dependency_overrides_provider=dependency_overrides_provider,
+                # dependant=self.dependant,
+                # dependency_overrides_provider=dependency_overrides_provider,
             )
         )
         self.path_regex, self.path_format, self.param_convertors = compile_path(path)
@@ -263,6 +392,12 @@ class APIWebSocketRoute(WebSocketRoute):
             self.path
         )
 
+    def matches(self, scope: Scope) -> Tuple[bool, Scope]:
+        match = self.path_regex.match(scope["path"])
+        if match:
+            return True, match.groupdict()
+        return False, {}
+
 
 class APIRoute(Route):
     def __init__(
@@ -273,7 +408,7 @@ class APIRoute(Route):
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
+        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -295,6 +430,9 @@ class APIRoute(Route):
             status_code = int(status_code)
         self.path = self._path_origin = path
         self.endpoint = endpoint
+        self.head_params = get_handler_head_params(endpoint)
+        self.head_validator = build_head_validator(self.head_params)
+        self.body_fields = get_handler_body_params(endpoint)
         self.name = get_name(endpoint) if name is None else name
         self.path_regex, self.path_format, self.param_convertors = compile_path(path)
         if methods is None:
@@ -327,7 +465,7 @@ class APIRoute(Route):
             self.secure_cloned_response_field = None
         self.status_code = status_code
         self.tags = tags or []
-        self.dependencies = list(dependencies) if dependencies else []
+        # self.dependencies = list(dependencies) if dependencies else []
         self.summary = summary
         self.description = description or inspect.cleandoc(self.endpoint.__doc__ or "")
         # if a "form feed" character (page break) is found in the description text,
@@ -356,26 +494,33 @@ class APIRoute(Route):
         self.response_class = response_class
 
         assert callable(endpoint), "An endpoint must be a callable"
-        self.dependant = get_dependant(path=self.path_format, call=self.endpoint)
-        for depends in self.dependencies[::-1]:
-            self.dependant.dependencies.insert(
-                0,
-                get_parameterless_sub_dependant(depends=depends, path=self.path_format),
-            )
-        self.body_field = get_body_field(dependant=self.dependant, name=self.unique_id)
+
+        # self.dependant = get_dependant(path=self.path_format, call=self.endpoint)
+        # for depends in self.dependencies[::-1]:
+        #     self.dependant.dependencies.insert(
+        #         0,
+        #         get_parameterless_sub_dependant(depends=depends, path=self.path_format),
+        #     )
+        # self.body_field = get_body_field(dependant=self.dependant, name=self.unique_id)
+
         self.dependency_overrides_provider = dependency_overrides_provider
         self.callbacks = callbacks
-        self.app = request_response(self.get_route_handler())
+        self.app = self.get_route_handler()
         self.openapi_extra = openapi_extra
+
+        # self.match_hack = (self.path_regex.match, self.endpoint)
 
     def get_route_handler(self) -> Callable[[Request], Coroutine[Any, Any, Response]]:
         return get_request_handler(
-            dependant=self.dependant,
-            body_field=self.body_field,
+            endpoint=self.endpoint,
+            # dependant=self.dependant,
+            # body_field=self.body_field,
             status_code=self.status_code,
             response_class=self.response_class,
             dependency_overrides_provider=self.dependency_overrides_provider,
             response_field=self.response_field,
+            head_validator=self.head_validator,
+            body_fields=self.body_fields,
         )
 
     def set_defaults(self) -> None:

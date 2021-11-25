@@ -50,18 +50,18 @@ if __name__ == "__main__":
     sleep_time = random.random() * 10  # random number between 0 and 10 seconds
     pr = repo.get_pull(github_event.pull_request.number)
     logging.debug(
-        f"Processing PR: {pr.number}, with anti-race condition sleep time: {sleep_time}"
+        f"Processing PR: {pr.numeric}, with anti-race condition sleep time: {sleep_time}"
     )
     if pr.state == "open":
-        logging.debug(f"PR is open: {pr.number}")
+        logging.debug(f"PR is open: {pr.numeric}")
         label_strs = set([label.name for label in pr.get_labels()])
         if lang_all_label in label_strs and awaiting_label in label_strs:
             logging.info(
-                f"This PR seems to be a language translation and awaiting reviews: {pr.number}"
+                f"This PR seems to be a language translation and awaiting reviews: {pr.numeric}"
             )
             if approved_label in label_strs:
                 message = (
-                    f"It seems this PR already has the approved label: {pr.number}"
+                    f"It seems this PR already has the approved label: {pr.numeric}"
                 )
                 logging.error(message)
                 raise RuntimeError(message)
@@ -76,29 +76,29 @@ if __name__ == "__main__":
                         f"Found a translation issue for language: {lang} in issue: {num}"
                     )
                     issue = repo.get_issue(num)
-                    message = f"Good news everyone! 😉 There's a new translation PR to be reviewed: #{pr.number} 🎉"
+                    message = f"Good news everyone! 😉 There's a new translation PR to be reviewed: #{pr.numeric} 🎉"
                     already_notified = False
                     time.sleep(sleep_time)
                     logging.info(
                         f"Sleeping for {sleep_time} seconds to avoid race conditions and multiple comments"
                     )
                     logging.info(
-                        f"Checking current comments in issue: {num} to see if already notified about this PR: {pr.number}"
+                        f"Checking current comments in issue: {num} to see if already notified about this PR: {pr.numeric}"
                     )
                     for comment in issue.get_comments():
                         if message in comment.body:
                             already_notified = True
                     if not already_notified:
                         logging.info(
-                            f"Writing comment in issue: {num} about PR: {pr.number}"
+                            f"Writing comment in issue: {num} about PR: {pr.numeric}"
                         )
                         issue.create_comment(message)
                     else:
                         logging.info(
-                            f"Issue: {num} was already notified of PR: {pr.number}"
+                            f"Issue: {num} was already notified of PR: {pr.numeric}"
                         )
     else:
         logging.info(
-            f"Changing labels in a closed PR doesn't trigger comments, PR: {pr.number}"
+            f"Changing labels in a closed PR doesn't trigger comments, PR: {pr.numeric}"
         )
     logging.info("Finished")
