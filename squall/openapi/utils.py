@@ -1,34 +1,31 @@
 import http.client
 import inspect
+import json
 from enum import Enum
-from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, Type, Union, cast
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Type, Union, cast
+
+from apischema.json_schema import (
+    JsonSchemaVersion,
+    definitions_schema,
+    deserialization_schema,
+)
+
+normalized = lambda a: json.loads(json.dumps(a))
 
 from pydantic import BaseModel
 from pydantic.fields import ModelField, Undefined
-from pydantic.schema import (
-    field_schema,
-    get_flat_models_from_fields,
-    get_model_name_map,
-)
-from pydantic.utils import lenient_issubclass
+from pydantic.schema import field_schema
 from squall import routing
 from squall.datastructures import DefaultPlaceholder
-
-# from squall.dependencies.models import Dependant
-# from squall.dependencies.utils import get_flat_dependant, get_flat_params
 from squall.openapi.constants import (
     METHODS_WITH_BODY,
     REF_PREFIX,
     STATUS_CODES_WITH_NO_BODY,
 )
 from squall.openapi.models import OpenAPI
-from squall.params import Body, Param
-from squall.responses import JSONResponse, Response
-from squall.utils import (
-    deep_dict_update,
-    generate_operation_id_for_path,
-    get_model_definitions,
-)
+from squall.params import Body
+from squall.responses import JSONResponse, PrettyJSONResponse, Response
+from squall.utils import deep_dict_update, generate_operation_id_for_path
 from starlette.routing import BaseRoute
 from starlette.status import HTTP_422_UNPROCESSABLE_ENTITY
 
@@ -48,6 +45,19 @@ validation_error_response_definition = {
     "type": "object",
     "properties": {
         "detail": {
+            "title": "Detail",
+            "type": "array",
+            "items": {"$ref": REF_PREFIX + "ValidationError"},
+        }
+    },
+}
+
+
+param_validation_error_response_definition = {
+    "title": "HTTPBadRequestError",
+    "type": "object",
+    "properties": {
+        "details": {
             "title": "Detail",
             "type": "array",
             "items": {"$ref": REF_PREFIX + "ValidationError"},
@@ -76,35 +86,35 @@ status_code_ranges: Dict[str, str] = {
 #         security_definitions[security_name] = security_definition
 #         operation_security.append({security_name: security_requirement.scopes})
 #     return security_definitions, operation_security
-
-
-def get_openapi_operation_parameters(
-    *,
-    all_route_params: Sequence[ModelField],
-    model_name_map: Dict[Union[Type[BaseModel], Type[Enum]], str],
-) -> List[Dict[str, Any]]:
-    parameters = []
-    for param in all_route_params:
-        field_info = param.field_info
-        field_info = cast(Param, field_info)
-        parameter = {
-            "name": param.alias,
-            "in": field_info.in_.value,
-            "required": param.required,
-            "schema": field_schema(
-                param, model_name_map=model_name_map, ref_prefix=REF_PREFIX
-            )[0],
-        }
-        if field_info.description:
-            parameter["description"] = field_info.description
-        if field_info.examples:
-            parameter["examples"] = field_info.examples
-        elif field_info.example != Undefined:
-            parameter["example"] = field_info.example
-        if field_info.deprecated:
-            parameter["deprecated"] = field_info.deprecated
-        parameters.append(parameter)
-    return parameters
+#
+#
+# def get_openapi_operation_parameters(
+#     *,
+#     all_route_params: Sequence[ModelField],
+#     model_name_map: Dict[Union[Type[BaseModel], Type[Enum]], str],
+# ) -> List[Dict[str, Any]]:
+#     parameters = []
+#     for param in all_route_params:
+#         field_info = param.field_info
+#         field_info = cast(Param, field_info)
+#         parameter = {
+#             "name": param.alias,
+#             "in": field_info.in_.value,
+#             "required": param.required,
+#             "schema": field_schema(
+#                 param, model_name_map=model_name_map, ref_prefix=REF_PREFIX
+#             )[0],
+#         }
+#         if field_info.description:
+#             parameter["description"] = field_info.description
+#         if field_info.examples:
+#             parameter["examples"] = field_info.examples
+#         elif field_info.example != Undefined:
+#             parameter["example"] = field_info.example
+#         if field_info.deprecated:
+#             parameter["deprecated"] = field_info.deprecated
+#         parameters.append(parameter)
+#     return parameters
 
 
 def get_openapi_operation_request_body(
@@ -161,6 +171,134 @@ def get_openapi_operation_metadata(
     return operation
 
 
+def get_head_params(route):
+    parameters: List[Dict[str, Any]] = []
+    for param in route.head_params:
+        parameters.append(param.spec)
+    return parameters
+
+
+class OpenAPIRoute:
+    def __init__(self, route: routing.APIRoute):
+        self.route = route
+        self._response_class = route.response_class
+        self.response_schemas = set()
+
+    @property
+    def response_class(self):
+        if isinstance(self._response_class, DefaultPlaceholder):
+            current_response_class: Type[Response] = self._response_class.value
+        else:
+            current_response_class = self._response_class
+        return current_response_class
+
+    @property
+    def default_status_code(self):
+        code = 200
+        if self.route.status_code is not None:
+            code = str(self.route.status_code)
+        else:
+            response_signature = inspect.signature(self.response_class.__init__)
+            status_code_param = response_signature.parameters.get("status_code")
+            if status_code_param is not None:
+                if isinstance(status_code_param.default, int):
+                    code = str(status_code_param.default)
+
+        return code or 200
+
+    @property
+    def responses(self):
+        responses = {}
+        # Default response
+        status_code = self.default_status_code
+        responses[status_code] = {"description": self.route.response_description}
+        if (
+            self.response_class.media_type
+            and status_code not in STATUS_CODES_WITH_NO_BODY
+        ):
+            response_schema = {"type": "string"}
+            if self.response_class in (JSONResponse, PrettyJSONResponse):
+                if self.route.response_model:
+                    response_schema = normalized(
+                        deserialization_schema(
+                            self.route.response_model,
+                            all_refs=True,
+                            version=JsonSchemaVersion.OPEN_API_3_1,
+                        )
+                    )
+                    self.response_schemas.add(self.route.response_model)
+                else:
+                    response_schema = {}
+            responses[status_code]["content"] = {
+                self.response_class.media_type: {"schema": response_schema}
+            }
+
+        # Errors
+        if self.route.head_params:
+            responses["400"] = {
+                "description": "Parameters Validation Error",
+                "content": {
+                    "application/json": {
+                        "schema": {"$ref": REF_PREFIX + "HTTPBadRequestError"}
+                    }
+                },
+            }
+        # For request_field
+        # responses["422"] = {
+        #     "description": "Request Body Validation Error",
+        #     "content": {
+        #         "application/json": {
+        #             "schema": {"$ref": REF_PREFIX + "HTTPValidationError"}
+        #         }
+        #     },
+        # }
+
+        # User defined responses
+        for status_code, response in self.route.responses.items():
+            status_code = str(status_code)
+            if status_code not in responses:
+                responses[status_code] = {}
+
+            model = response.get("model")
+            if model:
+                response_schema = normalized(
+                    deserialization_schema(
+                        model, all_refs=True, version=JsonSchemaVersion.OPEN_API_3_1
+                    )
+                )
+                self.response_schemas.add(self.route.response_model)
+                responses[status_code]["content"] = {
+                    self.response_class.media_type: {"schema": response_schema}
+                }
+            description = response.get("description")
+            if description:
+                responses[status_code]["description"] = description
+
+            content = response.get("content")
+            if content:
+                if "content" not in responses[status_code]:
+                    responses[status_code]["content"] = content.copy()
+                else:
+                    responses[status_code]["content"].update(content)
+
+        return responses
+
+    @property
+    def spec(self) -> Dict[str, Any]:
+        # Check before calling the function for if route.include_in_schema
+        data = {}
+
+        for method in self.route.methods:
+            operation = get_openapi_operation_metadata(route=self.route, method=method)
+            parameters = get_head_params(route=self.route)
+            if parameters:
+                operation["parameters"] = parameters
+            operation["responses"] = self.responses
+            data[method.lower()] = operation
+
+        return data
+
+
 def get_openapi_path(
     *, route: routing.APIRoute, model_name_map: Dict[type, str]
 ) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
@@ -178,9 +316,7 @@ def get_openapi_path(
     if route.include_in_schema:
         for method in route.methods:
             operation = get_openapi_operation_metadata(route=route, method=method)
-            parameters: List[Dict[str, Any]] = []
-            for param in route.head_params:
-                parameters.append(param.spec)
+            parameters = get_head_params(route=route)
 
             # flat_dependant = get_flat_dependant(route.dependant, skip_repeats=True)
             # security_definitions, operation_security = get_openapi_security_definitions(
@@ -207,19 +343,19 @@ def get_openapi_path(
                 # )
                 # if request_body_oai:
                 #     operation["requestBody"] = request_body_oai
-            if route.callbacks:
-                callbacks = {}
-                for callback in route.callbacks:
-                    if isinstance(callback, routing.APIRoute):
-                        (
-                            cb_path,
-                            cb_security_schemes,
-                            cb_definitions,
-                        ) = get_openapi_path(
-                            route=callback, model_name_map=model_name_map
-                        )
-                        callbacks[callback.name] = {callback.path: cb_path}
-                operation["callbacks"] = callbacks
+            # if route.callbacks:
+            #     callbacks = {}
+            #     for callback in route.callbacks:
+            #         if isinstance(callback, routing.APIRoute):
+            #             (
+            #                 cb_path,
+            #                 cb_security_schemes,
+            #                 cb_definitions,
+            #             ) = get_openapi_path(
+            #                 route=callback, model_name_map=model_name_map
+            #             )
+            #             callbacks[callback.name] = {callback.path: cb_path}
+            #     operation["callbacks"] = callbacks
             if route.status_code is not None:
                 status_code = str(route.status_code)
             else:
@@ -241,12 +377,14 @@ def get_openapi_path(
                 and route.status_code not in STATUS_CODES_WITH_NO_BODY
             ):
                 response_schema = {"type": "string"}
-                if lenient_issubclass(current_response_class, JSONResponse):
-                    if route.response_field:
-                        response_schema, _, _ = field_schema(
-                            route.response_field,
-                            model_name_map=model_name_map,
-                            ref_prefix=REF_PREFIX,
+                if current_response_class:
+                    if route.response_model:
+                        response_schema = normalized(
+                            deserialization_schema(
+                                route.response_model,
+                                all_refs=True,
+                                version=JsonSchemaVersion.OPEN_API_3_1,
+                            )
                         )
                     else:
                         response_schema = {}
@@ -324,46 +462,48 @@ def get_openapi_path(
     return path, security_schemes, definitions
 
 
-def get_flat_models_from_routes(
-    routes: Sequence[BaseRoute],
-) -> Set[Union[Type[BaseModel], Type[Enum]]]:
-    body_fields_from_routes: List[ModelField] = []
-    responses_from_routes: List[ModelField] = []
-    request_fields_from_routes: List[ModelField] = []
-    callback_flat_models: Set[Union[Type[BaseModel], Type[Enum]]] = set()
-    for route in routes:
-        if getattr(route, "include_in_schema", None) and isinstance(
-            route, routing.APIRoute
-        ):
-            # if route.body_field:
-            #     assert isinstance(
-            #         route.body_field, ModelField
-            #     ), "A request body must be a Pydantic Field"
-            #     body_fields_from_routes.append(route.body_field)
-            # if route.response_field:
-            #     responses_from_routes.append(route.response_field)
-            # if route.response_fields:
-            #     responses_from_routes.extend(route.response_fields.values())
-            # if route.callbacks:
-            #     callback_flat_models |= get_flat_models_from_routes(route.callbacks)
-            # params = get_flat_params(route.dependant)
-            # request_fields_from_routes.extend(params)
-            request_fields_from_routes.extend(
-                [
-                    # {
-                    #     "required": True,
-                    #     "schema": {"title": "Item Id", "type": "string"},
-                    #     "name": "item_id",
-                    #     "in": "path",
-                    # }
-                ]
-            )
-
-    flat_models = callback_flat_models | get_flat_models_from_fields(
-        body_fields_from_routes + responses_from_routes + request_fields_from_routes,
-        known_models=set(),
-    )
-    return flat_models
+#
+#
+# def get_flat_models_from_routes(
+#     routes: Sequence[BaseRoute],
+# ) -> Set[Union[Type[BaseModel], Type[Enum]]]:
+#     body_fields_from_routes: List[ModelField] = []
+#     responses_from_routes: List[ModelField] = []
+#     request_fields_from_routes: List[ModelField] = []
+#     callback_flat_models: Set[Union[Type[BaseModel], Type[Enum]]] = set()
+#     for route in routes:
+#         if getattr(route, "include_in_schema", None) and isinstance(
+#             route, routing.APIRoute
+#         ):
+#             # if route.body_field:
+#             #     assert isinstance(
+#             #         route.body_field, ModelField
+#             #     ), "A request body must be a Pydantic Field"
+#             #     body_fields_from_routes.append(route.body_field)
+#             # if route.response_field:
+#             #     responses_from_routes.append(route.response_field)
+#             # if route.response_fields:
+#             #     responses_from_routes.extend(route.response_fields.values())
+#             # if route.callbacks:
+#             #     callback_flat_models |= get_flat_models_from_routes(route.callbacks)
+#             # params = get_flat_params(route.dependant)
+#             # request_fields_from_routes.extend(params)
+#             request_fields_from_routes.extend(
+#                 [
+#                     # {
+#                     #     "required": True,
+#                     #     "schema": {"title": "Item Id", "type": "string"},
+#                     #     "name": "item_id",
+#                     #     "in": "path",
+#                     # }
+#                 ]
+#             )
+#
+#     flat_models = callback_flat_models | get_flat_models_from_fields(
+#         body_fields_from_routes + responses_from_routes + request_fields_from_routes,
+#         known_models=set(),
+#     )
+#     return flat_models
 
 
 def get_openapi(
@@ -393,26 +533,39 @@ def get_openapi(
         output["servers"] = servers
     components: Dict[str, Dict[str, Any]] = {}
     paths: Dict[str, Dict[str, Any]] = {}
-    flat_models = get_flat_models_from_routes(routes)
-    model_name_map = get_model_name_map(flat_models)
-    definitions = get_model_definitions(
-        flat_models=flat_models, model_name_map=model_name_map
-    )
+
+    request_schemas = set()
+    response_schemas = set()
     for route in routes:
-        if isinstance(route, routing.APIRoute):
-            result = get_openapi_path(route=route, model_name_map=model_name_map)
-            if result:
-                path, security_schemes, path_definitions = result
-                if path:
-                    paths.setdefault(route.path_format, {}).update(path)
-                if security_schemes:
-                    components.setdefault("securitySchemes", {}).update(
-                        security_schemes
-                    )
-                if path_definitions:
-                    definitions.update(path_definitions)
-    if definitions:
-        components["schemas"] = {k: definitions[k] for k in sorted(definitions)}
+        if not route.include_in_schema or not route.path_format:
+            continue
+
+        openapi_route = OpenAPIRoute(route)
+        paths[route.path_format] = openapi_route.spec
+        response_schemas.update(openapi_route.response_schemas)
+
+    schemas = set.union(request_schemas, response_schemas)
+    if schemas:
+        components["schemas"] = normalized(
+            definitions_schema(
+                deserialization=list(schemas),
+                all_refs=True,
+                version=JsonSchemaVersion.OPEN_API_3_0,
+            )
+        )
+
+        # Should be removed from here. Schema should be defined via handlers
+        if "ValidationError" not in components["schemas"]:
+            components["schemas"]["ValidationError"] = validation_error_definition
+        if "HTTPValidationError" not in components["schemas"]:
+            components["schemas"][
+                "HTTPValidationError"
+            ] = validation_error_response_definition
+        if "HTTPBadRequestError" not in components["schemas"]:
+            components["schemas"][
+                "HTTPBadRequestError"
+            ] = param_validation_error_response_definition
+
     if components:
         output["components"] = components
     output["paths"] = paths

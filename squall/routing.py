@@ -2,6 +2,7 @@ import asyncio
 import enum
 import inspect
 import re
+from dataclasses import is_dataclass
 from decimal import Decimal
 from typing import (
     Any,
@@ -17,6 +18,7 @@ from typing import (
     Union,
 )
 
+from apischema import ValidationError, deserialize, serialize
 from orjson import JSONDecodeError
 from pydantic.error_wrappers import ErrorWrapper, ValidationError
 from pydantic.fields import ModelField
@@ -124,6 +126,7 @@ def get_request_handler(
     response_class: Union[Type[Response], DefaultPlaceholder] = Default(JSONResponse),
     dependency_overrides_provider: Optional[Any] = None,
     response_field: Optional[ModelField] = None,
+    response_model: Optional[ModelField] = None,
 ) -> Callable[[Request], Coroutine[Any, Any, Response]]:
     is_coroutine = asyncio.iscoroutinefunction(endpoint)
     # is_body_form = body_field and isinstance(body_field.field_info, params.Form)
@@ -183,14 +186,24 @@ def get_request_handler(
             # return raw_response
 
         response_args: Dict[str, Any] = {}
+
         # If status_code was set, use it, otherwise use the default from the
         # response class, in the case of redirect it's 307
-        if response_field is not None:
-            response_value, response_errors = response_field.validate(
-                raw_response, {}, loc=("response",)
-            )
-            if response_errors:
-                raise ValidationError([response_errors], response_field.type_)
+        if response_model is not None:
+            if is_dataclass(raw_response):
+                response_value = serialize(
+                    response_model, raw_response, check_type=True
+                )
+            else:
+                response_value = serialize(
+                    response_model, deserialize(response_model, raw_response)
+                )
+
+            # response_value, response_errors = response_field.validate(
+            #     raw_response, {}, loc=("response",)
+            # )
+            # if response_errors:
+            #     raise ValidationError([response_errors], response_field.type_)
         else:
             response_value = raw_response
 
@@ -239,36 +252,6 @@ def get_request_handler(
         # if errors:
         #     raise RequestPayloadValidationError(errors, body=body)
         # else:
-        # if True:
-        #     if is_coroutine:
-        #         raw_response = await endpoint(**kwargs)
-        #     else:
-        #         raw_response = await run_in_threadpool(endpoint, **kwargs)
-        #
-        #     if isinstance(raw_response, Response):
-        #         await raw_response(scope, receive, send)
-        #         return
-        #         # return raw_response
-        #
-        #     response_args: Dict[str, Any] = {}
-        #     # If status_code was set, use it, otherwise use the default from the
-        #     # response class, in the case of redirect it's 307
-        #     if response_field is not None:
-        #         response_value, response_errors = response_field.validate(
-        #             raw_response, {}, loc=("response",)
-        #         )
-        #         if response_errors:
-        #             raise ValidationError([response_errors], response_field.type_)
-        #     else:
-        #         response_value = raw_response
-        #
-        #     if status_code is not None:
-        #         response_args["status_code"] = status_code
-        #     response = actual_response_class(response_value, **response_args)
-        #     # response.headers.raw.extend(sub_response.headers.raw)
-        #     # if sub_response.status_code:
-        #     #     response.status_code = sub_response.status_code
-        #     await response(scope, receive, send)
 
     return app
 
@@ -473,21 +456,6 @@ class APIRoute(Route):
         self.description = self.description.split("\f")[0]
         self.response_description = response_description
         self.responses = responses or {}
-        response_fields = {}
-        for additional_status_code, response in self.responses.items():
-            assert isinstance(response, dict), "An additional response must be a dict"
-            model = response.get("model")
-            if model:
-                assert (
-                    additional_status_code not in STATUS_CODES_WITH_NO_BODY
-                ), f"Status code {additional_status_code} must not have a response body"
-                response_name = f"Response_{additional_status_code}_{self.unique_id}"
-                response_field = create_response_field(name=response_name, type_=model)
-                response_fields[additional_status_code] = response_field
-        if response_fields:
-            self.response_fields: Dict[Union[int, str], ModelField] = response_fields
-        else:
-            self.response_fields = {}
         self.deprecated = deprecated
         self.operation_id = operation_id
         self.include_in_schema = include_in_schema
@@ -519,6 +487,7 @@ class APIRoute(Route):
             response_class=self.response_class,
             dependency_overrides_provider=self.dependency_overrides_provider,
             response_field=self.response_field,
+            response_model=self.response_model,
             head_validator=self.head_validator,
             body_fields=self.body_fields,
         )
