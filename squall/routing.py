@@ -20,7 +20,7 @@ from typing import (
 
 from apischema import ValidationError, deserialize, serialize
 from orjson import JSONDecodeError
-from pydantic.error_wrappers import ErrorWrapper, ValidationError
+from pydantic.error_wrappers import ErrorWrapper
 from pydantic.fields import ModelField
 from squall.datastructures import Default, DefaultPlaceholder
 from squall.exceptions import (
@@ -35,6 +35,7 @@ from squall.routing_.utils import (
     HeadParam,
     get_handler_body_params,
     get_handler_head_params,
+    get_handler_request_models,
 )
 from squall.utils import (
     create_cloned_field,
@@ -125,7 +126,8 @@ def get_request_handler(
     status_code: Optional[int] = None,
     response_class: Union[Type[Response], DefaultPlaceholder] = Default(JSONResponse),
     dependency_overrides_provider: Optional[Any] = None,
-    response_field: Optional[ModelField] = None,
+    # response_field: Optional[ModelField] = None,
+    request_model: Optional[ModelField] = None,
     response_model: Optional[ModelField] = None,
 ) -> Callable[[Request], Coroutine[Any, Any, Response]]:
     is_coroutine = asyncio.iscoroutinefunction(endpoint)
@@ -146,13 +148,16 @@ def get_request_handler(
         # Body fields and request object
         form = None
         try:
+            if request_model is not None:
+                body = await request.json()
+                kwargs[request_model["name"]] = deserialize(
+                    request_model["model"], body
+                )
+
             for field in body_fields:
                 kind = field["kind"]
                 if kind == "request":
                     kwargs[field["name"]] = request
-                elif kind == "model":
-                    body = await request.json()
-                    kwargs[field["name"]] = field["model_class"](**body)
                 elif kind == "body":
                     ct = request.headers.get("content-type")
                     if ct is not None and ct[-4:] == "json":
@@ -183,7 +188,6 @@ def get_request_handler(
         if isinstance(raw_response, Response):
             await raw_response(scope, receive, send)
             return
-            # return raw_response
 
         response_args: Dict[str, Any] = {}
 
@@ -415,7 +419,13 @@ class APIRoute(Route):
         self.endpoint = endpoint
         self.head_params = get_handler_head_params(endpoint)
         self.head_validator = build_head_validator(self.head_params)
+
         self.body_fields = get_handler_body_params(endpoint)
+
+        request_models = get_handler_request_models(endpoint)
+        assert len(request_models) < 2, "Only one request model allowed"
+        self.request_model = request_models[0] if request_models else None
+
         self.name = get_name(endpoint) if name is None else name
         self.path_regex, self.path_format, self.param_convertors = compile_path(path)
         if methods is None:
@@ -425,34 +435,11 @@ class APIRoute(Route):
             name=self.name, path=self.path_format, method=list(methods)[0]
         )
         self.response_model = response_model
-        if self.response_model:
-            assert (
-                status_code not in STATUS_CODES_WITH_NO_BODY
-            ), f"Status code {status_code} must not have a response body"
-            response_name = "Response_" + self.unique_id
-            self.response_field = create_response_field(
-                name=response_name, type_=self.response_model
-            )
-            # Create a clone of the field, so that a Pydantic submodel is not returned
-            # as is just because it's an instance of a subclass of a more limited class
-            # e.g. UserInDB (containing hashed_password) could be a subclass of User
-            # that doesn't have the hashed_password. But because it's a subclass, it
-            # would pass the validation and be returned as is.
-            # By being a new field, no inheritance will be passed as is. A new model
-            # will be always created.
-            self.secure_cloned_response_field: Optional[
-                ModelField
-            ] = create_cloned_field(self.response_field)
-        else:
-            self.response_field = None  # type: ignore
-            self.secure_cloned_response_field = None
         self.status_code = status_code
         self.tags = tags or []
         # self.dependencies = list(dependencies) if dependencies else []
         self.summary = summary
         self.description = description or inspect.cleandoc(self.endpoint.__doc__ or "")
-        # if a "form feed" character (page break) is found in the description text,
-        # truncate description text to the content preceding the first "form feed"
         self.description = self.description.split("\f")[0]
         self.response_description = response_description
         self.responses = responses or {}
@@ -463,20 +450,10 @@ class APIRoute(Route):
 
         assert callable(endpoint), "An endpoint must be a callable"
 
-        # self.dependant = get_dependant(path=self.path_format, call=self.endpoint)
-        # for depends in self.dependencies[::-1]:
-        #     self.dependant.dependencies.insert(
-        #         0,
-        #         get_parameterless_sub_dependant(depends=depends, path=self.path_format),
-        #     )
-        # self.body_field = get_body_field(dependant=self.dependant, name=self.unique_id)
-
         self.dependency_overrides_provider = dependency_overrides_provider
         self.callbacks = callbacks
         self.app = self.get_route_handler()
         self.openapi_extra = openapi_extra
-
-        # self.match_hack = (self.path_regex.match, self.endpoint)
 
     def get_route_handler(self) -> Callable[[Request], Coroutine[Any, Any, Response]]:
         return get_request_handler(
@@ -486,7 +463,8 @@ class APIRoute(Route):
             status_code=self.status_code,
             response_class=self.response_class,
             dependency_overrides_provider=self.dependency_overrides_provider,
-            response_field=self.response_field,
+            # response_field=self.response_field,
+            request_model=self.request_model,
             response_model=self.response_model,
             head_validator=self.head_validator,
             body_fields=self.body_fields,
