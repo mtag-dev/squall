@@ -16,8 +16,7 @@ from typing import (
     get_origin,
 )
 
-from pydantic import BaseModel
-from pydantic.fields import FieldInfo, Undefined
+from pydantic.fields import Undefined
 from squall.params import Body, CommonParam, File, Form, Num, Str
 from squall.requests import Request
 
@@ -204,7 +203,7 @@ def get_annotation_affiliation(annotation: Any) -> typing.Optional[Any]:
 
 
 def get_types(annotation: Any) -> Set[Any]:
-    """ Returns all types in the annotation
+    """Returns all types in the annotation
 
     :param annotation: variable to get types from
     :returns: set of available types
@@ -231,8 +230,7 @@ def get_types(annotation: Any) -> Set[Any]:
 
 
 def is_valid_body_model(annotation: Any) -> bool:
-    """ Check if annotation is valid type and includes dataclass
-    """
+    """Check if annotation is valid type and includes dataclass"""
     valid = {typing.Union, type(None), list, set, tuple}
 
     models = []
@@ -287,6 +285,7 @@ def get_handler_request_models(func: Callable[..., Any]):
                 param["field"] = v.default
             results.append(param)
     return results
+
 
 # class MyModel(BaseModel):
 #     a: int
