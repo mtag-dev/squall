@@ -248,7 +248,7 @@ def test_get_handler_args_validation_parameters():
 
     assert params[1].convertor == "int"
     assert params[1].default == 1
-    assert params[1].statements == {"ge": 1, "le": 2}
+    assert params[1].statements == {"ge": 1, "gt": None, "le": 2, "lt": None}
     assert params[1].name == "b"
     assert params[1].source == "path_params"
     assert params[1].validate == "numeric"
@@ -269,7 +269,7 @@ def test_get_handler_args_validation_parameters():
 
     assert params[4].convertor == "float"
     assert params[4].default == 3.14
-    assert params[4].statements == {"ge": 3.14, "le": 3.15}
+    assert params[4].statements == {"ge": 3.14, "gt": None, "le": 3.15, "lt": None}
     assert params[4].name == "e"
     assert params[4].source == "cookies"
     assert params[4].validate == "numeric"

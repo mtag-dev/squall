@@ -11,15 +11,12 @@ from .exceptions import HTTPException as HTTPException
 
 # from .param_functions import Depends as Depends
 from .params import Body as Body
+from .params import Cookie as Cookie
 from .params import File as File
 from .params import Form as Form
-
-from .params import Cookie as Cookie
 from .params import Header as Header
 from .params import Path as Path
 from .params import Query as Query
-
-
 
 # from .param_functions import Security as Security
 from .requests import Request as Request

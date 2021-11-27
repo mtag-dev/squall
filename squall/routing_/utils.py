@@ -1,6 +1,6 @@
 import inspect
 import typing
-from dataclasses import is_dataclass
+from dataclasses import asdict, is_dataclass
 from decimal import Decimal
 from enum import Enum
 from typing import (
@@ -76,11 +76,12 @@ class HeadParam:
         if hasattr(self._default, "valid") and isinstance(
             self._default.valid, (Num, Str)
         ):
+            statements = asdict(self._default.valid)
             validate = self._default.valid.in_.value
-            for constraint in self._default.valid.get_constraints():
-                value = getattr(self._default.valid, constraint)
-                if value is not None:
-                    statements[constraint] = value
+            # for constraint in self._default.valid.get_constraints():
+            #     value = getattr(self._default.valid, constraint)
+            #     if value is not None:
+            #         statements[constraint] = value
         return validate, statements
 
     def get_convertor(self) -> Tuple[bool, str]:
