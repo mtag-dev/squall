@@ -40,12 +40,7 @@ def cookie_parser(cookie_string: str) -> typing.Dict[str, str]:
     """
     cookie_dict: typing.Dict[str, str] = {}
     for chunk in cookie_string.split(";"):
-        if "=" in chunk:
-            key, val = chunk.split("=", 1)
-        else:
-            # Assume an empty name per
-            # https://bugzilla.mozilla.org/show_bug.cgi?id=169091
-            key, val = "", chunk
+        key, val = chunk.split("=", 1) if "=" in chunk else ("", chunk)
         key, val = key.strip(), val.strip()
         if key or val:
             # unquote using Python's algorithm.

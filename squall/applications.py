@@ -1,8 +1,13 @@
+from asyncio import iscoroutinefunction
+from functools import partial
 import typing
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Sequence, Type, Union
 
+from starlette.concurrency import run_in_threadpool
+
 from squall import router
 from squall.datastructures import Default
+from squall.errors import get_default_debug_response, get_default_error_response
 from squall.exception_handlers import (
     http_exception_handler,
     request_head_validation_exception_handler,
@@ -18,16 +23,14 @@ from squall.openapi.docs import (
 )
 from squall.openapi.utils import get_openapi
 
-# from squall.params import Depends
 from squall.requests import Request
 from squall.responses import HTMLResponse, JSONResponse, Response
 from squall.routing import APIRoute, APIWebSocketRoute
 from squall.types import AnyFunc, ASGIApp, Receive, Scope, Send
 from starlette.datastructures import State
-from starlette.exceptions import ExceptionMiddleware, HTTPException
+from starlette.exceptions import HTTPException
 from starlette.middleware import Middleware
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.middleware.errors import ServerErrorMiddleware
 
 
 class Squall:
@@ -62,7 +65,7 @@ class Squall:
         include_in_schema: bool = True,
         **extra: Any,
     ) -> None:
-        self._debug: bool = debug
+        self.debug: bool = debug
         self.state: State = State()
 
         self.router: router.RootRouter = router.RootRouter(
@@ -145,17 +148,6 @@ class Squall:
 
         self._setup()
 
-    @property
-    def debug(self) -> bool:
-        """Returns debug flag."""
-        return self._debug
-
-    @debug.setter
-    def debug(self, value: bool) -> None:
-        """Set debug flag."""
-        self._debug = value
-        self.middleware_stack = self._build_middleware_stack()
-
     def add_event_handler(self, event: str, handler: AnyFunc) -> None:
         """Registrates event hooks.
         There are two evens availiable: startup, shutdown
@@ -219,7 +211,6 @@ class Squall:
             >>> app.add_exception_handler(BackEndException, backend_exception_handler)
         """
         self.exception_handlers[exc_class_or_status_code] = handler
-        self.middleware_stack = self._build_middleware_stack()
 
     def exception_handler(
         self, exc_class_or_status_code: typing.Union[int, typing.Type[Exception]]
@@ -293,35 +284,56 @@ class Squall:
         if self.root_path:
             scope["root_path"] = self.root_path
         scope["app"] = self
-        return lambda receive, send: self.scoped(scope, receive, send)
+
+        return partial(self.scoped, scope)
+
+    def _lookup_exception_handler(self, exc: Exception) -> typing.Optional[typing.Callable]:
+        for cls in type(exc).__mro__:
+            if cls in self.exception_handlers:
+                return self.exception_handlers[cls]
+
+    def _handle_errors(self, app) -> ASGIApp:
+
+        async def decorator(scope, receive, send) -> None:
+            try:
+                await app(scope, receive, send)
+            except Exception as exc:
+                handler = None
+
+                if isinstance(exc, HTTPException):
+                    handler = self.exception_handlers.get(exc.status_code)
+
+                if handler is None:
+                    # TODO: we can avoid lookup each time and just set handler to self.exception_handlers
+                    handler = self._lookup_exception_handler(exc)
+
+                request = Request(scope)
+                if handler:
+                    if iscoroutinefunction(handler):
+                        response = await handler(request, exc)
+                    else:
+                        response = await run_in_threadpool(handler, request, exc)
+                elif self.debug:
+                    # In debug mode, return traceback responses.
+                    response = get_default_debug_response(request, exc)
+                else:
+                    # Use our default 500 error handler.
+                    response = get_default_error_response(request, exc)
+
+                await response(scope, receive, send)
+
+                # We always continue to raise the exception.
+                # This allows servers to log the error, or allows test clients
+                # to optionally raise the error within the test case.
+                raise exc
+        return decorator
 
     def _build_middleware_stack(self) -> ASGIApp:
         """Build stack for middlewares pipelining"""
-        error_handler = None
-        exception_handlers = {}
-
-        for key, value in self.exception_handlers.items():
-            if key in (500, Exception):
-                error_handler = value
-            else:
-                exception_handlers[key] = value
-
-        middleware = (
-            [Middleware(ServerErrorMiddleware, handler=error_handler, debug=self.debug)]
-            + self.user_middleware
-            + [
-                Middleware(
-                    ExceptionMiddleware, handlers=exception_handlers, debug=self.debug
-                )
-            ]
-        )
-
-        # middleware = self.user_middleware
-        #
         app = self.router
-        for cls, options in reversed(middleware):
+        for cls, options in reversed(self.user_middleware):
             app = cls(app=app, **options)
-        return app
+        return self._handle_errors(app)
 
     def openapi(self) -> Dict[str, Any]:
         if not self.openapi_schema:

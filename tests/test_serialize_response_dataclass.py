@@ -14,9 +14,7 @@ class Item:
     owner_ids: Optional[List[int]] = None
 
 
-@app.get("/items/valid", response_model=Item)
-def get_valid():
-    return {"name": "valid", "price": 1.0}
+
 
 
 @app.get("/items/object", response_model=Item)
@@ -62,6 +60,15 @@ def get_no_response_model_objectlist():
 
 
 client = TestClient(app)
+
+from starlette.exceptions import HTTPException
+
+
+@app.get("/items/valid", response_model=Item)
+def get_valid():
+    # raise Exception('123')
+    # raise HTTPException('123')
+    return {"name": "valid", "price": 1.0}
 
 
 def test_valid():
