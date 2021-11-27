@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional, Union
 from squall.exceptions import HTTPException
 from squall.openapi.models import OAuth2 as OAuth2Model
 from squall.openapi.models import OAuthFlows as OAuthFlowsModel
-from squall.param_functions import Form
+from squall.params import Form
 from squall.requests import Request
 from squall.security.base import SecurityBase
 from squall.security.utils import get_authorization_scheme_param
