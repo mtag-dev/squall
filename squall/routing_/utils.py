@@ -9,14 +9,14 @@ from typing import (
     Dict,
     List,
     Optional,
+    Set,
     Tuple,
     Union,
     get_args,
     get_origin,
 )
 
-from pydantic import BaseModel
-from pydantic.fields import FieldInfo, Undefined
+from pydantic.fields import Undefined
 from squall.params import Body, CommonParam, File, Form, Num, Str
 from squall.requests import Request
 
@@ -172,8 +172,9 @@ def get_handler_head_params(func: Callable[..., Any]) -> List[HeadParam]:
         if isinstance(v.default, CommonParam):
             source = v.default.in_.value
         elif v.default is v.empty:
-            res = get_annotation_affiliation(v.annotation)
-            if res is None:
+            is_model = is_valid_body_model(v.annotation)
+            is_affilated = get_annotation_affiliation(v.annotation)
+            if not (is_model or is_affilated):
                 source = "path_params"
         elif type(v.default) in (int, float, Decimal, str, bytes, type(None)):
             source = "path_params"
@@ -196,15 +197,53 @@ def get_annotation_affiliation(annotation: Any) -> typing.Optional[Any]:
 
     if annotation == Request:
         return "request"
-    elif inspect.isclass(annotation) and issubclass(annotation, BaseModel):
-        return "model"
-    elif inspect.isclass(annotation) and is_dataclass(annotation):
-        return "model"
-    elif isinstance(annotation, FieldInfo):
-        return "model"
     # elif isinstance(v.default, (Form, File)):
     #     return "form"
     return None
+
+
+def get_types(annotation: Any) -> Set[Any]:
+    """Returns all types in the annotation
+
+    :param annotation: variable to get types from
+    :returns: set of available types
+
+    Example:
+        >>> get_types(Optional[List[UserInfoResponse]])
+        {typing.Union, <class 'NoneType'>, <class '__main__.UserInfoResponse'>, <class 'list'>}
+    """
+    result = set()
+
+    if inspect.isclass(annotation):
+        result.add(annotation)
+
+    if origin := get_origin(annotation):
+        result.add(origin)
+        result.update(get_types(origin))
+
+    for i in get_args(annotation):
+        if not get_origin(i):
+            result.add(i)
+        else:
+            result.update(get_types(i))
+    return result
+
+
+def is_valid_body_model(annotation: Any) -> bool:
+    """Check if annotation is valid type and includes dataclass"""
+    valid = {typing.Union, type(None), list, set, tuple}
+
+    models = []
+    for i in get_types(annotation):
+        if i in valid:
+            continue
+        if is_dataclass(i):
+            models.append(i)
+        else:
+            return False
+    if len(models) == 1:
+        return True
+    return False
 
 
 def get_handler_body_params(func: Callable[..., Any]) -> List[Dict[str, Any]]:
@@ -222,19 +261,9 @@ def get_handler_body_params(func: Callable[..., Any]) -> List[Dict[str, Any]]:
 
         if annotation == Request:
             param["kind"] = "request"
-        elif inspect.isclass(annotation) and issubclass(annotation, BaseModel):
-            param["kind"] = "model"
-            param["model_class"] = annotation
-        elif inspect.isclass(annotation) and is_dataclass(annotation):
-            param["kind"] = "model"
-            param["model_class"] = annotation
-        elif isinstance(annotation, FieldInfo):
-            param["kind"] = "field"
-            param["model_class"] = annotation
         elif isinstance(v.default, (Form, File)):
             param["kind"] = "form"
             param["model_class"] = annotation
-            # param['origin'] = v.default
         elif isinstance(v.default, Body):
             param["kind"] = "body"
         else:
@@ -245,8 +274,21 @@ def get_handler_body_params(func: Callable[..., Any]) -> List[Dict[str, Any]]:
     return results
 
 
-class MyModel(BaseModel):
-    a: int
+def get_handler_request_models(func: Callable[..., Any]):
+    signature = inspect.signature(func)
+    results = []
+    for k, v in signature.parameters.items():
+        param: Dict[str, Any] = {"name": k}
+        if is_valid_body_model(v.annotation):
+            param["model"] = v.annotation
+            if isinstance(v.default, Body):
+                param["field"] = v.default
+            results.append(param)
+    return results
+
+
+# class MyModel(BaseModel):
+#     a: int
 
 
 if __name__ == "__main__":
