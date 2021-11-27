@@ -1,6 +1,6 @@
+from dataclasses import dataclass
 from typing import Dict
 
-from dataclasses import dataclass
 from squall import Squall
 from squall.testclient import TestClient
 

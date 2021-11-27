@@ -1,6 +1,6 @@
+import dataclasses
 from typing import Dict, List, Optional
 
-from pydantic import Field, dataclasses
 from squall import Squall
 from starlette.testclient import TestClient
 
@@ -9,7 +9,7 @@ app = Squall()
 
 @dataclasses.dataclass
 class Item:
-    name: str = Field(...)
+    name: str = dataclasses.field()
     price: Optional[float] = None
     owner_ids: Optional[List[int]] = None
 

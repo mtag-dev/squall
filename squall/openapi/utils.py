@@ -1,17 +1,16 @@
 import inspect
 import json
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Type, Union, cast
+from typing import Any, Dict, List, Optional, Sequence, Type, Union
 
 from apischema.json_schema import (
     JsonSchemaVersion,
     definitions_schema,
     deserialization_schema,
-    serialization_schema
+    serialization_schema,
 )
 
 normalized = lambda a: json.loads(json.dumps(a))
 
-from pydantic.fields import Undefined
 from squall import routing
 from squall.datastructures import DefaultPlaceholder
 from squall.openapi.constants import (
@@ -217,16 +216,16 @@ class OpenAPIRoute:
         if not self.route.request_model:
             return None
 
-        self.request_schemas.add(self.route.request_model['model'])
+        self.request_schemas.add(self.route.request_model["model"])
         response_schema = normalized(
             serialization_schema(
-                self.route.request_model['model'],
+                self.route.request_model["model"],
                 all_refs=True,
-                version=JsonSchemaVersion.OPEN_API_3_1
+                version=JsonSchemaVersion.OPEN_API_3_1,
             )
         )
 
-        field: Optional[Body] = self.route.request_model.get('field')
+        field: Optional[Body] = self.route.request_model.get("field")
 
         media_type = getattr(field, "media_type", "application/json")
         result = dict()
@@ -236,7 +235,7 @@ class OpenAPIRoute:
         if field:
             if field.examples:
                 content[media_type]["examples"] = field.examples
-            elif field.example != Undefined:
+            elif field.example:
                 content[media_type]["example"] = field.example
 
         content[media_type]["schema"] = response_schema

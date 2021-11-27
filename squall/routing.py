@@ -28,7 +28,6 @@ from squall.exceptions import (
     RequestHeadValidationError,
     RequestPayloadValidationError,
 )
-from squall.openapi.constants import STATUS_CODES_WITH_NO_BODY
 from squall.requests import Request
 from squall.responses import JSONResponse, Response
 from squall.routing_.utils import (
@@ -37,11 +36,7 @@ from squall.routing_.utils import (
     get_handler_head_params,
     get_handler_request_models,
 )
-from squall.utils import (
-    create_cloned_field,
-    create_response_field,
-    generate_operation_id_for_path,
-)
+from squall.utils import generate_operation_id_for_path
 from squall.validators.head import Validator
 from starlette.concurrency import run_in_threadpool
 from starlette.routing import BaseRoute as SlBaseRoute
@@ -193,15 +188,19 @@ def get_request_handler(
 
         # If status_code was set, use it, otherwise use the default from the
         # response class, in the case of redirect it's 307
+
         if response_model is not None:
-            if is_dataclass(raw_response):
-                response_value = serialize(
-                    response_model, raw_response, check_type=True
-                )
-            else:
-                response_value = serialize(
-                    response_model, deserialize(response_model, raw_response)
-                )
+            try:
+                if is_dataclass(raw_response):
+                    response_value = serialize(
+                        response_model, raw_response, check_type=True
+                    )
+                else:
+                    response_value = serialize(
+                        response_model, deserialize(response_model, raw_response)
+                    )
+            except TypeError as e:
+                raise RequestPayloadValidationError([ErrorWrapper(e, ("response",))])
 
             # response_value, response_errors = response_field.validate(
             #     raw_response, {}, loc=("response",)
@@ -395,7 +394,6 @@ class APIRoute(Route):
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
