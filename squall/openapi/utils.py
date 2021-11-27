@@ -187,8 +187,7 @@ class OpenAPIRoute:
             if status_code not in responses:
                 responses[status_code] = {}
 
-            model = response.get("model")
-            if model:
+            if model := response.get("model"):
                 response_schema = normalized(
                     deserialization_schema(
                         model, all_refs=True, version=JsonSchemaVersion.OPEN_API_3_1
@@ -198,12 +197,10 @@ class OpenAPIRoute:
                 responses[status_code]["content"] = {
                     self.response_class.media_type: {"schema": response_schema}
                 }
-            description = response.get("description")
-            if description:
+            if description := response.get("description"):
                 responses[status_code]["description"] = description
 
-            content = response.get("content")
-            if content:
+            if content := response.get("content"):
                 if "content" not in responses[status_code]:
                     responses[status_code]["content"] = content.copy()
                 else:
@@ -249,14 +246,12 @@ class OpenAPIRoute:
 
         for method in self.route.methods:
             operation = get_openapi_operation_metadata(route=self.route, method=method)
-            parameters = get_head_params(route=self.route)
-            if parameters:
+            if parameters := get_head_params(route=self.route):
                 operation["parameters"] = parameters
             operation["responses"] = self.responses
 
             if method in METHODS_WITH_BODY:
-                request_body = self.request_body
-                if request_body is not None:
+                if request_body := self.request_body:
                     operation["requestBody"] = request_body
 
             data[method.lower()] = operation
