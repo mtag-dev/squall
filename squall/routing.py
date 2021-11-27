@@ -300,13 +300,7 @@ def build_head_validator(head_params: List[HeadParam]) -> Callable[..., Any]:
             convert=param.convertor,
             as_list=param.is_array,
             default=param.default,
-            **param.statements
-            # gt=param.get("gt"),
-            # ge=param.get("ge"),
-            # lt=param.get("lt"),
-            # le=param.get("le"),
-            # min_length=param.get("min_length"),
-            # max_length=param.get("max_length"),
+            **param.statements,
         )
         print(
             dict(

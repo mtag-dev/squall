@@ -230,10 +230,10 @@ def test_get_handler_args_assigned_instance_defaults():
 
 def test_get_handler_args_validation_parameters():
     def handler(
-        a: Optional[str] = Param(None, valid=Str(min_length=2)),
+        a: Optional[str] = Param(None, valid=Str(min_len=2)),
         b: int = Param(1, valid=Num(ge=1, le=2)),
-        c: str = Query("Hey", valid=Str(min_length=2, max_length=5)),
-        d: bytes = Header(b"Hey", valid=Str(min_length=2, max_length=5)),
+        c: str = Query("Hey", valid=Str(min_len=2, max_len=5)),
+        d: bytes = Header(b"Hey", valid=Str(min_len=2, max_len=5)),
         e: float = Cookie(3.14, valid=Num(ge=3.14, le=3.15)),
     ):
         pass
@@ -241,7 +241,7 @@ def test_get_handler_args_validation_parameters():
     params = get_handler_head_params(handler)
     assert params[0].convertor == "str"
     assert params[0].default is None
-    assert params[0].statements["min_length"] == 2
+    assert params[0].statements["min_len"] == 2
     assert params[0].name == "a"
     assert params[0].source == "path_params"
     assert params[0].validate == "string"
@@ -255,14 +255,14 @@ def test_get_handler_args_validation_parameters():
 
     assert params[2].convertor == "str"
     assert params[2].default == "Hey"
-    assert params[2].statements == {"max_length": 5, "min_length": 2}
+    assert params[2].statements == {"max_len": 5, "min_len": 2}
     assert params[2].name == "c"
     assert params[2].source == "query_params"
     assert params[2].validate == "string"
 
     assert params[3].convertor == "bytes"
     assert params[3].default == b"Hey"
-    assert params[3].statements == {"max_length": 5, "min_length": 2}
+    assert params[3].statements == {"max_len": 5, "min_len": 2}
     assert params[3].name == "d"
     assert params[3].source == "headers"
     assert params[3].validate == "string"

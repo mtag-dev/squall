@@ -160,10 +160,10 @@ def test_no_defaults_cast_from_annotation_positive(app, client):
 def test_validate_any_string_positive(app, client):
     @app.get("/validate/any_string/{from_path}")
     def foo(
-        from_path: str = Param(..., valid=Str(min_length=5, max_length=20)),
-        from_qs: str = Query(..., valid=Str(min_length=5, max_length=20)),
-        from_header: bytes = Header(..., valid=Str(min_length=5, max_length=20)),
-        from_cookie: bytes = Cookie(..., valid=Str(min_length=5, max_length=20)),
+        from_path: str = Param(..., valid=Str(min_len=5, max_len=20)),
+        from_qs: str = Query(..., valid=Str(min_len=5, max_len=20)),
+        from_header: bytes = Header(..., valid=Str(min_len=5, max_len=20)),
+        from_cookie: bytes = Cookie(..., valid=Str(min_len=5, max_len=20)),
     ):
         return {
             "from_path": from_path,
@@ -195,28 +195,20 @@ def test_validate_any_string_positive(app, client):
 
 
 @pytest.mark.parametrize(
-    "min_length,max_length",
+    "min_len,max_len",
     [
         (6, None),
         (None, 4),
         (1, 4),
     ],
 )
-def test_validate_any_string_negative(app, client, min_length, max_length):
+def test_validate_any_string_negative(app, client, min_len, max_len):
     @app.get("/validate/any_string/{from_path}")
     def foo(
-        from_path: str = Param(
-            ..., valid=Str(min_length=min_length, max_length=max_length)
-        ),
-        from_qs: str = Query(
-            ..., valid=Str(min_length=min_length, max_length=max_length)
-        ),
-        from_header: bytes = Header(
-            ..., valid=Str(min_length=min_length, max_length=max_length)
-        ),
-        from_cookie: bytes = Cookie(
-            ..., valid=Str(min_length=min_length, max_length=max_length)
-        ),
+        from_path: str = Param(..., valid=Str(min_len=min_len, max_len=max_len)),
+        from_qs: str = Query(..., valid=Str(min_len=min_len, max_len=max_len)),
+        from_header: bytes = Header(..., valid=Str(min_len=min_len, max_len=max_len)),
+        from_cookie: bytes = Cookie(..., valid=Str(min_len=min_len, max_len=max_len)),
     ):
         return {
             "from_path": from_path,

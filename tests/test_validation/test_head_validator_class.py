@@ -107,11 +107,9 @@ def test_strings():
             "bytes": lambda a: str(a).encode("utf-8") if type(a) != bytes else a,
         },
     )
+    v.add_rule("string", "path_params", "string1", min_len=3, max_len=5, convert="str")
     v.add_rule(
-        "string", "path_params", "string1", min_length=3, max_length=5, convert="str"
-    )
-    v.add_rule(
-        "string", "path_params", "string2", min_length=3, max_length=5, convert="bytes"
+        "string", "path_params", "string2", min_len=3, max_len=5, convert="bytes"
     )
 
     validator = v.build()
@@ -156,9 +154,7 @@ def test_multiple_sources():
 
     v = Validator(args=["request"], convertors={"decimal": Decimal, "str": str})
     v.add_rule("numeric", "path_params", "numeric1", gt=20, le=50, convert="decimal")
-    v.add_rule(
-        "string", "headers", "string1", min_length=3, max_length=5, convert="str"
-    )
+    v.add_rule("string", "headers", "string1", min_len=3, max_len=5, convert="str")
     validator = v.build()
 
     request = Request(path_params={"numeric1": 20}, headers={"string1": "str"})

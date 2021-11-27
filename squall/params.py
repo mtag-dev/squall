@@ -23,8 +23,8 @@ class Num:
 @dataclass
 class Str:
     in_ = ValidatorTypes.string
-    min_length: Optional[int] = None
-    max_length: Optional[int] = None
+    min_len: Optional[int] = None
+    max_len: Optional[int] = None
 
 
 class ParamTypes(Enum):

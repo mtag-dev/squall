@@ -55,18 +55,18 @@ def get_path_param_required_id(item_id: str = Path(...)):
 
 
 @app.get("/path/param-minlength/{item_id}")
-def get_path_param_min_length(item_id: str = Path(..., valid=Str(min_length=3))):
+def get_path_param_min_len(item_id: str = Path(..., valid=Str(min_len=3))):
     return item_id
 
 
 @app.get("/path/param-maxlength/{item_id}")
-def get_path_param_max_length(item_id: str = Path(..., valid=Str(max_length=3))):
+def get_path_param_max_len(item_id: str = Path(..., valid=Str(max_len=3))):
     return item_id
 
 
 @app.get("/path/param-min_maxlength/{item_id}")
-def get_path_param_min_max_length(
-    item_id: str = Path(..., valid=Str(max_length=3, min_length=2))
+def get_path_param_min_max_len(
+    item_id: str = Path(..., valid=Str(max_len=3, min_len=2))
 ):
     return item_id
 
