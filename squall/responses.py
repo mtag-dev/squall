@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import orjson
 from pydantic import BaseModel
-from squall.types import Receive, Scope, Send
+from squall.types import Send, Scope, Receive
 from starlette.responses import FileResponse as FileResponse  # noqa
 from starlette.responses import RedirectResponse as RedirectResponse  # noqa
 from starlette.responses import Response as StarletteResponse  # noqa
@@ -81,10 +81,11 @@ class Response(StarletteResponse):
             "status": status_code,
             "headers": raw_headers,
         }
+        self.send_body = {"type": "http.response.body", "body": body}
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         await send(self.send_start)
-        await send({"type": "http.response.body", "body": self.body})
+        await send(self.send_body)
 
 
 class JSONResponse(Response):

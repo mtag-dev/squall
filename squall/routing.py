@@ -217,7 +217,8 @@ def get_request_handler(
             response_args["status_code"] = status_code
         response = actual_response_class(response_value, **response_args)
         await send(response.send_start)
-        await send({"type": "http.response.body", "body": response.body})
+        await send(response.send_body)
+
         # await response(scope, receive, send)
 
         # try:

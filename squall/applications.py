@@ -309,7 +309,8 @@ class Squall:
                 # Use our default 500 error handler.
                 response = self._default_error_response
 
-            await response(scope, receive, send)
+            await send(response.send_start)
+            await send(response.send_body)
 
             if not handler:
                 raise exc
@@ -361,7 +362,7 @@ class Squall:
                         self.servers.insert(0, {"url": root_path})
                         server_urls.add(root_path)
                 return JSONResponse(
-                    self.openapi().dict(exclude_unset=True, by_alias=True)  # type: ignore
+                    self.openapi() #.dict(exclude_unset=True, by_alias=True)  # type: ignore
                 )
 
             self.router.add_api_route(

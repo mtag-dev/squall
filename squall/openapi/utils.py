@@ -396,4 +396,4 @@ def get_openapi(
     output["paths"] = paths
     if tags:
         output["tags"] = tags
-    return OpenAPI(**output)  # type: ignore
+    return output  # type: ignore
