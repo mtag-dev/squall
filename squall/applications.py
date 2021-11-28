@@ -315,7 +315,7 @@ class Squall:
             if not handler:
                 raise exc
 
-    def _lookup_exception_handler(self, exc: Exception) -> typing.Optional[typing.Callable]:
+    def _lookup_exception_handler(self, exc: Exception) -> typing.Optional[typing.Callable[..., Any]]:
         exception_class = type(exc)
         try:
             return self.exception_handlers[exception_class]
@@ -324,6 +324,7 @@ class Squall:
                 if cls in self.exception_handlers:
                     self.exception_handlers[exception_class] = self.exception_handlers[cls]
                     return self.exception_handlers[cls]
+        return None
 
     def _build_middleware_stack(self) -> ASGIApp:
         """Build stack for middlewares pipelining"""
