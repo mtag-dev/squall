@@ -3,7 +3,7 @@ from typing import Optional
 
 import pytest
 from squall import Squall
-from squall.params import Num, Param, Path, Query, Str
+from squall.params import Num, Path, Query, Str
 from squall.testclient import TestClient
 
 app = Squall()
@@ -139,7 +139,7 @@ def get_path_param_lt_gt_int(item_id: int = Path(..., valid=Num(lt=3, gt=1))):
 
 
 @app.get("/path/param-le-ge-int/{item_id}")
-def get_path_param_le_ge_int(item_id: int = Param(..., valid=Num(le=3, ge=1))):
+def get_path_param_le_ge_int(item_id: int = Path(..., valid=Num(le=3, ge=1))):
     return item_id
 
 

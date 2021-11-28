@@ -28,7 +28,6 @@ class Str:
 
 
 class ParamTypes(Enum):
-    param = "path_params"
     query = "query_params"
     header = "headers"
     path = "path_params"
@@ -36,7 +35,6 @@ class ParamTypes(Enum):
 
 
 class ParamOpenAPI(Enum):
-    param = "path"
     query = "query"
     header = "header"
     path = "path"
@@ -58,12 +56,6 @@ class CommonParam:
 
 @dataclass
 class Path(CommonParam):
-    in_ = ParamTypes.path
-    openapi_ = ParamOpenAPI.path
-
-
-@dataclass
-class Param(CommonParam):
     in_ = ParamTypes.path
     openapi_ = ParamOpenAPI.path
 

@@ -2,7 +2,7 @@ import typing
 from decimal import Decimal
 
 import pytest
-from squall.params import Cookie, Header, Num, Param, Query, Str
+from squall.params import Cookie, Header, Num, Path, Query, Str
 
 
 def test_no_args(app, client):
@@ -86,7 +86,7 @@ def test_defaults_no_annotation(app, client):
 def test_parameter_from_another_origin_name(app, client):
     @app.get("/from_another/origin_name/{origin_param}")
     def foo(
-        param=Param(..., origin="origin_param"),
+        param=Path(..., origin="origin_param"),
         qs=Query(..., origin="origin_qs"),
         header=Header(..., origin="origin_header"),
         cookie=Cookie(..., origin="origin_cookie"),
@@ -160,7 +160,7 @@ def test_no_defaults_cast_from_annotation_positive(app, client):
 def test_validate_any_string_positive(app, client):
     @app.get("/validate/any_string/{from_path}")
     def foo(
-        from_path: str = Param(..., valid=Str(min_len=5, max_len=20)),
+        from_path: str = Path(..., valid=Str(min_len=5, max_len=20)),
         from_qs: str = Query(..., valid=Str(min_len=5, max_len=20)),
         from_header: bytes = Header(..., valid=Str(min_len=5, max_len=20)),
         from_cookie: bytes = Cookie(..., valid=Str(min_len=5, max_len=20)),
@@ -205,7 +205,7 @@ def test_validate_any_string_positive(app, client):
 def test_validate_any_string_negative(app, client, min_len, max_len):
     @app.get("/validate/any_string/{from_path}")
     def foo(
-        from_path: str = Param(..., valid=Str(min_len=min_len, max_len=max_len)),
+        from_path: str = Path(..., valid=Str(min_len=min_len, max_len=max_len)),
         from_qs: str = Query(..., valid=Str(min_len=min_len, max_len=max_len)),
         from_header: bytes = Header(..., valid=Str(min_len=min_len, max_len=max_len)),
         from_cookie: bytes = Cookie(..., valid=Str(min_len=min_len, max_len=max_len)),
@@ -256,7 +256,7 @@ def test_validate_any_string_negative(app, client, min_len, max_len):
 def test_validate_numeric_positive(app, client):
     @app.get("/validate/numeric/{from_path}")
     def foo(
-        from_path: int = Param(..., valid=Num(ge=5, le=20)),
+        from_path: int = Path(..., valid=Num(ge=5, le=20)),
         from_qs: float = Query(..., valid=Num(ge=5, le=20)),
         from_header: Decimal = Header(..., valid=Num(ge=5, le=20)),
         from_cookie: int = Cookie(..., valid=Num(ge=5, le=20)),
@@ -301,7 +301,7 @@ def test_validate_numeric_positive(app, client):
 def test_validate_numeric_negative(app, client, ge, le):
     @app.get("/validate/numeric/{from_path}")
     def foo(
-        from_path: int = Param(..., valid=Num(ge=ge, le=le)),
+        from_path: int = Path(..., valid=Num(ge=ge, le=le)),
         from_qs: float = Query(..., valid=Num(ge=ge, le=le)),
         from_header: Decimal = Header(..., valid=Num(ge=ge, le=le)),
         from_cookie: int = Cookie(..., valid=Num(ge=ge, le=le)),

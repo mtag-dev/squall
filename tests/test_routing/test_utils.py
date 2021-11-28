@@ -1,6 +1,6 @@
 from typing import Optional
 
-from squall.params import Cookie, Header, Num, Param, Query, Str
+from squall.params import Cookie, Header, Num, Path, Query, Str
 from squall.routing_.utils import get_handler_head_params
 
 
@@ -12,7 +12,7 @@ def test_get_handler_args_no_args():
 
 
 def test_get_handler_args_no_annotation():
-    def handler(a, b=Query(...), c=Param(...), d=Header(...), e=Cookie(...)):
+    def handler(a, b=Query(...), c=Path(...), d=Header(...), e=Cookie(...)):
         pass
 
     params = get_handler_head_params(handler)
@@ -60,7 +60,7 @@ def test_get_handler_args_no_annotation():
 def test_get_handler_args_origin():
     def handler(
         b=Query(..., origin="from_b"),
-        c=Param(..., origin="from_c"),
+        c=Path(..., origin="from_c"),
         d=Header(..., origin="from_d"),
         e=Cookie(..., origin="from_e"),
     ):
@@ -183,8 +183,8 @@ def test_get_handler_args_direct_defaults():
 
 def test_get_handler_args_assigned_instance_defaults():
     def handler(
-        a: Optional[str] = Param(None),
-        b: int = Param(1),
+        a: Optional[str] = Path(None),
+        b: int = Path(1),
         c: str = Query("Hey"),
         d: bytes = Header(b"Hey"),
         e: float = Cookie(3.14),
@@ -230,8 +230,8 @@ def test_get_handler_args_assigned_instance_defaults():
 
 def test_get_handler_args_validation_parameters():
     def handler(
-        a: Optional[str] = Param(None, valid=Str(min_len=2)),
-        b: int = Param(1, valid=Num(ge=1, le=2)),
+        a: Optional[str] = Path(None, valid=Str(min_len=2)),
+        b: int = Path(1, valid=Num(ge=1, le=2)),
         c: str = Query("Hey", valid=Str(min_len=2, max_len=5)),
         d: bytes = Header(b"Hey", valid=Str(min_len=2, max_len=5)),
         e: float = Cookie(3.14, valid=Num(ge=3.14, le=3.15)),
