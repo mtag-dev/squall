@@ -21,6 +21,7 @@ from squall.openapi.constants import (
 from squall.openapi.models import OpenAPI
 from squall.params import Body
 from squall.responses import JSONResponse, PrettyJSONResponse, Response
+from squall.routing_.utils import HeadParam
 from squall.utils import generate_operation_id_for_path
 from starlette.routing import BaseRoute
 
@@ -70,6 +71,16 @@ status_code_ranges: Dict[str, str] = {
 }
 
 
+type_mapping: Dict[str, str] = {
+    "int": "integer",
+    "Decimal": "number",
+    "float": "number",
+    "bool": "boolean",
+    "str": "string",
+    "bytes": "string",
+}
+
+
 def generate_operation_id(*, route: routing.APIRoute, method: str) -> str:
     if route.operation_id:
         return route.operation_id
@@ -96,13 +107,6 @@ def get_openapi_operation_metadata(
     if route.deprecated:
         operation["deprecated"] = route.deprecated
     return operation
-
-
-def get_head_params(route):
-    parameters: List[Dict[str, Any]] = []
-    for param in route.head_params:
-        parameters.append(param.spec)
-    return parameters
 
 
 class OpenAPIRoute:
@@ -239,6 +243,69 @@ class OpenAPIRoute:
         result["content"] = content
         return result
 
+    @staticmethod
+    def get_param_spec(param: HeadParam) -> Dict[str, Any]:
+        source_mapping = {
+            "path_params": "path",
+            "query_params": "query",
+            "headers": "header",
+            "cookies": "cookie",
+        }
+
+        item: Dict[str, Any] = {}
+        item["type"] = type_mapping.get(param.convertor, "string")
+
+        schema: Dict[str, Any]
+        if param.is_array:
+            schema = {"type": "array", "items": item}
+        else:
+            schema = item
+            if param.statements.get("ge") is not None:
+                schema["minimum"] = param.statements["ge"]
+                schema["exclusiveMinimum"] = False
+            elif param.statements.get("gt") is not None:
+                schema["minimum"] = param.statements["gt"]
+                schema["exclusiveMinimum"] = True
+
+            if param.statements.get("le") is not None:
+                schema["maximum"] = param.statements["le"]
+                schema["exclusiveMaximum"] = False
+            elif param.statements.get("lt") is not None:
+                schema["maximum"] = param.statements["lt"]
+                schema["exclusiveMaximum"] = True
+
+        result = {
+            "required": param.default == Ellipsis,
+            "schema": schema,
+            "name": param.origin or param.name,
+            "in": source_mapping[param.source],
+        }
+
+        description = getattr(param._default, "description", None)
+        if description is not None:
+            result["description"] = description
+
+        example = getattr(param._default, "example", None)
+        if example is not None:
+            result["example"] = example
+
+        examples = getattr(param._default, "examples", None)
+        if examples:
+            result["examples"] = examples
+
+        deprecated = getattr(param._default, "deprecated", None)
+        if deprecated:
+            result["deprecated"] = True
+
+        return result
+
+    @property
+    def head_params(self):
+        parameters: List[Dict[str, Any]] = []
+        for param in self.route.head_params:
+            parameters.append(self.get_param_spec(param))
+        return parameters
+
     @property
     def spec(self) -> Dict[str, Any]:
         # Check before calling the function for if route.include_in_schema
@@ -246,7 +313,7 @@ class OpenAPIRoute:
 
         for method in self.route.methods:
             operation = get_openapi_operation_metadata(route=self.route, method=method)
-            if parameters := get_head_params(route=self.route):
+            if parameters := self.head_params:
                 operation["parameters"] = parameters
             operation["responses"] = self.responses
 

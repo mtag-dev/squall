@@ -117,11 +117,9 @@ def get_request_handler(
     endpoint: Callable[..., Any],
     head_validator: Callable[..., Any],
     body_fields: List[Any],
-    # body_field: Optional[ModelField] = None,
     status_code: Optional[int] = None,
     response_class: Union[Type[Response], DefaultPlaceholder] = Default(JSONResponse),
     dependency_overrides_provider: Optional[Any] = None,
-    # response_field: Optional[ModelField] = None,
     request_model: Optional[ModelField] = None,
     response_model: Optional[ModelField] = None,
 ) -> Callable[[Request], Coroutine[Any, Any, Response]]:

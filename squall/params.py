@@ -35,6 +35,14 @@ class ParamTypes(Enum):
     cookie = "cookies"
 
 
+class ParamOpenAPI(Enum):
+    param = "path"
+    query = "query"
+    header = "header"
+    path = "path"
+    cookie = "cookie"
+
+
 @dataclass
 class CommonParam:
     # in_: ParamTypes
@@ -51,26 +59,31 @@ class CommonParam:
 @dataclass
 class Path(CommonParam):
     in_ = ParamTypes.path
+    openapi_ = ParamOpenAPI.path
 
 
 @dataclass
 class Param(CommonParam):
-    in_ = ParamTypes.param
+    in_ = ParamTypes.path
+    openapi_ = ParamOpenAPI.path
 
 
 @dataclass
 class Query(CommonParam):
     in_ = ParamTypes.query
+    openapi_ = ParamOpenAPI.query
 
 
 @dataclass
 class Header(CommonParam):
     in_ = ParamTypes.header
+    openapi_ = ParamOpenAPI.header
 
 
 @dataclass
 class Cookie(CommonParam):
     in_ = ParamTypes.cookie
+    openapi_ = ParamOpenAPI.cookie
 
 
 @dataclass
