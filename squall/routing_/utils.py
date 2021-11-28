@@ -16,7 +16,18 @@ from typing import (
 )
 
 from squall.bindings import RequestField
-from squall.params import Body, CommonParam, File, Form, Num, Str
+from squall.params import (
+    Body,
+    CommonParam,
+    Cookie,
+    File,
+    Form,
+    Header,
+    Num,
+    Path,
+    Query,
+    Str,
+)
 from squall.requests import Request
 
 
@@ -82,7 +93,7 @@ def get_handler_head_params(func: Callable[..., Any]) -> List[HeadParam]:
     results = []
     for k, v in signature.parameters.items():
         source = None
-        if isinstance(v.default, CommonParam):
+        if isinstance(v.default, (Query, Path, Cookie, Header)):
             source = v.default.in_.value
         elif v.default is v.empty:
             is_model = is_valid_body_model(v.annotation)
@@ -98,15 +109,15 @@ def get_handler_head_params(func: Callable[..., Any]) -> List[HeadParam]:
     return results
 
 
-def get_annotation_affiliation(annotation: Any) -> typing.Optional[Any]:
+def get_annotation_affiliation(annotation: Any) -> Optional[Any]:
     """Helper for classifying affiliation of parameter
 
     :param annotation: annotation record
     :returns: classified value or None
     """
     args, origin = get_args(annotation), get_origin(annotation)
-    if origin and origin == list:
-        annotation = args[0]
+    # if origin and origin == list:
+    annotation = args[0] if origin == list else annotation
 
     if annotation == Request:
         return "request"
@@ -143,7 +154,7 @@ def get_types(annotation: Any) -> Set[Any]:
 
 
 def is_valid_body_model(annotation: Any) -> bool:
-    """Check if annotation is valid type and includes dataclass"""
+    """Checks if the annotation is a valid type and includes dataclass"""
     valid = {typing.Union, type(None), list, set, tuple}
 
     models = []
@@ -188,6 +199,7 @@ def get_handler_body_params(func: Callable[..., Any]) -> List[Dict[str, Any]]:
 
 
 def get_handler_request_fields(func: Callable[..., Any]) -> List[RequestField]:
+    """Returns all fields that match as request schema"""
     signature = inspect.signature(func)
     results = []
     for name, v in signature.parameters.items():
