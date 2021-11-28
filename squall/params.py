@@ -1,8 +1,7 @@
+from dataclasses import dataclass
 from decimal import Decimal
 from enum import Enum
 from typing import Any, Dict, Optional, Union
-
-from pydantic.fields import FieldInfo, Undefined
 
 Number = Union[int, float, Decimal]
 
@@ -12,238 +11,92 @@ class ValidatorTypes(Enum):
     string = "string"
 
 
-class Num(FieldInfo):
+@dataclass
+class Num:
     in_ = ValidatorTypes.numeric
-
-    def __init__(
-        self,
-        gt: Optional[Number] = None,
-        ge: Optional[Number] = None,
-        lt: Optional[Number] = None,
-        le: Optional[Number] = None,
-    ):
-        self.in_ = self.in_
-        super().__init__(gt=gt, ge=ge, lt=lt, le=le)
+    gt: Optional[Number] = None
+    ge: Optional[Number] = None
+    lt: Optional[Number] = None
+    le: Optional[Number] = None
 
 
-class Str(FieldInfo):
+@dataclass
+class Str:
     in_ = ValidatorTypes.string
-
-    def __init__(
-        self,
-        min_length: Optional[int] = None,
-        max_length: Optional[int] = None,
-        # starts: Optional[AnyStr] = None,
-        # ends: Optional[AnyStr] = None,
-    ):
-        self.in_ = self.in_
-        super().__init__(min_length=min_length, max_length=max_length)
+    min_len: Optional[int] = None
+    max_len: Optional[int] = None
 
 
 class ParamTypes(Enum):
-    param = "path_params"
     query = "query_params"
     header = "headers"
     path = "path_params"
     cookie = "cookies"
 
 
-class CommonParam(FieldInfo):
-    in_: ParamTypes
-
-    def __init__(
-        self,
-        default: Any,
-        *,
-        origin: Optional[str] = None,
-        title: Optional[str] = None,
-        description: Optional[str] = None,
-        valid: Optional[Union[Str, Num]] = None,
-        example: Any = Undefined,
-        examples: Optional[Dict[str, Any]] = None,
-        deprecated: Optional[bool] = None,
-        **extra: Any,
-    ):
-        self.deprecated = deprecated
-        self.example = example
-        self.examples = examples
-        self.origin = origin
-        self.valid = valid
-        super().__init__(
-            default,
-            title=title,
-            description=description,
-            **extra,
-        )
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.default})"
+class ParamOpenAPI(Enum):
+    query = "query"
+    header = "header"
+    path = "path"
+    cookie = "cookie"
 
 
+@dataclass
+class CommonParam:
+    # in_: ParamTypes
+    default: Any = Ellipsis
+    origin: Optional[str] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    valid: Optional[Union[Str, Num]] = None
+    example: Optional[Any] = None
+    examples: Optional[Dict[str, Any]] = None
+    deprecated: Optional[bool] = None
+
+
+@dataclass
 class Path(CommonParam):
     in_ = ParamTypes.path
+    openapi_ = ParamOpenAPI.path
 
 
-class Param(CommonParam):
-    in_ = ParamTypes.param
-
-
+@dataclass
 class Query(CommonParam):
     in_ = ParamTypes.query
+    openapi_ = ParamOpenAPI.query
 
 
+@dataclass
 class Header(CommonParam):
     in_ = ParamTypes.header
+    openapi_ = ParamOpenAPI.header
 
 
+@dataclass
 class Cookie(CommonParam):
     in_ = ParamTypes.cookie
+    openapi_ = ParamOpenAPI.cookie
 
 
-class Body(FieldInfo):
-    def __init__(
-        self,
-        default: Any,
-        *,
-        embed: bool = False,
-        media_type: str = "application/json",
-        origin: Optional[str] = None,
-        title: Optional[str] = None,
-        description: Optional[str] = None,
-        gt: Optional[float] = None,
-        ge: Optional[float] = None,
-        lt: Optional[float] = None,
-        le: Optional[float] = None,
-        min_length: Optional[int] = None,
-        max_length: Optional[int] = None,
-        regex: Optional[str] = None,
-        example: Any = Undefined,
-        examples: Optional[Dict[str, Any]] = None,
-        **extra: Any,
-    ):
-        self.embed = embed
-        self.media_type = media_type
-        self.example = example
-        self.examples = examples
-        super().__init__(
-            default,
-            origin=origin,
-            title=title,
-            description=description,
-            gt=gt,
-            ge=ge,
-            lt=lt,
-            le=le,
-            min_length=min_length,
-            max_length=max_length,
-            regex=regex,
-            **extra,
-        )
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.default})"
+@dataclass
+class Body:
+    default: Any = Ellipsis
+    media_type: str = "application/json"
+    embed: bool = False
+    title: Optional[str] = None
+    description: Optional[str] = None
+    required: Optional[bool] = None
+    example: Optional[Any] = None
+    examples: Optional[Dict[str, Any]] = None
 
 
+@dataclass
 class Form(Body):
-    def __init__(
-        self,
-        default: Any,
-        *,
-        media_type: str = "application/x-www-form-urlencoded",
-        origin: Optional[str] = None,
-        title: Optional[str] = None,
-        description: Optional[str] = None,
-        gt: Optional[float] = None,
-        ge: Optional[float] = None,
-        lt: Optional[float] = None,
-        le: Optional[float] = None,
-        min_length: Optional[int] = None,
-        max_length: Optional[int] = None,
-        regex: Optional[str] = None,
-        example: Any = Undefined,
-        examples: Optional[Dict[str, Any]] = None,
-        **extra: Any,
-    ):
-        super().__init__(
-            default,
-            embed=True,
-            media_type=media_type,
-            origin=origin,
-            title=title,
-            description=description,
-            gt=gt,
-            ge=ge,
-            lt=lt,
-            le=le,
-            min_length=min_length,
-            max_length=max_length,
-            regex=regex,
-            example=example,
-            examples=examples,
-            **extra,
-        )
+    media_type: str = "application/x-www-form-urlencoded"
+    origin: Optional[str] = None
 
 
-class File(Form):
-    def __init__(
-        self,
-        default: Any,
-        *,
-        media_type: str = "multipart/form-data",
-        origin: Optional[str] = None,
-        title: Optional[str] = None,
-        description: Optional[str] = None,
-        gt: Optional[float] = None,
-        ge: Optional[float] = None,
-        lt: Optional[float] = None,
-        le: Optional[float] = None,
-        min_length: Optional[int] = None,
-        max_length: Optional[int] = None,
-        regex: Optional[str] = None,
-        example: Any = Undefined,
-        examples: Optional[Dict[str, Any]] = None,
-        **extra: Any,
-    ):
-        super().__init__(
-            default,
-            media_type=media_type,
-            origin=origin,
-            title=title,
-            description=description,
-            gt=gt,
-            ge=ge,
-            lt=lt,
-            le=le,
-            min_length=min_length,
-            max_length=max_length,
-            regex=regex,
-            example=example,
-            examples=examples,
-            **extra,
-        )
-
-
-#
-# class Depends:
-#     def __init__(
-#         self, dependency: Optional[Callable[..., Any]] = None, *, use_cache: bool = True
-#     ):
-#         self.dependency = dependency
-#         self.use_cache = use_cache
-#
-#     def __repr__(self) -> str:
-#         attr = getattr(self.dependency, "__name__", type(self.dependency).__name__)
-#         cache = "" if self.use_cache else ", use_cache=False"
-#         return f"{self.__class__.__name__}({attr}{cache})"
-#
-#
-# class Security(Depends):
-#     def __init__(
-#         self,
-#         dependency: Optional[Callable[..., Any]] = None,
-#         *,
-#         scopes: Optional[Sequence[str]] = None,
-#         use_cache: bool = True,
-#     ):
-#         super().__init__(dependency=dependency, use_cache=use_cache)
-#         self.scopes = scopes or []
+@dataclass
+class File(Body):
+    media_type: str = "multipart/form-data"
+    origin: Optional[str] = None

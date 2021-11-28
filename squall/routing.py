@@ -2,6 +2,7 @@ import asyncio
 import enum
 import inspect
 import re
+from dataclasses import is_dataclass
 from decimal import Decimal
 from typing import (
     Any,
@@ -17,8 +18,9 @@ from typing import (
     Union,
 )
 
+from apischema import ValidationError, deserialize, serialize
 from orjson import JSONDecodeError
-from pydantic.error_wrappers import ErrorWrapper, ValidationError
+from pydantic.error_wrappers import ErrorWrapper
 from pydantic.fields import ModelField
 from squall.datastructures import Default, DefaultPlaceholder
 from squall.exceptions import (
@@ -26,19 +28,15 @@ from squall.exceptions import (
     RequestHeadValidationError,
     RequestPayloadValidationError,
 )
-from squall.openapi.constants import STATUS_CODES_WITH_NO_BODY
 from squall.requests import Request
 from squall.responses import JSONResponse, Response
 from squall.routing_.utils import (
     HeadParam,
     get_handler_body_params,
     get_handler_head_params,
+    get_handler_request_models,
 )
-from squall.utils import (
-    create_cloned_field,
-    create_response_field,
-    generate_operation_id_for_path,
-)
+from squall.utils import generate_operation_id_for_path
 from squall.validators.head import Validator
 from starlette.concurrency import run_in_threadpool
 from starlette.routing import BaseRoute as SlBaseRoute
@@ -119,11 +117,11 @@ def get_request_handler(
     endpoint: Callable[..., Any],
     head_validator: Callable[..., Any],
     body_fields: List[Any],
-    # body_field: Optional[ModelField] = None,
     status_code: Optional[int] = None,
     response_class: Union[Type[Response], DefaultPlaceholder] = Default(JSONResponse),
     dependency_overrides_provider: Optional[Any] = None,
-    response_field: Optional[ModelField] = None,
+    request_model: Optional[ModelField] = None,
+    response_model: Optional[ModelField] = None,
 ) -> Callable[[Request], Coroutine[Any, Any, Response]]:
     is_coroutine = asyncio.iscoroutinefunction(endpoint)
     # is_body_form = body_field and isinstance(body_field.field_info, params.Form)
@@ -143,13 +141,16 @@ def get_request_handler(
         # Body fields and request object
         form = None
         try:
+            if request_model is not None:
+                body = await request.json()
+                kwargs[request_model["name"]] = deserialize(
+                    request_model["model"], body
+                )
+
             for field in body_fields:
                 kind = field["kind"]
                 if kind == "request":
                     kwargs[field["name"]] = request
-                elif kind == "model":
-                    body = await request.json()
-                    kwargs[field["name"]] = field["model_class"](**body)
                 elif kind == "body":
                     ct = request.headers.get("content-type")
                     if ct is not None and ct[-4:] == "json":
@@ -180,17 +181,30 @@ def get_request_handler(
         if isinstance(raw_response, Response):
             await raw_response(scope, receive, send)
             return
-            # return raw_response
 
         response_args: Dict[str, Any] = {}
+
         # If status_code was set, use it, otherwise use the default from the
         # response class, in the case of redirect it's 307
-        if response_field is not None:
-            response_value, response_errors = response_field.validate(
-                raw_response, {}, loc=("response",)
-            )
-            if response_errors:
-                raise ValidationError([response_errors], response_field.type_)
+
+        if response_model is not None:
+            try:
+                if is_dataclass(raw_response):
+                    response_value = serialize(
+                        response_model, raw_response, check_type=True
+                    )
+                else:
+                    response_value = serialize(
+                        response_model, deserialize(response_model, raw_response)
+                    )
+            except TypeError as e:
+                raise RequestPayloadValidationError([ErrorWrapper(e, ("response",))])
+
+            # response_value, response_errors = response_field.validate(
+            #     raw_response, {}, loc=("response",)
+            # )
+            # if response_errors:
+            #     raise ValidationError([response_errors], response_field.type_)
         else:
             response_value = raw_response
 
@@ -239,36 +253,6 @@ def get_request_handler(
         # if errors:
         #     raise RequestPayloadValidationError(errors, body=body)
         # else:
-        # if True:
-        #     if is_coroutine:
-        #         raw_response = await endpoint(**kwargs)
-        #     else:
-        #         raw_response = await run_in_threadpool(endpoint, **kwargs)
-        #
-        #     if isinstance(raw_response, Response):
-        #         await raw_response(scope, receive, send)
-        #         return
-        #         # return raw_response
-        #
-        #     response_args: Dict[str, Any] = {}
-        #     # If status_code was set, use it, otherwise use the default from the
-        #     # response class, in the case of redirect it's 307
-        #     if response_field is not None:
-        #         response_value, response_errors = response_field.validate(
-        #             raw_response, {}, loc=("response",)
-        #         )
-        #         if response_errors:
-        #             raise ValidationError([response_errors], response_field.type_)
-        #     else:
-        #         response_value = raw_response
-        #
-        #     if status_code is not None:
-        #         response_args["status_code"] = status_code
-        #     response = actual_response_class(response_value, **response_args)
-        #     # response.headers.raw.extend(sub_response.headers.raw)
-        #     # if sub_response.status_code:
-        #     #     response.status_code = sub_response.status_code
-        #     await response(scope, receive, send)
 
     return app
 
@@ -301,8 +285,8 @@ def build_head_validator(head_params: List[HeadParam]) -> Callable[..., Any]:
             "int": int,
             "float": float,
             "Decimal": Decimal,
-            "str": str,
-            "bytes": lambda a: a.encode("utf-8"),
+            "str": lambda a: a.decode("utf-8") if type(a) == bytes else str(a),
+            "bytes": lambda a: str(a).encode("utf-8") if type(a) != bytes else a,
         },
     )
     for param in head_params:
@@ -314,26 +298,20 @@ def build_head_validator(head_params: List[HeadParam]) -> Callable[..., Any]:
             convert=param.convertor,
             as_list=param.is_array,
             default=param.default,
-            **param.statements
-            # gt=param.get("gt"),
-            # ge=param.get("ge"),
-            # lt=param.get("lt"),
-            # le=param.get("le"),
-            # min_length=param.get("min_length"),
-            # max_length=param.get("max_length"),
+            **param.statements,
         )
-        print(
-            dict(
-                attribute=param.source,
-                name=param.name,
-                key=param.origin,
-                check=param.validate,
-                convert=param.convertor,
-                as_list=param.is_array,
-                default=param.default,
-                **param.statements,
-            )
-        )
+        # print(
+        #     dict(
+        #         attribute=param.source,
+        #         name=param.name,
+        #         key=param.origin,
+        #         check=param.validate,
+        #         convert=param.convertor,
+        #         as_list=param.is_array,
+        #         default=param.default,
+        #         **param.statements,
+        #     )
+        # )
     return v.build()
 
 
@@ -408,7 +386,6 @@ class APIRoute(Route):
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -432,7 +409,13 @@ class APIRoute(Route):
         self.endpoint = endpoint
         self.head_params = get_handler_head_params(endpoint)
         self.head_validator = build_head_validator(self.head_params)
+
         self.body_fields = get_handler_body_params(endpoint)
+
+        request_models = get_handler_request_models(endpoint)
+        assert len(request_models) < 2, "Only one request model allowed"
+        self.request_model = request_models[0] if request_models else None
+
         self.name = get_name(endpoint) if name is None else name
         self.path_regex, self.path_format, self.param_convertors = compile_path(path)
         if methods is None:
@@ -442,52 +425,14 @@ class APIRoute(Route):
             name=self.name, path=self.path_format, method=list(methods)[0]
         )
         self.response_model = response_model
-        if self.response_model:
-            assert (
-                status_code not in STATUS_CODES_WITH_NO_BODY
-            ), f"Status code {status_code} must not have a response body"
-            response_name = "Response_" + self.unique_id
-            self.response_field = create_response_field(
-                name=response_name, type_=self.response_model
-            )
-            # Create a clone of the field, so that a Pydantic submodel is not returned
-            # as is just because it's an instance of a subclass of a more limited class
-            # e.g. UserInDB (containing hashed_password) could be a subclass of User
-            # that doesn't have the hashed_password. But because it's a subclass, it
-            # would pass the validation and be returned as is.
-            # By being a new field, no inheritance will be passed as is. A new model
-            # will be always created.
-            self.secure_cloned_response_field: Optional[
-                ModelField
-            ] = create_cloned_field(self.response_field)
-        else:
-            self.response_field = None  # type: ignore
-            self.secure_cloned_response_field = None
         self.status_code = status_code
         self.tags = tags or []
         # self.dependencies = list(dependencies) if dependencies else []
         self.summary = summary
         self.description = description or inspect.cleandoc(self.endpoint.__doc__ or "")
-        # if a "form feed" character (page break) is found in the description text,
-        # truncate description text to the content preceding the first "form feed"
         self.description = self.description.split("\f")[0]
         self.response_description = response_description
         self.responses = responses or {}
-        response_fields = {}
-        for additional_status_code, response in self.responses.items():
-            assert isinstance(response, dict), "An additional response must be a dict"
-            model = response.get("model")
-            if model:
-                assert (
-                    additional_status_code not in STATUS_CODES_WITH_NO_BODY
-                ), f"Status code {additional_status_code} must not have a response body"
-                response_name = f"Response_{additional_status_code}_{self.unique_id}"
-                response_field = create_response_field(name=response_name, type_=model)
-                response_fields[additional_status_code] = response_field
-        if response_fields:
-            self.response_fields: Dict[Union[int, str], ModelField] = response_fields
-        else:
-            self.response_fields = {}
         self.deprecated = deprecated
         self.operation_id = operation_id
         self.include_in_schema = include_in_schema
@@ -495,20 +440,10 @@ class APIRoute(Route):
 
         assert callable(endpoint), "An endpoint must be a callable"
 
-        # self.dependant = get_dependant(path=self.path_format, call=self.endpoint)
-        # for depends in self.dependencies[::-1]:
-        #     self.dependant.dependencies.insert(
-        #         0,
-        #         get_parameterless_sub_dependant(depends=depends, path=self.path_format),
-        #     )
-        # self.body_field = get_body_field(dependant=self.dependant, name=self.unique_id)
-
         self.dependency_overrides_provider = dependency_overrides_provider
         self.callbacks = callbacks
         self.app = self.get_route_handler()
         self.openapi_extra = openapi_extra
-
-        # self.match_hack = (self.path_regex.match, self.endpoint)
 
     def get_route_handler(self) -> Callable[[Request], Coroutine[Any, Any, Response]]:
         return get_request_handler(
@@ -518,7 +453,9 @@ class APIRoute(Route):
             status_code=self.status_code,
             response_class=self.response_class,
             dependency_overrides_provider=self.dependency_overrides_provider,
-            response_field=self.response_field,
+            # response_field=self.response_field,
+            request_model=self.request_model,
+            response_model=self.response_model,
             head_validator=self.head_validator,
             body_fields=self.body_fields,
         )

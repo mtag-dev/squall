@@ -10,7 +10,7 @@ app = Squall()
 class Item:
     name: str = Field(...)
     description: Optional[str] = Field(
-        None, title="The description of the item", max_length=300
+        None, title="The description of the item", max_len=300
     )
     price: float = Field(..., gt=0, description="The price must be greater than zero")
     tax: Optional[float] = None

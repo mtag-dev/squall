@@ -1,13 +1,14 @@
+from dataclasses import dataclass
 from typing import Dict
 
-from pydantic import BaseModel
 from squall import Squall
 from squall.testclient import TestClient
 
 app = Squall()
 
 
-class Items(BaseModel):
+@dataclass
+class Items:
     items: Dict[str, int]
 
 
