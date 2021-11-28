@@ -15,6 +15,7 @@ from typing import (
     get_origin,
 )
 
+from squall.bindings import RequestField
 from squall.params import Body, CommonParam, File, Form, Num, Str
 from squall.requests import Request
 
@@ -186,14 +187,12 @@ def get_handler_body_params(func: Callable[..., Any]) -> List[Dict[str, Any]]:
     return results
 
 
-def get_handler_request_models(func: Callable[..., Any]):
+def get_handler_request_fields(func: Callable[..., Any]) -> List[RequestField]:
     signature = inspect.signature(func)
     results = []
-    for k, v in signature.parameters.items():
-        param: Dict[str, Any] = {"name": k}
+    for name, v in signature.parameters.items():
         if is_valid_body_model(v.annotation):
-            param["model"] = v.annotation
-            if isinstance(v.default, Body):
-                param["field"] = v.default
-            results.append(param)
+            settings = v.default if isinstance(v.default, Body) else None
+            field = RequestField(name, model=v.annotation, settings=settings)
+            results.append(field)
     return results

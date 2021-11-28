@@ -21,7 +21,7 @@ from typing import (
 from apischema import ValidationError, deserialize, serialize
 from orjson import JSONDecodeError
 from pydantic.error_wrappers import ErrorWrapper
-from pydantic.fields import ModelField
+from squall.bindings import RequestField, ResponseField
 from squall.datastructures import Default, DefaultPlaceholder
 from squall.exceptions import (
     HTTPException,
@@ -34,7 +34,7 @@ from squall.routing_.utils import (
     HeadParam,
     get_handler_body_params,
     get_handler_head_params,
-    get_handler_request_models,
+    get_handler_request_fields,
 )
 from squall.utils import generate_operation_id_for_path
 from squall.validators.head import Validator
@@ -120,8 +120,8 @@ def get_request_handler(
     status_code: Optional[int] = None,
     response_class: Union[Type[Response], DefaultPlaceholder] = Default(JSONResponse),
     dependency_overrides_provider: Optional[Any] = None,
-    request_model: Optional[ModelField] = None,
-    response_model: Optional[ModelField] = None,
+    request_field: Optional[RequestField] = None,
+    response_field: Optional[ResponseField] = None,
 ) -> Callable[[Request], Coroutine[Any, Any, Response]]:
     is_coroutine = asyncio.iscoroutinefunction(endpoint)
     # is_body_form = body_field and isinstance(body_field.field_info, params.Form)
@@ -129,6 +129,12 @@ def get_request_handler(
         actual_response_class: Type[Response] = response_class.value
     else:
         actual_response_class = response_class
+
+    response_model = response_field.model if response_field else None
+    request_model = request_model_param = None
+    if request_field is not None:
+        request_model_param = request_field.name
+        request_model = request_field.model
 
     async def app(scope: Scope, receive: Receive, send: Send) -> None:
         request = Request(scope, receive=receive, send=send)
@@ -143,9 +149,7 @@ def get_request_handler(
         try:
             if request_model is not None:
                 body = await request.json()
-                kwargs[request_model["name"]] = deserialize(
-                    request_model["model"], body
-                )
+                kwargs[request_model_param] = deserialize(request_model, body)
 
             for field in body_fields:
                 kind = field["kind"]
@@ -412,9 +416,9 @@ class APIRoute(Route):
 
         self.body_fields = get_handler_body_params(endpoint)
 
-        request_models = get_handler_request_models(endpoint)
-        assert len(request_models) < 2, "Only one request model allowed"
-        self.request_model = request_models[0] if request_models else None
+        request_fields = get_handler_request_fields(endpoint)
+        assert len(request_fields) < 2, "Only one request model allowed"
+        self.request_field = request_fields[0] if request_fields else None
 
         self.name = get_name(endpoint) if name is None else name
         self.path_regex, self.path_format, self.param_convertors = compile_path(path)
@@ -424,7 +428,10 @@ class APIRoute(Route):
         self.unique_id = generate_operation_id_for_path(
             name=self.name, path=self.path_format, method=list(methods)[0]
         )
-        self.response_model = response_model
+        if response_model is not None:
+            self.response_field = ResponseField(model=response_model)
+        else:
+            self.response_field = None
         self.status_code = status_code
         self.tags = tags or []
         # self.dependencies = list(dependencies) if dependencies else []
@@ -454,8 +461,8 @@ class APIRoute(Route):
             response_class=self.response_class,
             dependency_overrides_provider=self.dependency_overrides_provider,
             # response_field=self.response_field,
-            request_model=self.request_model,
-            response_model=self.response_model,
+            request_field=self.request_field,
+            response_field=self.response_field,
             head_validator=self.head_validator,
             body_fields=self.body_fields,
         )

@@ -150,15 +150,15 @@ class OpenAPIRoute:
         ):
             response_schema = {"type": "string"}
             if self.response_class in (JSONResponse, PrettyJSONResponse):
-                if self.route.response_model:
+                if self.route.response_field:
                     response_schema = normalized(
                         deserialization_schema(
-                            self.route.response_model,
+                            self.route.response_field.model,
                             all_refs=True,
                             version=self.version,
                         )
                     )
-                    self.response_schemas.add(self.route.response_model)
+                    self.response_schemas.add(self.route.response_field.model)
                 else:
                     response_schema = {}
             responses[status_code]["content"] = {
@@ -193,11 +193,9 @@ class OpenAPIRoute:
 
             if model := response.get("model"):
                 response_schema = normalized(
-                    deserialization_schema(
-                        model, all_refs=True, version=self.version
-                    )
+                    deserialization_schema(model, all_refs=True, version=self.version)
                 )
-                self.response_schemas.add(self.route.response_model)
+                self.response_schemas.add(self.route.response_field.model)
                 responses[status_code]["content"] = {
                     self.response_class.media_type: {"schema": response_schema}
                 }
@@ -214,30 +212,30 @@ class OpenAPIRoute:
 
     @property
     def request_body(self) -> Optional[Dict[str, Any]]:
-        if not self.route.request_model:
+        if not self.route.request_field:
             return None
 
-        self.request_schemas.add(self.route.request_model["model"])
+        self.request_schemas.add(self.route.request_field.model)
         response_schema = normalized(
             serialization_schema(
-                self.route.request_model["model"],
+                self.route.request_field.model,
                 all_refs=True,
                 version=self.version,
             )
         )
 
-        field: Optional[Body] = self.route.request_model.get("field")
+        settings: Optional[Body] = self.route.request_field.settings
 
-        media_type = getattr(field, "media_type", "application/json")
+        media_type = getattr(settings, "media_type", "application/json")
         result = dict()
-        result["required"] = getattr(field, "required", True)
+        result["required"] = getattr(settings, "required", True)
         content = {media_type: {}}
 
-        if field:
-            if field.examples:
-                content[media_type]["examples"] = field.examples
-            elif field.example:
-                content[media_type]["example"] = field.example
+        if settings:
+            if settings.examples:
+                content[media_type]["examples"] = settings.examples
+            elif settings.example:
+                content[media_type]["example"] = settings.example
 
         content[media_type]["schema"] = response_schema
         result["content"] = content
