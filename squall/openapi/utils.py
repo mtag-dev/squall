@@ -1,5 +1,6 @@
 import inspect
 import json
+import typing
 from typing import Any, Dict, List, Optional, Sequence, Type, Union
 
 from apischema.json_schema import (
@@ -9,7 +10,7 @@ from apischema.json_schema import (
     serialization_schema,
 )
 
-normalized = lambda a: json.loads(json.dumps(a))
+normalized: typing.Callable[..., typing.Any] = lambda a: json.loads(json.dumps(a))
 
 from squall import routing
 from squall.datastructures import DefaultPlaceholder
@@ -23,7 +24,11 @@ from squall.params import Body
 from squall.responses import JSONResponse, PrettyJSONResponse, Response
 from squall.routing_.utils import HeadParam
 from squall.utils import generate_operation_id_for_path
-from starlette.routing import BaseRoute
+
+from squall.routing import APIRoute, APIWebSocketRoute
+
+AnyRoute = Union[APIRoute, APIWebSocketRoute]
+
 
 validation_error_definition = {
     "title": "ValidationError",
@@ -110,15 +115,15 @@ def get_openapi_operation_metadata(
 
 
 class OpenAPIRoute:
-    def __init__(self, route: routing.APIRoute, version=JsonSchemaVersion.OPEN_API_3_1):
+    def __init__(self, route: APIRoute, version: JsonSchemaVersion) -> None:
         self.version = version
         self.route = route
         self._response_class = route.response_class
-        self.request_schemas = set()
-        self.response_schemas = set()
+        self.request_schemas: typing.Set[Any] = set()
+        self.response_schemas: typing.Set[Any] = set()
 
     @property
-    def response_class(self):
+    def response_class(self) -> Type[Response]:
         if isinstance(self._response_class, DefaultPlaceholder):
             current_response_class: Type[Response] = self._response_class.value
         else:
@@ -126,8 +131,8 @@ class OpenAPIRoute:
         return current_response_class
 
     @property
-    def default_status_code(self):
-        code = 200
+    def default_status_code(self) -> str:
+        code = str(200)
         if self.route.status_code is not None:
             code = str(self.route.status_code)
         else:
@@ -136,10 +141,10 @@ class OpenAPIRoute:
             if status_code_param is not None:
                 code = str(status_code_param.default)
 
-        return code or str(200)
+        return code
 
     @property
-    def responses(self):
+    def responses(self) -> Dict[str, Any]:
         responses = {}
         # Default response
         status_code = self.default_status_code
@@ -229,7 +234,7 @@ class OpenAPIRoute:
         media_type = getattr(settings, "media_type", "application/json")
         result = dict()
         result["required"] = getattr(settings, "required", True)
-        content = {media_type: {}}
+        content: Dict[str, Dict[str, Any]] = {media_type: {}}
 
         if settings:
             if settings.examples:
@@ -275,7 +280,7 @@ class OpenAPIRoute:
         result = {
             "required": param.default == Ellipsis,
             "schema": schema,
-            "name": param.origin or param.name,
+            "name": param.alias or param.name,
             "in": source_mapping[param.source],
         }
 
@@ -298,7 +303,7 @@ class OpenAPIRoute:
         return result
 
     @property
-    def head_params(self):
+    def head_params(self) -> List[Dict[str, Any]]:
         parameters: List[Dict[str, Any]] = []
         for param in self.route.head_params:
             parameters.append(self.get_param_spec(param))
@@ -330,7 +335,7 @@ def get_openapi(
     version: str,
     openapi_version: str = "3.0.2",
     description: Optional[str] = None,
-    routes: Sequence[BaseRoute],
+    routes: Sequence[AnyRoute],
     tags: Optional[List[Dict[str, Any]]] = None,
     servers: Optional[List[Dict[str, Union[str, Any]]]] = None,
     terms_of_service: Optional[str] = None,
@@ -352,14 +357,14 @@ def get_openapi(
     components: Dict[str, Dict[str, Any]] = {}
     paths: Dict[str, Dict[str, Any]] = {}
 
-    version = JsonSchemaVersion.OPEN_API_3_0
+    _version = JsonSchemaVersion.OPEN_API_3_1
     request_schemas = set()
     response_schemas = set()
     for route in routes:
         if not route.include_in_schema or not route.path_format:
             continue
 
-        openapi_route = OpenAPIRoute(route, version=version)
+        openapi_route = OpenAPIRoute(route, version=_version)
         paths[route.path_format] = openapi_route.spec
         response_schemas.update(openapi_route.response_schemas)
         request_schemas.update(openapi_route.request_schemas)
@@ -370,7 +375,7 @@ def get_openapi(
             definitions_schema(
                 deserialization=list(schemas),
                 all_refs=True,
-                version=version,
+                version=_version,
             )
         )
 

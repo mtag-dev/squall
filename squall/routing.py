@@ -216,7 +216,9 @@ def get_request_handler(
         if status_code is not None:
             response_args["status_code"] = status_code
         response = actual_response_class(response_value, **response_args)
-        await response(scope, receive, send)
+        await send(response.send_start)
+        await send({"type": "http.response.body", "body": response.body})
+        # await response(scope, receive, send)
 
         # try:
         #     body: Any = None
