@@ -45,7 +45,7 @@ class ParamOpenAPI(Enum):
 class CommonParam:
     # in_: ParamTypes
     default: Any = Ellipsis
-    origin: Optional[str] = None
+    alias: Optional[str] = None
     title: Optional[str] = None
     description: Optional[str] = None
     valid: Optional[Union[Str, Num]] = None
@@ -93,10 +93,10 @@ class Body:
 @dataclass
 class Form(Body):
     media_type: str = "application/x-www-form-urlencoded"
-    origin: Optional[str] = None
+    alias: Optional[str] = None
 
 
 @dataclass
 class File(Body):
     media_type: str = "multipart/form-data"
-    origin: Optional[str] = None
+    alias: Optional[str] = None

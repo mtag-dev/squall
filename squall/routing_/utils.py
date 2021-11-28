@@ -42,8 +42,8 @@ class HeadParam:
         self.validate, self.statements = self.get_validation_statements()
 
     @property
-    def origin(self) -> str:
-        return getattr(self._default, "origin", None) or self.name
+    def alias(self) -> str:
+        return getattr(self._default, "alias", None) or self.name
 
     @property
     def default(self) -> Any:
@@ -65,15 +65,15 @@ class HeadParam:
 
     def get_convertor(self) -> Tuple[bool, str]:
         is_array, convertor = False, "str"
-        args, origin = get_args(self._annotation), get_origin(self._annotation)
-        if origin is Union:
+        args, alias = get_args(self._annotation), get_origin(self._annotation)
+        if alias is Union:
             if type(None) in args:
                 if get_origin(args[0]) == list:
                     is_array, _convertor = True, get_args(args[0])[0]
                 else:
                     is_array, _convertor = False, args[0]
                 convertor = getattr(_convertor, "__name__", None)
-        elif origin == list:
+        elif alias == list:
             try:
                 is_array, convertor = True, args[0].__name__
             except Exception:
@@ -84,7 +84,7 @@ class HeadParam:
         ):
             convertor = self._annotation.__name__
         else:
-            assert not origin, f"Convertor for {self.name} unknown"
+            assert not alias, f"Convertor for {self.name} unknown"
         return is_array, convertor
 
 
@@ -115,9 +115,9 @@ def get_annotation_affiliation(annotation: Any) -> Optional[Any]:
     :param annotation: annotation record
     :returns: classified value or None
     """
-    args, origin = get_args(annotation), get_origin(annotation)
-    # if origin and origin == list:
-    annotation = args[0] if origin == list else annotation
+    args, alias = get_args(annotation), get_origin(annotation)
+    # if alias and alias == list:
+    annotation = args[0] if alias == list else annotation
 
     if annotation == Request:
         return "request"
@@ -141,9 +141,9 @@ def get_types(annotation: Any) -> Set[Any]:
     if inspect.isclass(annotation):
         result.add(annotation)
 
-    if origin := get_origin(annotation):
-        result.add(origin)
-        result.update(get_types(origin))
+    if alias := get_origin(annotation):
+        result.add(alias)
+        result.update(get_types(alias))
 
     for i in get_args(annotation):
         if not get_origin(i):

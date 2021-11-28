@@ -298,7 +298,7 @@ def build_head_validator(head_params: List[HeadParam]) -> Callable[..., Any]:
         v.add_rule(
             attribute=param.source,
             name=param.name,
-            key=param.origin,
+            key=param.alias,
             check=param.validate,
             convert=param.convertor,
             as_list=param.is_array,
