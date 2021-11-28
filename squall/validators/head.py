@@ -48,10 +48,10 @@ class Validator:
 
     def add_rule(
         self,
-        check: str,
         attribute: str,
         key: str,
         as_list: bool = False,
+        check: typing.Optional[str] = None,
         name: typing.Optional[str] = None,
         convert: typing.Optional[typing.Any] = None,
         default: typing.Optional[typing.Any] = Ellipsis,

@@ -1,5 +1,6 @@
 import asyncio
 import enum
+import functools
 import inspect
 import re
 from dataclasses import is_dataclass
@@ -36,11 +37,10 @@ from squall.routing_.utils import (
     get_handler_head_params,
     get_handler_request_fields,
 )
+from squall.types import ASGIApp
 from squall.utils import generate_operation_id_for_path
 from squall.validators.head import Validator
 from starlette.concurrency import run_in_threadpool
-from starlette.routing import BaseRoute as SlBaseRoute
-from starlette.routing import Route as SlRoute
 from starlette.routing import WebSocketRoute as SlWebSocketRoute
 from starlette.routing import get_name, websocket_session
 from starlette.types import Receive, Scope, Send
@@ -115,14 +115,13 @@ def compile_path(
 
 def get_request_handler(
     endpoint: Callable[..., Any],
-    head_validator: Callable[..., Any],
-    body_fields: List[Any],
+    head_validator: Optional[Callable[..., Any]] = None,
+    body_fields: Optional[List[Any]] = None,
     status_code: Optional[int] = None,
     response_class: Union[Type[Response], DefaultPlaceholder] = Default(JSONResponse),
-    dependency_overrides_provider: Optional[Any] = None,
     request_field: Optional[RequestField] = None,
     response_field: Optional[ResponseField] = None,
-) -> Callable[[Request], Coroutine[Any, Any, Response]]:
+) -> ASGIApp:
     is_coroutine = asyncio.iscoroutinefunction(endpoint)
     # is_body_form = body_field and isinstance(body_field.field_info, params.Form)
     if isinstance(response_class, DefaultPlaceholder):
@@ -140,9 +139,12 @@ def get_request_handler(
         request = Request(scope, receive=receive, send=send)
 
         # Head validation
-        kwargs, errors = head_validator(request)
-        if errors:
-            raise RequestHeadValidationError(errors)
+        if head_validator is not None:
+            kwargs, errors = head_validator(request)
+            if errors:
+                raise RequestHeadValidationError(errors)
+        else:
+            kwargs = {}
 
         # Body fields and request object
         form = None
@@ -151,25 +153,24 @@ def get_request_handler(
                 body = await request.json()
                 kwargs[request_model_param] = deserialize(request_model, body)
 
-            for field in body_fields:
-                kind = field["kind"]
-                if kind == "request":
-                    kwargs[field["name"]] = request
-                elif kind == "body":
-                    ct = request.headers.get("content-type")
-                    if ct is not None and ct[-4:] == "json":
-                        kwargs[field["name"]] = await request.json()
-                    else:
-                        kwargs[field["name"]] = await request.body()
-                elif kind == "form":
-                    if form is None:
-                        form = await request.form()
-                    kwargs[field["name"]] = form.get(field["name"])
+            if body_fields:
+                for field in body_fields:
+                    kind = field["kind"]
+                    if kind == "request":
+                        kwargs[field["name"]] = request
+                    elif kind == "body":
+                        ct = request.headers.get("content-type")
+                        if ct is not None and ct[-4:] == "json":
+                            kwargs[field["name"]] = await request.json()
+                        else:
+                            kwargs[field["name"]] = await request.body()
+                    elif kind == "form":
+                        if form is None:
+                            form = await request.form()
+                        kwargs[field["name"]] = form.get(field["name"])
 
         except JSONDecodeError as e:
-            raise RequestPayloadValidationError(
-                [ErrorWrapper(e, ("body", e.pos))], body=e.doc
-            )
+            raise RequestPayloadValidationError([ErrorWrapper(e, ("body",))])
         except ValidationError as e:
             raise RequestPayloadValidationError([ErrorWrapper(e, ("body",))])
         except Exception as e:
@@ -304,22 +305,10 @@ def build_head_validator(head_params: List[HeadParam]) -> Callable[..., Any]:
             default=param.default,
             **param.statements,
         )
-        # print(
-        #     dict(
-        #         attribute=param.source,
-        #         name=param.name,
-        #         key=param.origin,
-        #         check=param.validate,
-        #         convert=param.convertor,
-        #         as_list=param.is_array,
-        #         default=param.default,
-        #         **param.statements,
-        #     )
-        # )
     return v.build()
 
 
-class Route(SlRoute):
+class Route:
     def __init__(
         self,
         path: str,
@@ -329,19 +318,46 @@ class Route(SlRoute):
         name: Optional[str] = None,
         include_in_schema: bool = True,
     ) -> None:
-        super(Route, self).__init__(
-            path,
-            endpoint,
-            methods=methods,  # type: ignore
-            name=name,  # type: ignore
-            include_in_schema=include_in_schema,
-        )
+        assert path.startswith("/"), "Routed paths must start with '/'"
+        self.path = path
+        self.endpoint = endpoint
+        self.name = get_name(endpoint) if name is None else name
+        self.include_in_schema = include_in_schema
+
+        endpoint_handler = endpoint
+        while isinstance(endpoint_handler, functools.partial):
+            endpoint_handler = endpoint_handler.func
+        if inspect.isfunction(endpoint_handler) or inspect.ismethod(endpoint_handler):
+            # Endpoint is function or method. Treat it as `func(request) -> response`.
+            self.app = get_request_handler(endpoint=endpoint)
+            if methods is None:
+                methods = ["GET"]
+        else:
+            # Endpoint is a class. Treat it as ASGI.
+            self.app = endpoint
+
+        if methods is None:
+            self.methods = None
+        else:
+            self.methods = {method.upper() for method in methods}
+            if "GET" in self.methods:
+                self.methods.add("HEAD")
+
+        self.path_regex, self.path_format, self.param_convertors = compile_path(path)
 
     def matches(self, scope: Scope) -> Tuple[bool, Scope]:
         match = self.path_regex.match(scope["path"])
         if match:
             return True, {"endpoint": self.endpoint, "path_params": match.groupdict()}
         return False, {}
+
+    def __eq__(self, other: Any) -> bool:
+        return (
+            isinstance(other, Route)
+            and self.path == other.path
+            and self.endpoint == other.endpoint
+            and self.methods == other.methods
+        )
 
 
 class APIWebSocketRoute(WebSocketRoute):
@@ -351,7 +367,6 @@ class APIWebSocketRoute(WebSocketRoute):
         endpoint: Callable[..., Any],
         *,
         name: Optional[str] = None,
-        dependency_overrides_provider: Optional[Any] = None,
     ) -> None:
         self.path = self._path_origin = path
         self.endpoint = endpoint
@@ -402,8 +417,6 @@ class APIRoute(Route):
         response_class: Union[Type[Response], DefaultPlaceholder] = Default(
             JSONResponse
         ),
-        dependency_overrides_provider: Optional[Any] = None,
-        callbacks: Optional[List[SlBaseRoute]] = None,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> None:
         # normalise enums e.g. http.HTTPStatus
@@ -428,10 +441,10 @@ class APIRoute(Route):
         self.unique_id = generate_operation_id_for_path(
             name=self.name, path=self.path_format, method=list(methods)[0]
         )
+        self.response_field: Optional[ResponseField] = None
         if response_model is not None:
             self.response_field = ResponseField(model=response_model)
-        else:
-            self.response_field = None
+
         self.status_code = status_code
         self.tags = tags or []
         # self.dependencies = list(dependencies) if dependencies else []
@@ -447,20 +460,14 @@ class APIRoute(Route):
 
         assert callable(endpoint), "An endpoint must be a callable"
 
-        self.dependency_overrides_provider = dependency_overrides_provider
-        self.callbacks = callbacks
         self.app = self.get_route_handler()
         self.openapi_extra = openapi_extra
 
-    def get_route_handler(self) -> Callable[[Request], Coroutine[Any, Any, Response]]:
+    def get_route_handler(self) -> ASGIApp:
         return get_request_handler(
             endpoint=self.endpoint,
-            # dependant=self.dependant,
-            # body_field=self.body_field,
             status_code=self.status_code,
             response_class=self.response_class,
-            dependency_overrides_provider=self.dependency_overrides_provider,
-            # response_field=self.response_field,
             request_field=self.request_field,
             response_field=self.response_field,
             head_validator=self.head_validator,

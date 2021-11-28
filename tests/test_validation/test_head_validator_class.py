@@ -18,9 +18,13 @@ def test_numeric_with_conversion():
         args=["request"],
         convertors={"int": int, "float": float, "decimal": Decimal},
     )
-    v.add_rule("numeric", "path_params", "numeric1", gt=20, le=50, convert="decimal")
-    v.add_rule("numeric", "path_params", "numeric2", gt=20, le=50, convert="int")
-    v.add_rule("numeric", "path_params", "numeric3", gt=20, le=50, convert="float")
+    v.add_rule(
+        "path_params", "numeric1", check="numeric", gt=20, le=50, convert="decimal"
+    )
+    v.add_rule("path_params", "numeric2", check="numeric", gt=20, le=50, convert="int")
+    v.add_rule(
+        "path_params", "numeric3", check="numeric", gt=20, le=50, convert="float"
+    )
     validator = v.build()
 
     request = Request(path_params={"numeric1": 30, "numeric2": 30, "numeric3": 30})
@@ -52,9 +56,9 @@ def test_numeric_with_conversion():
 
 def test_numeric_without_conversion():
     v = Validator(args=["request"], convertors={})
-    v.add_rule("numeric", "path_params", "numeric1", gt=20, le=50)
-    v.add_rule("numeric", "path_params", "numeric2", gt=20, le=50)
-    v.add_rule("numeric", "path_params", "numeric3", gt=20, le=50)
+    v.add_rule("path_params", "numeric1", check="numeric", gt=20, le=50)
+    v.add_rule("path_params", "numeric2", check="numeric", gt=20, le=50)
+    v.add_rule("path_params", "numeric3", check="numeric", gt=20, le=50)
     validator = v.build()
 
     request = Request(path_params={"numeric1": 30, "numeric2": 30, "numeric3": 30})
@@ -107,9 +111,11 @@ def test_strings():
             "bytes": lambda a: str(a).encode("utf-8") if type(a) != bytes else a,
         },
     )
-    v.add_rule("string", "path_params", "string1", min_len=3, max_len=5, convert="str")
     v.add_rule(
-        "string", "path_params", "string2", min_len=3, max_len=5, convert="bytes"
+        "path_params", "string1", check="string", min_len=3, max_len=5, convert="str"
+    )
+    v.add_rule(
+        "path_params", "string2", check="string", min_len=3, max_len=5, convert="bytes"
     )
 
     validator = v.build()
@@ -153,8 +159,12 @@ def test_multiple_sources():
     assert validator(request) == ({}, [])
 
     v = Validator(args=["request"], convertors={"decimal": Decimal, "str": str})
-    v.add_rule("numeric", "path_params", "numeric1", gt=20, le=50, convert="decimal")
-    v.add_rule("string", "headers", "string1", min_len=3, max_len=5, convert="str")
+    v.add_rule(
+        "path_params", "numeric1", check="numeric", gt=20, le=50, convert="decimal"
+    )
+    v.add_rule(
+        "headers", "string1", check="string", min_len=3, max_len=5, convert="str"
+    )
     validator = v.build()
 
     request = Request(path_params={"numeric1": 20}, headers={"string1": "str"})
@@ -166,8 +176,8 @@ def test_multiple_sources():
 
 def test_default():
     v = Validator(args=["request"], convertors={})
-    v.add_rule("numeric", "path_params", "numeric1", default=1)
-    v.add_rule("string", "headers", "string1", default="default_str")
+    v.add_rule("path_params", "numeric1", check="numeric", default=1)
+    v.add_rule("headers", "string1", check="string", default="default_str")
     validator = v.build()
 
     request = Request()
@@ -176,9 +186,9 @@ def test_default():
 
 def test_origin_key():
     v = Validator(args=["request"], convertors={})
-    v.add_rule("numeric", "query_params", name="n1", key="numeric1")
-    v.add_rule("numeric", "query_params", name="n2", key="numeric2")
-    v.add_rule("numeric", "query_params", name="n3", key="numeric3")
+    v.add_rule("query_params", name="n1", check="numeric", key="numeric1")
+    v.add_rule("query_params", name="n2", check="numeric", key="numeric2")
+    v.add_rule("query_params", name="n3", check="numeric", key="numeric3")
     validator = v.build()
 
     request = Request(query_params={"numeric1": 30, "numeric2": 30, "numeric3": 30})
@@ -187,7 +197,7 @@ def test_origin_key():
 
 def test_lists():
     v = Validator(args=["request"], convertors={})
-    v.add_rule(None, "query_params", "query1", as_list=True)
+    v.add_rule("query_params", "query1", as_list=True)
     validator = v.build()
     from starlette.datastructures import MultiDict
 
@@ -196,9 +206,9 @@ def test_lists():
     assert validator(request) == ({"query1": []}, [])
 
     v = Validator(args=["request"], convertors={"int": int})
-    v.add_rule(None, "query_params", "query1", as_list=True)
-    v.add_rule(None, "query_params", "query2", as_list=True)
-    v.add_rule(None, "query_params", "query3", as_list=True, convert="int")
+    v.add_rule("query_params", "query1", as_list=True)
+    v.add_rule("query_params", "query2", as_list=True)
+    v.add_rule("query_params", "query3", as_list=True, convert="int")
     validator = v.build()
 
     qs = MultiDict()
