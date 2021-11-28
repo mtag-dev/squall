@@ -21,7 +21,7 @@ class Validator:
         >>> )
         >>> v.add_rule("numeric", "path_params", "orders", name="my_orders", gt=20)
         >>> v.add_rule("string", "path_params", "name",
-        >>>            min_length=3, max_length=5, default="anon", convert="str")
+        >>>            min_len=3, max_len=5, default="anon", convert="str")
         >>> validator = v.build()
         >>> param = {"orders": 30, "name": b"Some", "useless1": 1, "useless2": 40}
         >>> validator(request)
@@ -61,8 +61,8 @@ class Validator:
         lt: typing.Optional[Number] = None,
         le: typing.Optional[Number] = None,
         # String arguments
-        min_length: typing.Optional[int] = None,
-        max_length: typing.Optional[int] = None,
+        min_len: typing.Optional[int] = None,
+        max_len: typing.Optional[int] = None,
     ) -> None:
         """
         Adds new validation rule.
@@ -80,8 +80,8 @@ class Validator:
         :param ge: Numeric only. Checked value should be grater than or equal
         :param lt: Numeric only. Checked value should be less than
         :param le: Numeric only. Checked value should be less than or equal
-        :param min_length: String only. Checked value length should be more than or equal
-        :param max_length: String only. Checked value length should be less than or equal
+        :param min_len: String only. Checked value length should be more than or equal
+        :param max_len: String only. Checked value length should be less than or equal
         """
         self.getters.add((attribute, as_list))
         name = name or key
@@ -111,8 +111,8 @@ class Validator:
             rule = self.validate_string(
                 on_success=[save],
                 on_failure=[self.add_violate(attribute, key, "Validation error")],
-                min_length=min_length,
-                max_length=max_length,
+                min_len=min_len,
+                max_len=max_len,
             )
         else:
             rule = [save]
@@ -267,16 +267,16 @@ class Validator:
     def validate_string(
         on_success: typing.List[typing.Any],
         on_failure: typing.List[typing.Any],
-        min_length: typing.Optional[int] = None,
-        max_length: typing.Optional[int] = None,
+        min_len: typing.Optional[int] = None,
+        max_len: typing.Optional[int] = None,
     ) -> typing.List[typing.Any]:
         """
         String validator
 
         :param on_success: statements for run if check is success
         :param on_failure: statements for run if check is fail
-        :param min_length: value length must be grater than or equal
-        :param max_length: value length must be less than or equal
+        :param min_len: value length must be grater than or equal
+        :param max_len: value length must be less than or equal
         :returns: list of expressions for execution
         """
         ops: typing.List[typing.Union[ast.Gt, ast.GtE]] = []
@@ -284,14 +284,14 @@ class Validator:
             typing.Union[ast.Constant, ast.Name, ast.Call, ast.Expr]
         ] = []
 
-        if max_length is not None:
-            comparators.append(ast.Constant(value=max_length))
+        if max_len is not None:
+            comparators.append(ast.Constant(value=max_len))
             ops.append(ast.GtE())
 
         comparators.append(call("len", args=[ast.Name(id="candidate", ctx=ast.Load())]))
 
-        if min_length is not None:
-            comparators.append(ast.Constant(value=min_length))
+        if min_len is not None:
+            comparators.append(ast.Constant(value=min_len))
             ops.append(ast.GtE())
 
         if not ops:

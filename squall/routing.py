@@ -117,11 +117,9 @@ def get_request_handler(
     endpoint: Callable[..., Any],
     head_validator: Callable[..., Any],
     body_fields: List[Any],
-    # body_field: Optional[ModelField] = None,
     status_code: Optional[int] = None,
     response_class: Union[Type[Response], DefaultPlaceholder] = Default(JSONResponse),
     dependency_overrides_provider: Optional[Any] = None,
-    # response_field: Optional[ModelField] = None,
     request_model: Optional[ModelField] = None,
     response_model: Optional[ModelField] = None,
 ) -> Callable[[Request], Coroutine[Any, Any, Response]]:
@@ -287,8 +285,8 @@ def build_head_validator(head_params: List[HeadParam]) -> Callable[..., Any]:
             "int": int,
             "float": float,
             "Decimal": Decimal,
-            "str": str,
-            "bytes": lambda a: a.encode("utf-8"),
+            "str": lambda a: a.decode("utf-8") if type(a) == bytes else str(a),
+            "bytes": lambda a: str(a).encode("utf-8") if type(a) != bytes else a,
         },
     )
     for param in head_params:
@@ -300,26 +298,20 @@ def build_head_validator(head_params: List[HeadParam]) -> Callable[..., Any]:
             convert=param.convertor,
             as_list=param.is_array,
             default=param.default,
-            **param.statements
-            # gt=param.get("gt"),
-            # ge=param.get("ge"),
-            # lt=param.get("lt"),
-            # le=param.get("le"),
-            # min_length=param.get("min_length"),
-            # max_length=param.get("max_length"),
+            **param.statements,
         )
-        print(
-            dict(
-                attribute=param.source,
-                name=param.name,
-                key=param.origin,
-                check=param.validate,
-                convert=param.convertor,
-                as_list=param.is_array,
-                default=param.default,
-                **param.statements,
-            )
-        )
+        # print(
+        #     dict(
+        #         attribute=param.source,
+        #         name=param.name,
+        #         key=param.origin,
+        #         check=param.validate,
+        #         convert=param.convertor,
+        #         as_list=param.is_array,
+        #         default=param.default,
+        #         **param.statements,
+        #     )
+        # )
     return v.build()
 
 

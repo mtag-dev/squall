@@ -21,6 +21,7 @@ from squall.openapi.constants import (
 from squall.openapi.models import OpenAPI
 from squall.params import Body
 from squall.responses import JSONResponse, PrettyJSONResponse, Response
+from squall.routing_.utils import HeadParam
 from squall.utils import generate_operation_id_for_path
 from starlette.routing import BaseRoute
 
@@ -70,6 +71,16 @@ status_code_ranges: Dict[str, str] = {
 }
 
 
+type_mapping: Dict[str, str] = {
+    "int": "integer",
+    "Decimal": "number",
+    "float": "number",
+    "bool": "boolean",
+    "str": "string",
+    "bytes": "string",
+}
+
+
 def generate_operation_id(*, route: routing.APIRoute, method: str) -> str:
     if route.operation_id:
         return route.operation_id
@@ -98,15 +109,9 @@ def get_openapi_operation_metadata(
     return operation
 
 
-def get_head_params(route):
-    parameters: List[Dict[str, Any]] = []
-    for param in route.head_params:
-        parameters.append(param.spec)
-    return parameters
-
-
 class OpenAPIRoute:
-    def __init__(self, route: routing.APIRoute):
+    def __init__(self, route: routing.APIRoute, version=JsonSchemaVersion.OPEN_API_3_1):
+        self.version = version
         self.route = route
         self._response_class = route.response_class
         self.request_schemas = set()
@@ -129,10 +134,9 @@ class OpenAPIRoute:
             response_signature = inspect.signature(self.response_class.__init__)
             status_code_param = response_signature.parameters.get("status_code")
             if status_code_param is not None:
-                if isinstance(status_code_param.default, int):
-                    code = str(status_code_param.default)
+                code = str(status_code_param.default)
 
-        return code or 200
+        return code or str(200)
 
     @property
     def responses(self):
@@ -151,7 +155,7 @@ class OpenAPIRoute:
                         deserialization_schema(
                             self.route.response_model,
                             all_refs=True,
-                            version=JsonSchemaVersion.OPEN_API_3_1,
+                            version=self.version,
                         )
                     )
                     self.response_schemas.add(self.route.response_model)
@@ -190,7 +194,7 @@ class OpenAPIRoute:
             if model := response.get("model"):
                 response_schema = normalized(
                     deserialization_schema(
-                        model, all_refs=True, version=JsonSchemaVersion.OPEN_API_3_1
+                        model, all_refs=True, version=self.version
                     )
                 )
                 self.response_schemas.add(self.route.response_model)
@@ -218,7 +222,7 @@ class OpenAPIRoute:
             serialization_schema(
                 self.route.request_model["model"],
                 all_refs=True,
-                version=JsonSchemaVersion.OPEN_API_3_1,
+                version=self.version,
             )
         )
 
@@ -239,6 +243,69 @@ class OpenAPIRoute:
         result["content"] = content
         return result
 
+    @staticmethod
+    def get_param_spec(param: HeadParam) -> Dict[str, Any]:
+        source_mapping = {
+            "path_params": "path",
+            "query_params": "query",
+            "headers": "header",
+            "cookies": "cookie",
+        }
+
+        item: Dict[str, Any] = {}
+        item["type"] = type_mapping.get(param.convertor, "string")
+
+        schema: Dict[str, Any]
+        if param.is_array:
+            schema = {"type": "array", "items": item}
+        else:
+            schema = item
+            if param.statements.get("ge") is not None:
+                schema["minimum"] = param.statements["ge"]
+                schema["exclusiveMinimum"] = False
+            elif param.statements.get("gt") is not None:
+                schema["minimum"] = param.statements["gt"]
+                schema["exclusiveMinimum"] = True
+
+            if param.statements.get("le") is not None:
+                schema["maximum"] = param.statements["le"]
+                schema["exclusiveMaximum"] = False
+            elif param.statements.get("lt") is not None:
+                schema["maximum"] = param.statements["lt"]
+                schema["exclusiveMaximum"] = True
+
+        result = {
+            "required": param.default == Ellipsis,
+            "schema": schema,
+            "name": param.origin or param.name,
+            "in": source_mapping[param.source],
+        }
+
+        description = getattr(param._default, "description", None)
+        if description is not None:
+            result["description"] = description
+
+        example = getattr(param._default, "example", None)
+        if example is not None:
+            result["example"] = example
+
+        examples = getattr(param._default, "examples", None)
+        if examples:
+            result["examples"] = examples
+
+        deprecated = getattr(param._default, "deprecated", None)
+        if deprecated:
+            result["deprecated"] = True
+
+        return result
+
+    @property
+    def head_params(self):
+        parameters: List[Dict[str, Any]] = []
+        for param in self.route.head_params:
+            parameters.append(self.get_param_spec(param))
+        return parameters
+
     @property
     def spec(self) -> Dict[str, Any]:
         # Check before calling the function for if route.include_in_schema
@@ -246,7 +313,7 @@ class OpenAPIRoute:
 
         for method in self.route.methods:
             operation = get_openapi_operation_metadata(route=self.route, method=method)
-            if parameters := get_head_params(route=self.route):
+            if parameters := self.head_params:
                 operation["parameters"] = parameters
             operation["responses"] = self.responses
 
@@ -287,13 +354,14 @@ def get_openapi(
     components: Dict[str, Dict[str, Any]] = {}
     paths: Dict[str, Dict[str, Any]] = {}
 
+    version = JsonSchemaVersion.OPEN_API_3_0
     request_schemas = set()
     response_schemas = set()
     for route in routes:
         if not route.include_in_schema or not route.path_format:
             continue
 
-        openapi_route = OpenAPIRoute(route)
+        openapi_route = OpenAPIRoute(route, version=version)
         paths[route.path_format] = openapi_route.spec
         response_schemas.update(openapi_route.response_schemas)
         request_schemas.update(openapi_route.request_schemas)
@@ -304,7 +372,7 @@ def get_openapi(
             definitions_schema(
                 deserialization=list(schemas),
                 all_refs=True,
-                version=JsonSchemaVersion.OPEN_API_3_0,
+                version=version,
             )
         )
 

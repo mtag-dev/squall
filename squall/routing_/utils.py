@@ -1,8 +1,7 @@
 import inspect
 import typing
-from dataclasses import is_dataclass
+from dataclasses import asdict, is_dataclass
 from decimal import Decimal
-from enum import Enum
 from typing import (
     Any,
     Callable,
@@ -16,35 +15,8 @@ from typing import (
     get_origin,
 )
 
-from pydantic.fields import Undefined
 from squall.params import Body, CommonParam, File, Form, Num, Str
 from squall.requests import Request
-
-
-class ParameterSourceType(Enum):
-    query = "query"
-    header = "header"
-    path = "path"
-    cookie = "cookie"
-
-
-# class ParameterVariableType(Enum):
-#     int = "integer"
-#     Decimal = "number"
-#     float = "number"
-#     bool = "boolean"
-#     str = "string"
-#     bytes = "string"
-
-
-type_mapping: Dict[str, str] = {
-    "int": "integer",
-    "Decimal": "number",
-    "float": "number",
-    "bool": "boolean",
-    "str": "string",
-    "bytes": "string",
-}
 
 
 class HeadParam:
@@ -52,7 +24,6 @@ class HeadParam:
         self._annotation = value.annotation
         self._default = value.default
         self._empty = value.empty
-
         self.name = name
         self.source = source
         self.is_array, self.convertor = self.get_convertor()
@@ -76,11 +47,8 @@ class HeadParam:
         if hasattr(self._default, "valid") and isinstance(
             self._default.valid, (Num, Str)
         ):
+            statements = asdict(self._default.valid)
             validate = self._default.valid.in_.value
-            for constraint in self._default.valid.get_constraints():
-                value = getattr(self._default.valid, constraint)
-                if value is not None:
-                    statements[constraint] = value
         return validate, statements
 
     def get_convertor(self) -> Tuple[bool, str]:
@@ -106,62 +74,6 @@ class HeadParam:
         else:
             assert not origin, f"Convertor for {self.name} unknown"
         return is_array, convertor
-
-    @property
-    def spec(self) -> Dict[str, Any]:
-        source_mapping = {
-            "path_params": "path",
-            "query_params": "query",
-            "headers": "header",
-            "cookies": "cookie",
-        }
-
-        item: Dict[str, Any] = {}
-        item["type"] = type_mapping.get(self.convertor, "string")
-
-        schema: Dict[str, Any]
-        if self.is_array:
-            schema = {"type": "array", "items": item}
-        else:
-            schema = item
-            if self.statements.get("ge") is not None:
-                schema["minimum"] = self.statements["ge"]
-                schema["exclusiveMinimum"] = False
-            elif self.statements.get("gt") is not None:
-                schema["minimum"] = self.statements["gt"]
-                schema["exclusiveMinimum"] = True
-
-            if self.statements.get("le") is not None:
-                schema["maximum"] = self.statements["le"]
-                schema["exclusiveMaximum"] = False
-            elif self.statements.get("lt") is not None:
-                schema["maximum"] = self.statements["lt"]
-                schema["exclusiveMaximum"] = True
-
-        result = {
-            "required": self.default == Ellipsis,
-            "schema": schema,
-            "name": self.origin or self.name,
-            "in": source_mapping[self.source],
-        }
-
-        description = getattr(self._default, "description", None)
-        if description is not None:
-            result["description"] = description
-
-        example = getattr(self._default, "example", None)
-        if example != Undefined and example:
-            result["example"] = example
-
-        examples = getattr(self._default, "examples", None)
-        if examples:
-            result["examples"] = examples
-
-        deprecated = getattr(self._default, "deprecated", None)
-        if deprecated:
-            result["deprecated"] = True
-
-        return result
 
 
 def get_handler_head_params(func: Callable[..., Any]) -> List[HeadParam]:
@@ -285,17 +197,3 @@ def get_handler_request_models(func: Callable[..., Any]):
                 param["field"] = v.default
             results.append(param)
     return results
-
-
-# class MyModel(BaseModel):
-#     a: int
-
-
-if __name__ == "__main__":
-
-    def func(req: Request, a: MyModel) -> None:
-        pass
-
-    from pprint import pprint
-
-    pprint(get_handler_body_params(func))

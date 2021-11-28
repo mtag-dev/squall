@@ -274,7 +274,7 @@ openapi_schema = {
                     },
                 },
                 "summary": "Get Path Param Min Length",
-                "operationId": "get_path_param_min_length_path_param_minlength__item_id__get",
+                "operationId": "get_path_param_min_len_path_param_minlength__item_id__get",
                 "parameters": [
                     {
                         "required": True,
@@ -308,7 +308,7 @@ openapi_schema = {
                     },
                 },
                 "summary": "Get Path Param Max Length",
-                "operationId": "get_path_param_max_length_path_param_maxlength__item_id__get",
+                "operationId": "get_path_param_max_len_path_param_maxlength__item_id__get",
                 "parameters": [
                     {
                         "required": True,
@@ -342,7 +342,7 @@ openapi_schema = {
                     },
                 },
                 "summary": "Get Path Param Min Max Length",
-                "operationId": "get_path_param_min_max_length_path_param_min_maxlength__item_id__get",
+                "operationId": "get_path_param_min_max_len_path_param_min_maxlength__item_id__get",
                 "parameters": [
                     {
                         "required": True,

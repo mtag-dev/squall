@@ -12,8 +12,8 @@ async def read_items(
         alias="item-query",
         title="Query string",
         description="Query string for the items to search in the database that have a good match",
-        min_length=3,
-        max_length=50,
+        min_len=3,
+        max_len=50,
         regex="^fixedquery$",
         deprecated=True,
     )

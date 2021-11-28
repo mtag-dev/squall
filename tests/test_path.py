@@ -3,7 +3,7 @@ from typing import Optional
 
 import pytest
 from squall import Squall
-from squall.params import Num, Param, Path, Query, Str
+from squall.params import Num, Path, Query, Str
 from squall.testclient import TestClient
 
 app = Squall()
@@ -57,18 +57,18 @@ def get_path_param_required_id(item_id: str = Path(...)):
 
 
 @app.get("/path/param-minlength/{item_id}")
-def get_path_param_min_length(item_id: str = Path(..., valid=Str(min_length=3))):
+def get_path_param_min_len(item_id: str = Path(..., valid=Str(min_len=3))):
     return item_id
 
 
 @app.get("/path/param-maxlength/{item_id}")
-def get_path_param_max_length(item_id: str = Path(..., valid=Str(max_length=3))):
+def get_path_param_max_len(item_id: str = Path(..., valid=Str(max_len=3))):
     return item_id
 
 
 @app.get("/path/param-min_maxlength/{item_id}")
-def get_path_param_min_max_length(
-    item_id: str = Path(..., valid=Str(max_length=3, min_length=2))
+def get_path_param_min_max_len(
+    item_id: str = Path(..., valid=Str(max_len=3, min_len=2))
 ):
     return item_id
 
@@ -139,7 +139,7 @@ def get_path_param_lt_gt_int(item_id: int = Path(..., valid=Num(lt=3, gt=1))):
 
 
 @app.get("/path/param-le-ge-int/{item_id}")
-def get_path_param_le_ge_int(item_id: int = Param(..., valid=Num(le=3, ge=1))):
+def get_path_param_le_ge_int(item_id: int = Path(..., valid=Num(le=3, ge=1))):
     return item_id
 
 
