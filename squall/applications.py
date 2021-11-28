@@ -1,13 +1,12 @@
 from asyncio import iscoroutinefunction
-from functools import partial
 import typing
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Sequence, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Type, Union
 
 from starlette.concurrency import run_in_threadpool
 
 from squall import router
 from squall.datastructures import Default
-from squall.errors import get_default_debug_response, get_default_error_response
+from squall.errors import get_default_debug_response
 from squall.exception_handlers import (
     http_exception_handler,
     request_head_validation_exception_handler,
@@ -24,7 +23,7 @@ from squall.openapi.docs import (
 from squall.openapi.utils import get_openapi
 
 from squall.requests import Request
-from squall.responses import HTMLResponse, JSONResponse, Response
+from squall.responses import HTMLResponse, JSONResponse, Response, PlainTextResponse
 from squall.routing import APIRoute, APIWebSocketRoute
 from squall.types import AnyFunc, ASGIApp, Receive, Scope, Send
 from starlette.datastructures import State
@@ -34,6 +33,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 
 class Squall:
+    _default_error_response = PlainTextResponse("Internal Server Error", status_code=500)
+
     def __init__(
         self,
         *,
@@ -274,66 +275,61 @@ class Squall:
 
         return decorator
 
-    def scoped(self, scope: Scope, receive: Receive, send: Send) -> Awaitable[Any]:
-        if scope["type"] == "lifespan":
-            return lifespan(self.lifespan_ctx, scope, receive, send)
-        return self.middleware_stack(scope, receive, send)
-
-    def __call__(self, scope: Scope) -> Callable[..., Awaitable[Any]]:
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """ASGI calls entrypoint."""
         if self.root_path:
             scope["root_path"] = self.root_path
         scope["app"] = self
 
-        return partial(self.scoped, scope)
+        if scope["type"] == "lifespan":
+            await lifespan(self.lifespan_ctx, scope, receive, send)
+            return
+
+        try:
+            await self.middleware_stack(scope, receive, send)
+        except Exception as exc:
+            handler = None
+
+            if isinstance(exc, HTTPException):
+                handler = self.exception_handlers.get(exc.status_code)
+
+            if handler is None:
+                handler = self._lookup_exception_handler(exc)
+
+            request = Request(scope)
+            if handler:
+                if iscoroutinefunction(handler):
+                    response = await handler(request, exc)
+                else:
+                    response = await run_in_threadpool(handler, request, exc)
+            elif self.debug:
+                # In debug mode, return traceback responses.
+                response = get_default_debug_response(request, exc)
+            else:
+                # Use our default 500 error handler.
+                response = self._default_error_response
+
+            await response(scope, receive, send)
+
+            if not handler:
+                raise exc
 
     def _lookup_exception_handler(self, exc: Exception) -> typing.Optional[typing.Callable]:
-        for cls in type(exc).__mro__:
-            if cls in self.exception_handlers:
-                return self.exception_handlers[cls]
-
-    def _handle_errors(self, app) -> ASGIApp:
-
-        async def decorator(scope, receive, send) -> None:
-            try:
-                await app(scope, receive, send)
-            except Exception as exc:
-                handler = None
-
-                if isinstance(exc, HTTPException):
-                    handler = self.exception_handlers.get(exc.status_code)
-
-                if handler is None:
-                    # TODO: we can avoid lookup each time and just set handler to self.exception_handlers
-                    handler = self._lookup_exception_handler(exc)
-
-                request = Request(scope)
-                if handler:
-                    if iscoroutinefunction(handler):
-                        response = await handler(request, exc)
-                    else:
-                        response = await run_in_threadpool(handler, request, exc)
-                elif self.debug:
-                    # In debug mode, return traceback responses.
-                    response = get_default_debug_response(request, exc)
-                else:
-                    # Use our default 500 error handler.
-                    response = get_default_error_response(request, exc)
-
-                await response(scope, receive, send)
-
-                # We always continue to raise the exception.
-                # This allows servers to log the error, or allows test clients
-                # to optionally raise the error within the test case.
-                raise exc
-        return decorator
+        exception_class = type(exc)
+        try:
+            return self.exception_handlers[exception_class]
+        except KeyError:
+            for cls in type(exc).__mro__:
+                if cls in self.exception_handlers:
+                    self.exception_handlers[exception_class] = self.exception_handlers[cls]
+                    return self.exception_handlers[cls]
 
     def _build_middleware_stack(self) -> ASGIApp:
         """Build stack for middlewares pipelining"""
         app = self.router
         for cls, options in reversed(self.user_middleware):
             app = cls(app=app, **options)
-        return self._handle_errors(app)
+        return app
 
     def openapi(self) -> Dict[str, Any]:
         if not self.openapi_schema:

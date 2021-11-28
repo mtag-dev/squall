@@ -1,11 +1,11 @@
 from html import escape
-from traceback import format_exception, TracebackException
 from inspect import getinnerframes
-from starlette.exceptions import ExceptionMiddleware, HTTPException
-from squall.types import Receive
+from traceback import format_exception, TracebackException
+
+from starlette.middleware.errors import TEMPLATE, STYLES, JS
+
 from squall.requests import Request
 from squall.responses import Response, HTMLResponse, PlainTextResponse
-from starlette.middleware.errors import TEMPLATE, STYLES, JS
 
 
 def generate_html(self, exc: Exception, limit: int = 7) -> str:
@@ -30,6 +30,7 @@ def generate_html(self, exc: Exception, limit: int = 7) -> str:
 
 
 def get_default_debug_response(request: Request, exc: Exception) -> Response:
+    """ Generate default error response if debug enabled """
     accept = request.headers.get("accept", "")
 
     if "text/html" in accept:
@@ -37,7 +38,3 @@ def get_default_debug_response(request: Request, exc: Exception) -> Response:
         return HTMLResponse(content, status_code=500)
     content = "".join(format_exception(type(exc), exc, exc.__traceback__))
     return PlainTextResponse(content, status_code=500)
-
-
-def get_default_error_response(request: Request, exc: Exception) -> Response:
-    return PlainTextResponse("Internal Server Error", status_code=500)
