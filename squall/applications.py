@@ -2,7 +2,7 @@ from asyncio import iscoroutinefunction
 import typing
 from typing import Any, Callable, Dict, List, Optional, Sequence, Type, Union
 
-from starlette.concurrency import run_in_threadpool
+from squall.concurrency import run_in_threadpool
 
 from squall import router
 from squall.datastructures import Default
@@ -26,8 +26,8 @@ from squall.requests import Request
 from squall.responses import HTMLResponse, JSONResponse, Response, PlainTextResponse
 from squall.routing import APIRoute, APIWebSocketRoute
 from squall.types import AnyFunc, ASGIApp, Receive, Scope, Send
+from squall.exceptions import HTTPException
 from starlette.datastructures import State
-from starlette.exceptions import HTTPException
 from starlette.middleware import Middleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
