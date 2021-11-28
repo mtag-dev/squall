@@ -285,8 +285,8 @@ def build_head_validator(head_params: List[HeadParam]) -> Callable[..., Any]:
             "int": int,
             "float": float,
             "Decimal": Decimal,
-            "str": str,
-            "bytes": lambda a: a.encode("utf-8"),
+            "str": lambda a: a.decode("utf-8") if type(a) == bytes else str(a),
+            "bytes": lambda a: str(a).encode("utf-8") if type(a) != bytes else a,
         },
     )
     for param in head_params:
@@ -300,18 +300,18 @@ def build_head_validator(head_params: List[HeadParam]) -> Callable[..., Any]:
             default=param.default,
             **param.statements,
         )
-        print(
-            dict(
-                attribute=param.source,
-                name=param.name,
-                key=param.origin,
-                check=param.validate,
-                convert=param.convertor,
-                as_list=param.is_array,
-                default=param.default,
-                **param.statements,
-            )
-        )
+        # print(
+        #     dict(
+        #         attribute=param.source,
+        #         name=param.name,
+        #         key=param.origin,
+        #         check=param.validate,
+        #         convert=param.convertor,
+        #         as_list=param.is_array,
+        #         default=param.default,
+        #         **param.statements,
+        #     )
+        # )
     return v.build()
 
 

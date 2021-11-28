@@ -110,7 +110,8 @@ def get_openapi_operation_metadata(
 
 
 class OpenAPIRoute:
-    def __init__(self, route: routing.APIRoute):
+    def __init__(self, route: routing.APIRoute, version=JsonSchemaVersion.OPEN_API_3_1):
+        self.version = version
         self.route = route
         self._response_class = route.response_class
         self.request_schemas = set()
@@ -133,10 +134,9 @@ class OpenAPIRoute:
             response_signature = inspect.signature(self.response_class.__init__)
             status_code_param = response_signature.parameters.get("status_code")
             if status_code_param is not None:
-                if isinstance(status_code_param.default, int):
-                    code = str(status_code_param.default)
+                code = str(status_code_param.default)
 
-        return code or 200
+        return code or str(200)
 
     @property
     def responses(self):
@@ -155,7 +155,7 @@ class OpenAPIRoute:
                         deserialization_schema(
                             self.route.response_model,
                             all_refs=True,
-                            version=JsonSchemaVersion.OPEN_API_3_1,
+                            version=self.version,
                         )
                     )
                     self.response_schemas.add(self.route.response_model)
@@ -194,7 +194,7 @@ class OpenAPIRoute:
             if model := response.get("model"):
                 response_schema = normalized(
                     deserialization_schema(
-                        model, all_refs=True, version=JsonSchemaVersion.OPEN_API_3_1
+                        model, all_refs=True, version=self.version
                     )
                 )
                 self.response_schemas.add(self.route.response_model)
@@ -222,7 +222,7 @@ class OpenAPIRoute:
             serialization_schema(
                 self.route.request_model["model"],
                 all_refs=True,
-                version=JsonSchemaVersion.OPEN_API_3_1,
+                version=self.version,
             )
         )
 
@@ -354,13 +354,14 @@ def get_openapi(
     components: Dict[str, Dict[str, Any]] = {}
     paths: Dict[str, Dict[str, Any]] = {}
 
+    version = JsonSchemaVersion.OPEN_API_3_0
     request_schemas = set()
     response_schemas = set()
     for route in routes:
         if not route.include_in_schema or not route.path_format:
             continue
 
-        openapi_route = OpenAPIRoute(route)
+        openapi_route = OpenAPIRoute(route, version=version)
         paths[route.path_format] = openapi_route.spec
         response_schemas.update(openapi_route.response_schemas)
         request_schemas.update(openapi_route.request_schemas)
@@ -371,7 +372,7 @@ def get_openapi(
             definitions_schema(
                 deserialization=list(schemas),
                 all_refs=True,
-                version=JsonSchemaVersion.OPEN_API_3_0,
+                version=version,
             )
         )
 
