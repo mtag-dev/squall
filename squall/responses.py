@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import orjson
 from pydantic import BaseModel
-from squall.types import Send, Scope, Receive
+from squall.types import Receive, Scope, Send
 from starlette.responses import FileResponse as FileResponse  # noqa
 from starlette.responses import RedirectResponse as RedirectResponse  # noqa
 from starlette.responses import Response as StarletteResponse  # noqa

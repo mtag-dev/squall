@@ -1,12 +1,10 @@
 from html import escape
-from inspect import getinnerframes, FrameInfo
-from traceback import format_exception, TracebackException
-
-from starlette.middleware.errors import TEMPLATE, STYLES, JS
+from inspect import FrameInfo, getinnerframes
+from traceback import TracebackException, format_exception
 
 from squall.requests import Request
-from squall.responses import Response, HTMLResponse, PlainTextResponse
-
+from squall.responses import HTMLResponse, PlainTextResponse, Response
+from starlette.middleware.errors import JS, STYLES, TEMPLATE
 
 FRAME_TEMPLATE = """
 <div>
@@ -78,15 +76,14 @@ def generate_html(exc: Exception, limit: int = 7) -> str:
 
     # escape error class and text
     error = (
-        f"{escape(traceback_obj.exc_type.__name__)}: "
-        f"{escape(str(traceback_obj))}"
+        f"{escape(traceback_obj.exc_type.__name__)}: " f"{escape(str(traceback_obj))}"
     )
 
     return TEMPLATE.format(styles=STYLES, js=JS, error=error, exc_html=exc_html)
 
 
 def get_default_debug_response(request: Request, exc: Exception) -> Response:
-    """ Generate default error response if debug enabled """
+    """Generate default error response if debug enabled"""
     accept = request.headers.get("accept", "")
 
     if "text/html" in accept:
