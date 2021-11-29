@@ -10,7 +10,7 @@ from starlette.formparsers import FormParser, MultiPartParser
 from starlette.types import Message, Receive, Scope, Send
 
 try:
-    from multipart.multipart import parse_options_header
+    from multipart.multipart import parse_options_header  # type: ignore
 except ImportError:  # pragma: nocover
     parse_options_header = None
 
@@ -52,13 +52,13 @@ class ClientDisconnect(Exception):
     pass
 
 
-class HTTPConnection(Mapping):
+class HTTPConnection(Mapping[str, Any]):
     """
     A base class for incoming HTTP connections, that is used to provide
     any functionality that is common to both `Request` and `WebSocket`.
     """
 
-    def __init__(self, scope: Scope, receive: Receive = None) -> None:
+    def __init__(self, scope: Scope) -> None:
         assert scope["type"] in ("http", "websocket")
         self.scope = scope
         self.path_params = scope.get("path_params", {})

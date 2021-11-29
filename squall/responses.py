@@ -81,10 +81,11 @@ class Response(StarletteResponse):
             "status": status_code,
             "headers": raw_headers,
         }
+        self.send_body = {"type": "http.response.body", "body": body}
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         await send(self.send_start)
-        await send({"type": "http.response.body", "body": self.body})
+        await send(self.send_body)
 
 
 class JSONResponse(Response):

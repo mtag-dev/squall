@@ -83,13 +83,13 @@ def test_defaults_no_annotation(app, client):
     }
 
 
-def test_parameter_from_another_origin_name(app, client):
-    @app.get("/from_another/origin_name/{origin_param}")
+def test_parameter_from_another_alias_name(app, client):
+    @app.get("/from_another/alias_name/{alias_param}")
     def foo(
-        param=Path(..., origin="origin_param"),
-        qs=Query(..., origin="origin_qs"),
-        header=Header(..., origin="origin_header"),
-        cookie=Cookie(..., origin="origin_cookie"),
+        param=Path(..., alias="alias_param"),
+        qs=Query(..., alias="alias_qs"),
+        header=Header(..., alias="alias_header"),
+        cookie=Cookie(..., alias="alias_cookie"),
     ):
         return {
             "param": param,
@@ -103,9 +103,9 @@ def test_parameter_from_another_origin_name(app, client):
         }
 
     response = client.get(
-        "/from_another/origin_name/some_param?origin_qs=qs_value",
-        headers={"origin_header": "header_value"},
-        cookies={"origin_cookie": "cookie_value"},
+        "/from_another/alias_name/some_param?alias_qs=qs_value",
+        headers={"alias_header": "header_value"},
+        cookies={"alias_cookie": "cookie_value"},
     )
     assert response.status_code == 200, response.text
     assert response.json() == {

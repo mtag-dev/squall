@@ -15,7 +15,19 @@ from typing import (
     get_origin,
 )
 
-from squall.params import Body, CommonParam, File, Form, Num, Str
+from squall.bindings import RequestField
+from squall.params import (
+    Body,
+    CommonParam,
+    Cookie,
+    File,
+    Form,
+    Header,
+    Num,
+    Path,
+    Query,
+    Str,
+)
 from squall.requests import Request
 
 
@@ -30,8 +42,8 @@ class HeadParam:
         self.validate, self.statements = self.get_validation_statements()
 
     @property
-    def origin(self) -> str:
-        return getattr(self._default, "origin", None) or self.name
+    def alias(self) -> str:
+        return getattr(self._default, "alias", None) or self.name
 
     @property
     def default(self) -> Any:
@@ -53,15 +65,15 @@ class HeadParam:
 
     def get_convertor(self) -> Tuple[bool, str]:
         is_array, convertor = False, "str"
-        args, origin = get_args(self._annotation), get_origin(self._annotation)
-        if origin is Union:
+        args, alias = get_args(self._annotation), get_origin(self._annotation)
+        if alias is Union:
             if type(None) in args:
                 if get_origin(args[0]) == list:
                     is_array, _convertor = True, get_args(args[0])[0]
                 else:
                     is_array, _convertor = False, args[0]
                 convertor = getattr(_convertor, "__name__", None)
-        elif origin == list:
+        elif alias == list:
             try:
                 is_array, convertor = True, args[0].__name__
             except Exception:
@@ -72,7 +84,7 @@ class HeadParam:
         ):
             convertor = self._annotation.__name__
         else:
-            assert not origin, f"Convertor for {self.name} unknown"
+            assert not alias, f"Convertor for {self.name} unknown"
         return is_array, convertor
 
 
@@ -81,7 +93,7 @@ def get_handler_head_params(func: Callable[..., Any]) -> List[HeadParam]:
     results = []
     for k, v in signature.parameters.items():
         source = None
-        if isinstance(v.default, CommonParam):
+        if isinstance(v.default, (Query, Path, Cookie, Header)):
             source = v.default.in_.value
         elif v.default is v.empty:
             is_model = is_valid_body_model(v.annotation)
@@ -97,15 +109,15 @@ def get_handler_head_params(func: Callable[..., Any]) -> List[HeadParam]:
     return results
 
 
-def get_annotation_affiliation(annotation: Any) -> typing.Optional[Any]:
+def get_annotation_affiliation(annotation: Any) -> Optional[Any]:
     """Helper for classifying affiliation of parameter
 
     :param annotation: annotation record
     :returns: classified value or None
     """
-    args, origin = get_args(annotation), get_origin(annotation)
-    if origin and origin == list:
-        annotation = args[0]
+    args, alias = get_args(annotation), get_origin(annotation)
+    # if alias and alias == list:
+    annotation = args[0] if alias == list else annotation
 
     if annotation == Request:
         return "request"
@@ -129,9 +141,9 @@ def get_types(annotation: Any) -> Set[Any]:
     if inspect.isclass(annotation):
         result.add(annotation)
 
-    if origin := get_origin(annotation):
-        result.add(origin)
-        result.update(get_types(origin))
+    if alias := get_origin(annotation):
+        result.add(alias)
+        result.update(get_types(alias))
 
     for i in get_args(annotation):
         if not get_origin(i):
@@ -142,7 +154,7 @@ def get_types(annotation: Any) -> Set[Any]:
 
 
 def is_valid_body_model(annotation: Any) -> bool:
-    """Check if annotation is valid type and includes dataclass"""
+    """Checks if the annotation is a valid type and includes dataclass"""
     valid = {typing.Union, type(None), list, set, tuple}
 
     models = []
@@ -186,14 +198,13 @@ def get_handler_body_params(func: Callable[..., Any]) -> List[Dict[str, Any]]:
     return results
 
 
-def get_handler_request_models(func: Callable[..., Any]):
+def get_handler_request_fields(func: Callable[..., Any]) -> List[RequestField]:
+    """Returns all fields that match as request schema"""
     signature = inspect.signature(func)
     results = []
-    for k, v in signature.parameters.items():
-        param: Dict[str, Any] = {"name": k}
+    for name, v in signature.parameters.items():
         if is_valid_body_model(v.annotation):
-            param["model"] = v.annotation
-            if isinstance(v.default, Body):
-                param["field"] = v.default
-            results.append(param)
+            settings = v.default if isinstance(v.default, Body) else None
+            field = RequestField(name, model=v.annotation, settings=settings)
+            results.append(field)
     return results

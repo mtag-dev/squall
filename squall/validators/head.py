@@ -19,8 +19,8 @@ class Validator:
         >>>         "str": lambda a: a.decode("utf-8") if type(a) == bytes else str(a)
         >>>     }
         >>> )
-        >>> v.add_rule("numeric", "path_params", "orders", name="my_orders", gt=20)
-        >>> v.add_rule("string", "path_params", "name",
+        >>> v.add_rule("path_params", "orders", check="numeric", name="my_orders", gt=20)
+        >>> v.add_rule("path_params", "name", check="string",
         >>>            min_len=3, max_len=5, default="anon", convert="str")
         >>> validator = v.build()
         >>> param = {"orders": 30, "name": b"Some", "useless1": 1, "useless2": 40}
@@ -48,10 +48,10 @@ class Validator:
 
     def add_rule(
         self,
-        check: str,
         attribute: str,
         key: str,
         as_list: bool = False,
+        check: typing.Optional[str] = None,
         name: typing.Optional[str] = None,
         convert: typing.Optional[typing.Any] = None,
         default: typing.Optional[typing.Any] = Ellipsis,

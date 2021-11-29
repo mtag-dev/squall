@@ -20,7 +20,7 @@ def test_get_handler_args_no_annotation():
     assert params[0].default == Ellipsis
     assert params[0].statements == {}
     assert params[0].name == "a"
-    assert params[0].origin == "a"
+    assert params[0].alias == "a"
     assert params[0].source == "path_params"
     assert params[0].validate is None
 
@@ -28,7 +28,7 @@ def test_get_handler_args_no_annotation():
     assert params[1].default == Ellipsis
     assert params[1].statements == {}
     assert params[1].name == "b"
-    assert params[1].origin == "b"
+    assert params[1].alias == "b"
     assert params[1].source == "query_params"
     assert params[1].validate is None
 
@@ -36,7 +36,7 @@ def test_get_handler_args_no_annotation():
     assert params[2].default == Ellipsis
     assert params[2].statements == {}
     assert params[2].name == "c"
-    assert params[2].origin == "c"
+    assert params[2].alias == "c"
     assert params[2].source == "path_params"
     assert params[2].validate is None
 
@@ -44,7 +44,7 @@ def test_get_handler_args_no_annotation():
     assert params[3].default == Ellipsis
     assert params[3].statements == {}
     assert params[3].name == "d"
-    assert params[3].origin == "d"
+    assert params[3].alias == "d"
     assert params[3].source == "headers"
     assert params[3].validate is None
 
@@ -52,17 +52,17 @@ def test_get_handler_args_no_annotation():
     assert params[4].default == Ellipsis
     assert params[4].statements == {}
     assert params[4].name == "e"
-    assert params[4].origin == "e"
+    assert params[4].alias == "e"
     assert params[4].source == "cookies"
     assert params[4].validate is None
 
 
-def test_get_handler_args_origin():
+def test_get_handler_args_alias():
     def handler(
-        b=Query(..., origin="from_b"),
-        c=Path(..., origin="from_c"),
-        d=Header(..., origin="from_d"),
-        e=Cookie(..., origin="from_e"),
+        b=Query(..., alias="from_b"),
+        c=Path(..., alias="from_c"),
+        d=Header(..., alias="from_d"),
+        e=Cookie(..., alias="from_e"),
     ):
         pass
 
@@ -71,7 +71,7 @@ def test_get_handler_args_origin():
     assert params[0].default == Ellipsis
     assert params[0].statements == {}
     assert params[0].name == "b"
-    assert params[0].origin == "from_b"
+    assert params[0].alias == "from_b"
     assert params[0].source == "query_params"
     assert params[0].validate is None
 
@@ -79,7 +79,7 @@ def test_get_handler_args_origin():
     assert params[1].default == Ellipsis
     assert params[1].statements == {}
     assert params[1].name == "c"
-    assert params[1].origin == "from_c"
+    assert params[1].alias == "from_c"
     assert params[1].source == "path_params"
     assert params[1].validate is None
 
@@ -87,7 +87,7 @@ def test_get_handler_args_origin():
     assert params[2].default == Ellipsis
     assert params[2].statements == {}
     assert params[2].name == "d"
-    assert params[2].origin == "from_d"
+    assert params[2].alias == "from_d"
     assert params[2].source == "headers"
     assert params[2].validate is None
 
@@ -95,7 +95,7 @@ def test_get_handler_args_origin():
     assert params[3].default == Ellipsis
     assert params[3].statements == {}
     assert params[3].name == "e"
-    assert params[3].origin == "from_e"
+    assert params[3].alias == "from_e"
     assert params[3].source == "cookies"
     assert params[3].validate is None
 

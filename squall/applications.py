@@ -1,10 +1,9 @@
-from asyncio import iscoroutinefunction
 import typing
+from asyncio import iscoroutinefunction
 from typing import Any, Callable, Dict, List, Optional, Sequence, Type, Union
 
-from squall.concurrency import run_in_threadpool
-
 from squall import router
+from squall.concurrency import run_in_threadpool
 from squall.datastructures import Default
 from squall.errors import get_default_debug_response
 from squall.exception_handlers import (
@@ -12,7 +11,11 @@ from squall.exception_handlers import (
     request_head_validation_exception_handler,
     request_payload_validation_exception_handler,
 )
-from squall.exceptions import RequestHeadValidationError, RequestPayloadValidationError
+from squall.exceptions import (
+    HTTPException,
+    RequestHeadValidationError,
+    RequestPayloadValidationError,
+)
 from squall.lifespan import LifespanContext, lifespan
 from squall.logger import logger
 from squall.openapi.docs import (
@@ -21,19 +24,19 @@ from squall.openapi.docs import (
     get_swagger_ui_oauth2_redirect_html,
 )
 from squall.openapi.utils import get_openapi
-
 from squall.requests import Request
-from squall.responses import HTMLResponse, JSONResponse, Response, PlainTextResponse
+from squall.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
 from squall.routing import APIRoute, APIWebSocketRoute
 from squall.types import AnyFunc, ASGIApp, Receive, Scope, Send
-from squall.exceptions import HTTPException
 from starlette.datastructures import State
 from starlette.middleware import Middleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
 
 class Squall:
-    _default_error_response = PlainTextResponse("Internal Server Error", status_code=500)
+    _default_error_response = PlainTextResponse(
+        "Internal Server Error", status_code=500
+    )
 
     def __init__(
         self,
@@ -309,20 +312,26 @@ class Squall:
                 # Use our default 500 error handler.
                 response = self._default_error_response
 
-            await response(scope, receive, send)
+            await send(response.send_start)
+            await send(response.send_body)
 
             if not handler:
                 raise exc
 
-    def _lookup_exception_handler(self, exc: Exception) -> typing.Optional[typing.Callable]:
+    def _lookup_exception_handler(
+        self, exc: Exception
+    ) -> typing.Optional[typing.Callable[..., Any]]:
         exception_class = type(exc)
         try:
             return self.exception_handlers[exception_class]
         except KeyError:
             for cls in type(exc).__mro__:
                 if cls in self.exception_handlers:
-                    self.exception_handlers[exception_class] = self.exception_handlers[cls]
+                    self.exception_handlers[exception_class] = self.exception_handlers[
+                        cls
+                    ]
                     return self.exception_handlers[cls]
+        return None
 
     def _build_middleware_stack(self) -> ASGIApp:
         """Build stack for middlewares pipelining"""
@@ -361,7 +370,7 @@ class Squall:
                         self.servers.insert(0, {"url": root_path})
                         server_urls.add(root_path)
                 return JSONResponse(
-                    self.openapi().dict(exclude_unset=True, by_alias=True)  # type: ignore
+                    self.openapi()  # .dict(exclude_unset=True, by_alias=True)  # type: ignore
                 )
 
             self.router.add_api_route(
