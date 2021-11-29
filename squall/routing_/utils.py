@@ -165,9 +165,7 @@ def is_valid_body_model(annotation: Any) -> bool:
             models.append(i)
         else:
             return False
-    if len(models) == 1:
-        return True
-    return False
+    return len(models) == 1
 
 
 def get_handler_body_params(func: Callable[..., Any]) -> List[Dict[str, Any]]:

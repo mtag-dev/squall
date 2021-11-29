@@ -174,6 +174,7 @@ async def empty_send(message: Message) -> None:
 
 class Request(HTTPConnection):
     _json: Dict[str, Any]
+    _body: bytes
 
     def __init__(
         self, scope: Scope, receive: Receive = empty_receive, send: Send = empty_send
@@ -204,14 +205,13 @@ class Request(HTTPConnection):
             raise RuntimeError("Stream consumed")
 
         self._stream_consumed = True
+        message_get = dict.get
         while True:
             message = await self._receive()
             if message["type"] == "http.request":
-                message_get = message.get
-                body = message_get("body", b"")
-                if body:
+                if body := message_get(message, "body"):
                     yield body
-                if not message_get("more_body", False):
+                if not message_get(message, "more_body"):
                     break
             elif message["type"] == "http.disconnect":
                 self._is_disconnected = True
@@ -223,19 +223,72 @@ class Request(HTTPConnection):
         if body is not None:
             return body
 
+        message_get = dict.get
+
         chunks = []
-        async for chunk in self.stream():
-            chunks.append(chunk)
-        self._body = body = b"".join(chunks)
-        return body
+        message = await self._receive()
+        if message["type"] == "http.request":
+            body = message_get(message, "body", b"")
+            if not message_get(message, "more_body"):
+                self._body = body
+                return body
+            chunks.append(body)
+        elif message["type"] == "http.disconnect":
+            self._is_disconnected = True
+            raise ClientDisconnect()
+
+        while True:
+            message = await self._receive()
+            if message["type"] == "http.request":
+                if body := message_get(message, "body"):
+                    chunks.append(body)
+                    if not message_get(message, "more_body"):
+                        self._body = _body = b"".join(chunks)
+                        return _body
+            elif message["type"] == "http.disconnect":
+                self._is_disconnected = True
+                raise ClientDisconnect()
 
     async def json(self) -> typing.Any:
         if hasattr(self, "_json"):
             return self._json
 
-        body = await self.body()
-        self._json = _json = json_loads(body)
-        return _json
+        if body := getattr(self, "_body", None) is not None:
+            self._json = _json = json_loads(body)
+            return _json
+
+        if self._stream_consumed:
+            raise RuntimeError("Stream consumed")
+
+        self._stream_consumed = True
+
+        message_get = dict.get
+
+        chunks = []
+        message = await self._receive()
+        if message["type"] == "http.request":
+            body = message_get(message, "body", b"")
+            if not message_get(message, "more_body"):
+                self._body = body
+                self._json = _json = json_loads(body)
+                return _json
+            chunks.append(body)
+        elif message["type"] == "http.disconnect":
+            self._is_disconnected = True
+            raise ClientDisconnect()
+
+        while True:
+            message = await self._receive()
+            if message["type"] == "http.request":
+                if body := message_get(message, "body"):
+                    chunks.append(body)
+                    if not message_get(message, "more_body"):
+                        self._body = b"".join(chunks)
+                        self._json = _json = json_loads(self._body)
+                        return _json
+            elif message["type"] == "http.disconnect":
+                self._is_disconnected = True
+                raise ClientDisconnect()
 
     async def form(self) -> FormData:
         if not hasattr(self, "_form"):
