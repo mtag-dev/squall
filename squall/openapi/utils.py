@@ -1,5 +1,4 @@
 import inspect
-import json
 import typing
 from typing import Any, Dict, List, Optional, Sequence, Type, Union
 
@@ -9,9 +8,6 @@ from apischema.json_schema import (
     deserialization_schema,
     serialization_schema,
 )
-
-normalized: typing.Callable[..., typing.Any] = lambda a: json.loads(json.dumps(a))
-
 from squall import routing
 from squall.datastructures import DefaultPlaceholder
 from squall.openapi.constants import (
@@ -154,12 +150,10 @@ class OpenAPIRoute:
             response_schema = {"type": "string"}
             if self.response_class in (JSONResponse, PrettyJSONResponse):
                 if self.route.response_field:
-                    response_schema = normalized(
-                        deserialization_schema(
-                            self.route.response_field.model,
-                            all_refs=True,
-                            version=self.version,
-                        )
+                    response_schema = deserialization_schema(
+                        self.route.response_field.model,
+                        all_refs=True,
+                        version=self.version,
                     )
                     self.response_schemas.add(self.route.response_field.model)
                 else:
@@ -195,10 +189,9 @@ class OpenAPIRoute:
                 responses[status_code] = {}
 
             if model := response.get("model"):
-                response_schema = normalized(
-                    deserialization_schema(model, all_refs=True, version=self.version)
+                response_schema = deserialization_schema(
+                    model, all_refs=True, version=self.version
                 )
-                # self.response_schemas.add(self.route.response_field.model)
                 responses[status_code]["content"] = {
                     self.response_class.media_type: {"schema": response_schema}
                 }
@@ -219,12 +212,10 @@ class OpenAPIRoute:
             return None
 
         self.request_schemas.add(self.route.request_field.model)
-        response_schema = normalized(
-            serialization_schema(
-                self.route.request_field.model,
-                all_refs=True,
-                version=self.version,
-            )
+        response_schema = serialization_schema(
+            self.route.request_field.model,
+            all_refs=True,
+            version=self.version,
         )
 
         settings: Optional[Body] = self.route.request_field.settings
@@ -369,12 +360,10 @@ def get_openapi(
 
     schemas = set.union(request_schemas, response_schemas)
     if schemas:
-        components["schemas"] = normalized(
-            definitions_schema(
-                deserialization=list(schemas),
-                all_refs=True,
-                version=_version,
-            )
+        components["schemas"] = definitions_schema(
+            deserialization=list(schemas),
+            all_refs=True,
+            version=_version,
         )
 
         # Should be removed from here. Schema should be defined via handlers
