@@ -242,9 +242,9 @@ class Request(HTTPConnection):
             if message["type"] == "http.request":
                 if body := message_get(message, "body"):
                     chunks.append(body)
-                    if not message_get(message, "more_body"):
-                        self._body = _body = b"".join(chunks)
-                        return _body
+                if not message_get(message, "more_body"):
+                    self._body = _body = b"".join(chunks)
+                    return _body
             elif message["type"] == "http.disconnect":
                 self._is_disconnected = True
                 raise ClientDisconnect()
