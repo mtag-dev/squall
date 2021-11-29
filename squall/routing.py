@@ -265,10 +265,7 @@ def get_request_handler(
     return app
 
 
-def get_websocket_app(
-    # dependant: Dependant,
-    # dependency_overrides_provider: Optional[Any] = None
-) -> Callable[[WebSocket], Coroutine[Any, Any, Any]]:
+def get_websocket_app() -> Callable[[WebSocket], Coroutine[Any, Any, Any]]:
     async def app(websocket: WebSocket) -> None:
         pass
         # solved_result = await solve_dependencies(
@@ -374,13 +371,7 @@ class APIWebSocketRoute(WebSocketRoute):
         self.path = self._path_origin = path
         self.endpoint = endpoint
         self.name = get_name(endpoint) if name is None else name
-        # self.dependant = get_dependant(path=path, call=self.endpoint)
-        self.app = websocket_session(
-            get_websocket_app(
-                # dependant=self.dependant,
-                # dependency_overrides_provider=dependency_overrides_provider,
-            )
-        )
+        self.app = websocket_session(get_websocket_app())
         self.path_regex, self.path_format, self.param_convertors = compile_path(path)
 
     def set_defaults(self) -> None:

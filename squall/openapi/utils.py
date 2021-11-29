@@ -19,13 +19,11 @@ from squall.openapi.constants import (
     REF_PREFIX,
     STATUS_CODES_WITH_NO_BODY,
 )
-from squall.openapi.models import OpenAPI
 from squall.params import Body
 from squall.responses import JSONResponse, PrettyJSONResponse, Response
+from squall.routing import APIRoute, APIWebSocketRoute
 from squall.routing_.utils import HeadParam
 from squall.utils import generate_operation_id_for_path
-
-from squall.routing import APIRoute, APIWebSocketRoute
 
 AnyRoute = Union[APIRoute, APIWebSocketRoute]
 
@@ -144,8 +142,8 @@ class OpenAPIRoute:
         return code
 
     @property
-    def responses(self) -> Dict[str, Any]:
-        responses = {}
+    def responses(self) -> Dict[Union[str, int], Any]:
+        responses: Dict[Union[int, str], Any] = {}
         # Default response
         status_code: Union[str, int] = self.default_status_code
         responses[status_code] = {"description": self.route.response_description}
@@ -200,7 +198,7 @@ class OpenAPIRoute:
                 response_schema = normalized(
                     deserialization_schema(model, all_refs=True, version=self.version)
                 )
-                self.response_schemas.add(self.route.response_field.model)
+                # self.response_schemas.add(self.route.response_field.model)
                 responses[status_code]["content"] = {
                     self.response_class.media_type: {"schema": response_schema}
                 }
