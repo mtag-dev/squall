@@ -147,7 +147,7 @@ class OpenAPIRoute:
     def responses(self) -> Dict[str, Any]:
         responses = {}
         # Default response
-        status_code = self.default_status_code
+        status_code: Union[str, int] = self.default_status_code
         responses[status_code] = {"description": self.route.response_description}
         if (
             self.response_class.media_type
@@ -396,4 +396,4 @@ def get_openapi(
     output["paths"] = paths
     if tags:
         output["tags"] = tags
-    return output  # type: ignore
+    return output
