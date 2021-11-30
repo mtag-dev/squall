@@ -41,15 +41,54 @@ from squall.types import ASGIApp
 from squall.utils import generate_operation_id_for_path
 from squall.validators.head import Validator
 from starlette.concurrency import run_in_threadpool
-from starlette.routing import WebSocketRoute as SlWebSocketRoute
-from starlette.routing import get_name, websocket_session
 from starlette.types import Receive, Scope, Send
 from starlette.websockets import WebSocket
 
 
-class WebSocketRoute(SlWebSocketRoute):
+class BaseRoute:
+    path: str
+    path_regex: Pattern[str]
+    endpoint: ASGIApp
+    methods: Optional[List[str]]
+
+    def matches(self, scope: Scope) -> Tuple[bool, Scope]:
+        if match := self.path_regex.match(scope["path"]):
+            return True, {"endpoint": self.endpoint, "path_params": match.groupdict()}
+        return False, {}
+
+    def __eq__(self, other: Any) -> bool:
+        return (
+            isinstance(other, BaseRoute)
+            and self.path == other.path
+            and self.endpoint == other.endpoint
+            and self.methods == other.methods
+        )
+
     def add_path_prefix(self, prefix: str) -> None:
         self.path = prefix + self.path
+        self.path_regex, self.path_format, self.param_convertors = compile_path(
+            self.path
+        )
+
+    def set_defaults(self) -> None:
+        self.path = self._path_origin
+
+
+class WebSocketRoute(BaseRoute):
+    def __init__(self, path: str, endpoint: Callable, *, name: str = None) -> None:
+        assert path.startswith("/"), "Routed paths must start with '/'"
+        self.path = path
+        self.endpoint = endpoint
+        self.name = get_name(endpoint) if name is None else name
+
+        if inspect.isfunction(endpoint) or inspect.ismethod(endpoint):
+            # Endpoint is function or method. Treat it as `func(websocket)`.
+            self.app = websocket_session(endpoint)
+        else:
+            # Endpoint is a class. Treat it as ASGI.
+            self.app = endpoint
+
+        self.path_regex, self.path_format, self.param_convertors = compile_path(path)
 
 
 class NoMatchFound(Exception):
@@ -308,7 +347,7 @@ def build_head_validator(head_params: List[HeadParam]) -> Callable[..., Any]:
     return v.build()
 
 
-class Route:
+class Route(BaseRoute):
     def __init__(
         self,
         path: str,
@@ -345,20 +384,6 @@ class Route:
 
         self.path_regex, self.path_format, self.param_convertors = compile_path(path)
 
-    def matches(self, scope: Scope) -> Tuple[bool, Scope]:
-        match = self.path_regex.match(scope["path"])
-        if match:
-            return True, {"endpoint": self.endpoint, "path_params": match.groupdict()}
-        return False, {}
-
-    def __eq__(self, other: Any) -> bool:
-        return (
-            isinstance(other, Route)
-            and self.path == other.path
-            and self.endpoint == other.endpoint
-            and self.methods == other.methods
-        )
-
 
 class APIWebSocketRoute(WebSocketRoute):
     def __init__(
@@ -373,21 +398,6 @@ class APIWebSocketRoute(WebSocketRoute):
         self.name = get_name(endpoint) if name is None else name
         self.app = websocket_session(get_websocket_app())
         self.path_regex, self.path_format, self.param_convertors = compile_path(path)
-
-    def set_defaults(self) -> None:
-        self.path = self._path_origin
-
-    def add_path_prefix(self, prefix: str) -> None:
-        self.path = prefix + self.path
-        self.path_regex, self.path_format, self.param_convertors = compile_path(
-            self.path
-        )
-
-    def matches(self, scope: Scope) -> Tuple[bool, Scope]:
-        match = self.path_regex.match(scope["path"])
-        if match:
-            return True, match.groupdict()
-        return False, {}
 
 
 class APIRoute(Route):
@@ -466,13 +476,4 @@ class APIRoute(Route):
             response_field=self.response_field,
             head_validator=self.head_validator,
             body_fields=self.body_fields,
-        )
-
-    def set_defaults(self) -> None:
-        self.path = self._path_origin
-
-    def add_path_prefix(self, prefix: str) -> None:
-        self.path = prefix + self.path
-        self.path_regex, self.path_format, self.param_convertors = compile_path(
-            self.path
         )
