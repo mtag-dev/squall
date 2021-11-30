@@ -49,14 +49,20 @@ from starlette.types import Receive, Scope, Send
 
 
 class BaseRoute:
-    path: str
-    path_regex: Pattern[str]
-    app: ASGIApp
-    methods: Optional[List[str]]
+    def __init__(
+        self,
+        path: str,
+        endpoint: Callable[..., Any],
+        *,
+        methods: Optional[List[str]] = None,
+    ) -> None:
+        self.path = self._path_origin = path
+        self.endpoint = endpoint
+        self.methods = methods
 
     def matches(self, scope: Scope) -> Tuple[bool, Scope]:
         if match := self.path_regex.match(scope["path"]):
-            return True, {"endpoint": self.app, "path_params": match.groupdict()}
+            return True, {"endpoint": self.endpoint, "path_params": match.groupdict()}
         return False, {}
 
     def __eq__(self, other: Any) -> bool:
@@ -92,16 +98,15 @@ class WebSocketRoute(BaseRoute):
         self.head_validator = build_head_validator(self.head_params)
         self.name = get_callable_name(endpoint) if name is None else name
         self.include_in_schema = include_in_schema
-        self.app = websocket_session(
-            get_websocket_handler(endpoint, head_validator=self.head_validator)
-        )
-        # if inspect.isfunction(endpoint) or inspect.ismethod(endpoint):
-        #     # Endpoint is function or method. Treat it as `func(websocket)`.
-        #     self.app = websocket_session(endpoint)
-        # else:
-        #     # Endpoint is a class. Treat it as ASGI.
-        #     self.app = endpoint
-        #
+
+        if inspect.isfunction(endpoint) or inspect.ismethod(endpoint):
+            # Endpoint is function or method. Treat it as `func(websocket)`.
+            self.app = websocket_session(
+                get_websocket_handler(endpoint, head_validator=self.head_validator)
+            )
+        else:
+            # Endpoint is a class. Treat it as ASGI.
+            self.app = endpoint
 
         self.path_regex, self.path_format, self.param_convertors = compile_path(path)
 
@@ -393,9 +398,9 @@ class Route(BaseRoute):
         if methods is None:
             self.methods = None
         else:
-            self.methods = {method.upper() for method in methods}
-            if "GET" in self.methods:
-                self.methods.add("HEAD")
+            self.methods = [method.upper() for method in methods]
+            if self.methods is not None and "GET" in self.methods:
+                self.methods.append("HEAD")
 
         self.path_regex, self.path_format, self.param_convertors = compile_path(path)
 
@@ -441,7 +446,7 @@ class APIRoute(Route):
         self.path_regex, self.path_format, self.param_convertors = compile_path(path)
         if methods is None:
             methods = ["GET"]
-        self.methods: Set[str] = {method.upper() for method in methods}
+        self.methods = [method.upper() for method in methods]
         self.unique_id = generate_operation_id_for_path(
             name=self.name, path=self.path_format, method=list(methods)[0]
         )

@@ -16,7 +16,7 @@ def generate_operation_id_for_path(*, name: str, path: str, method: str) -> str:
     return operation_id
 
 
-def get_callable_name(callable: Callable) -> str:
+def get_callable_name(callable: Callable[..., Any]) -> str:
     if inspect.isfunction(callable) or inspect.isclass(callable):
         return callable.__name__
     return callable.__class__.__name__

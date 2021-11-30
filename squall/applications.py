@@ -298,7 +298,7 @@ class Squall:
 
             if handler is None:
                 handler = self._lookup_exception_handler(exc)
-            # raise
+
             request = Request(scope)
             if handler:
                 if iscoroutinefunction(handler):
