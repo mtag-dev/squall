@@ -221,8 +221,7 @@ class OpenAPIRoute:
         settings: Optional[Body] = self.route.request_field.settings
 
         media_type = getattr(settings, "media_type", "application/json")
-        result = dict()
-        result["required"] = getattr(settings, "required", True)
+        result = {'required': getattr(settings, "required", True)}
         content: Dict[str, Dict[str, Any]] = {media_type: {}}
 
         if settings:
