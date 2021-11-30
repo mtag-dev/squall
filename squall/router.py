@@ -16,7 +16,7 @@ from typing import (
 from squall.datastructures import Default
 from squall.exceptions import HTTPException
 from squall.responses import JSONResponse, PlainTextResponse, RedirectResponse, Response
-from squall.routing import APIRoute, APIWebSocketRoute
+from squall.routing import APIRoute, WebSocketRoute
 from squall.types import ASGIApp, DecoratedCallable, Receive, Scope, Send
 from squall.utils import get_value_or_default
 from starlette.datastructures import URL
@@ -34,7 +34,7 @@ class Router:
         # dependencies: Optional[Sequence[params.Depends]] = None,
         default_response_class: Type[Response] = Default(JSONResponse),
         responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
-        routes: Optional[List[Union[APIRoute, APIWebSocketRoute]]] = None,
+        routes: Optional[List[Union[APIRoute, WebSocketRoute]]] = None,
         route_class: Type[APIRoute] = APIRoute,
         deprecated: Optional[bool] = None,
         include_in_schema: bool = True,
@@ -50,7 +50,7 @@ class Router:
         self._responses = responses or {}
         # self.dependency_overrides_provider = dependency_overrides_provider
 
-        self._routes: List[Union[APIRoute, APIWebSocketRoute]] = routes or []
+        self._routes: List[Union[APIRoute, WebSocketRoute]] = routes or []
 
     def add_api_route(
         self,
@@ -164,7 +164,7 @@ class Router:
         )
         self.route_register(route)
 
-    def route_register(self, route: Union[APIRoute, APIWebSocketRoute]) -> None:
+    def route_register(self, route: Union[APIRoute, WebSocketRoute]) -> None:
         self._routes.append(route)
 
     def add_api(
@@ -228,7 +228,7 @@ class Router:
         *,
         name: Optional[str] = None,
     ) -> None:
-        route = APIWebSocketRoute(
+        route = WebSocketRoute(
             self._prefix + path,
             endpoint=endpoint,
             name=name,
@@ -275,7 +275,7 @@ class Router:
             self.route_register(route)
 
     @property
-    def routes(self) -> List[Union[APIRoute, APIWebSocketRoute]]:
+    def routes(self) -> List[Union[APIRoute, WebSocketRoute]]:
         return self._routes
 
     def get(
@@ -592,7 +592,7 @@ class RootRouter(Router):
         # dependencies: Optional[Sequence[params.Depends]] = None,
         default_response_class: Type[Response] = Default(JSONResponse),
         responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
-        routes: Optional[List[Union[APIRoute, APIWebSocketRoute]]] = None,
+        routes: Optional[List[Union[APIRoute, WebSocketRoute]]] = None,
         redirect_slashes: bool = True,
         default: Optional[ASGIApp] = None,
         route_class: Type[APIRoute] = APIRoute,
@@ -626,7 +626,7 @@ class RootRouter(Router):
         if "router" not in scope:
             scope["router"] = self
 
-        routes: Sequence[Union[APIRoute, APIWebSocketRoute]]
+        routes: Sequence[Union[APIRoute, WebSocketRoute]]
         if scope["type"] == "http":
             routes, _locations = self.get_http_routes(scope["method"], scope["path"])
         elif scope["type"] == "websocket":
@@ -696,7 +696,7 @@ class RootRouter(Router):
         return result
 
     def _add_fast_path_route(
-        self, route: Union[APIRoute, APIWebSocketRoute], websocket: bool = False
+        self, route: Union[APIRoute, WebSocketRoute], websocket: bool = False
     ) -> None:
         layer = self._fast_path_route_ws if websocket else self._fast_path_route_http
 
@@ -724,10 +724,10 @@ class RootRouter(Router):
                 layer["#routes#"][method] = []
             layer["#routes#"][method].append(route)
 
-    def route_register(self, route: Union[APIRoute, APIWebSocketRoute]) -> None:
+    def route_register(self, route: Union[APIRoute, WebSocketRoute]) -> None:
         if isinstance(route, APIRoute):
             self._add_fast_path_route(route, websocket=False)
-        elif isinstance(route, APIWebSocketRoute):
+        elif isinstance(route, WebSocketRoute):
             self._add_fast_path_route(route, websocket=True)
         self._routes.append(route)
 
@@ -746,7 +746,7 @@ class RootRouter(Router):
         routes: List[APIRoute] = last.get("#routes#", {}).get(method, [])
         return routes, locations
 
-    def get_ws_routes(self, path: str) -> List[APIWebSocketRoute]:
+    def get_ws_routes(self, path: str) -> List[WebSocketRoute]:
         last = self._fast_path_route_ws
         try:
             for key in path.strip("/").split("/"):

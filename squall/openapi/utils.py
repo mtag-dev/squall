@@ -17,11 +17,11 @@ from squall.openapi.constants import (
 )
 from squall.params import Body
 from squall.responses import JSONResponse, PrettyJSONResponse, Response
-from squall.routing import APIRoute, APIWebSocketRoute
+from squall.routing import APIRoute, WebSocketRoute
 from squall.routing_.utils import HeadParam
 from squall.utils import generate_operation_id_for_path
 
-AnyRoute = Union[APIRoute, APIWebSocketRoute]
+AnyRoute = Union[APIRoute, WebSocketRoute]
 
 
 validation_error_definition = {
@@ -349,6 +349,9 @@ def get_openapi(
     request_schemas = set()
     response_schemas = set()
     for route in routes:
+        if isinstance(route, WebSocketRoute):
+            continue
+
         if not route.include_in_schema or not route.path_format:
             continue
 

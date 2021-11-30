@@ -26,7 +26,7 @@ from squall.openapi.docs import (
 from squall.openapi.utils import get_openapi
 from squall.requests import Request
 from squall.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
-from squall.routing import APIRoute, APIWebSocketRoute
+from squall.routing import APIRoute, WebSocketRoute
 from squall.types import AnyFunc, ASGIApp, Receive, Scope, Send
 from starlette.datastructures import State
 from starlette.middleware import Middleware
@@ -42,7 +42,7 @@ class Squall:
         self,
         *,
         debug: bool = False,
-        routes: Optional[Optional[List[Union[APIRoute, APIWebSocketRoute]]]] = None,
+        routes: Optional[Optional[List[Union[APIRoute, WebSocketRoute]]]] = None,
         title: str = "Squall",
         description: str = "",
         version: str = "0.1.0",
@@ -298,7 +298,7 @@ class Squall:
 
             if handler is None:
                 handler = self._lookup_exception_handler(exc)
-
+            # raise
             request = Request(scope)
             if handler:
                 if iscoroutinefunction(handler):
