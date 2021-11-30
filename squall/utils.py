@@ -1,5 +1,6 @@
+import inspect
 import re
-from typing import Any, Dict, Set, Union
+from typing import Any, Callable, Dict, Set, Union
 
 from squall.datastructures import DefaultPlaceholder, DefaultType
 
@@ -13,6 +14,12 @@ def generate_operation_id_for_path(*, name: str, path: str, method: str) -> str:
     operation_id = re.sub("[^0-9a-zA-Z_]", "_", operation_id)
     operation_id = operation_id + "_" + method.lower()
     return operation_id
+
+
+def get_callable_name(callable: Callable[..., Any]) -> str:
+    if inspect.isfunction(callable) or inspect.isclass(callable):
+        return callable.__name__
+    return callable.__class__.__name__
 
 
 def deep_dict_update(main_dict: Dict[Any, Any], update_dict: Dict[Any, Any]) -> None:

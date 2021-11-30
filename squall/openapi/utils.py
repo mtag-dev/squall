@@ -1,6 +1,6 @@
 import inspect
 import typing
-from typing import Any, Dict, List, Optional, Sequence, Type, Union
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Type, Union
 
 from apischema.json_schema import (
     JsonSchemaVersion,
@@ -17,11 +17,11 @@ from squall.openapi.constants import (
 )
 from squall.params import Body
 from squall.responses import JSONResponse, PrettyJSONResponse, Response
-from squall.routing import APIRoute, APIWebSocketRoute
+from squall.routing import APIRoute, WebSocketRoute
 from squall.routing_.utils import HeadParam
 from squall.utils import generate_operation_id_for_path
 
-AnyRoute = Union[APIRoute, APIWebSocketRoute]
+AnyRoute = Union[APIRoute, WebSocketRoute]
 
 
 validation_error_definition = {
@@ -147,7 +147,7 @@ class OpenAPIRoute:
             self.response_class.media_type
             and status_code not in STATUS_CODES_WITH_NO_BODY
         ):
-            response_schema = {"type": "string"}
+            response_schema: Mapping[str, Any] = {"type": "string"}
             if self.response_class in (JSONResponse, PrettyJSONResponse):
                 if self.route.response_field:
                     response_schema = deserialization_schema(
@@ -221,7 +221,7 @@ class OpenAPIRoute:
         settings: Optional[Body] = self.route.request_field.settings
 
         media_type = getattr(settings, "media_type", "application/json")
-        result = {'required': getattr(settings, "required", True)}
+        result = {"required": getattr(settings, "required", True)}
         content: Dict[str, Dict[str, Any]] = {media_type: {}}
 
         if settings:
@@ -299,8 +299,9 @@ class OpenAPIRoute:
 
     @property
     def spec(self) -> Dict[str, Any]:
-        # Check before calling the function for if route.include_in_schema
-        data = {}
+        data: Dict[str, Any] = {}
+        if self.route.methods is None:
+            return data
 
         for method in self.route.methods:
             operation = get_openapi_operation_metadata(route=self.route, method=method)
@@ -342,13 +343,16 @@ def get_openapi(
     output: Dict[str, Any] = {"openapi": openapi_version, "info": info}
     if servers:
         output["servers"] = servers
-    components: Dict[str, Dict[str, Any]] = {}
+    components: Dict[str, Any] = {}
     paths: Dict[str, Dict[str, Any]] = {}
 
     _version = JsonSchemaVersion.OPEN_API_3_1
     request_schemas = set()
     response_schemas = set()
     for route in routes:
+        if isinstance(route, WebSocketRoute):
+            continue
+
         if not route.include_in_schema or not route.path_format:
             continue
 

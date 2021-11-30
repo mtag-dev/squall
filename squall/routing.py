@@ -28,6 +28,7 @@ from squall.exceptions import (
     HTTPException,
     RequestHeadValidationError,
     RequestPayloadValidationError,
+    WebSocketRequestValidationError,
 )
 from squall.requests import Request
 from squall.responses import JSONResponse, Response
@@ -38,18 +39,76 @@ from squall.routing_.utils import (
     get_handler_request_fields,
 )
 from squall.types import ASGIApp
-from squall.utils import generate_operation_id_for_path
+from squall.utils import generate_operation_id_for_path, get_callable_name
 from squall.validators.head import Validator
+from squall.websockets import WebSocket
 from starlette.concurrency import run_in_threadpool
-from starlette.routing import WebSocketRoute as SlWebSocketRoute
-from starlette.routing import get_name, websocket_session
+from starlette.routing import websocket_session
+from starlette.status import WS_1008_POLICY_VIOLATION
 from starlette.types import Receive, Scope, Send
-from starlette.websockets import WebSocket
 
 
-class WebSocketRoute(SlWebSocketRoute):
+class BaseRoute:
+    def __init__(
+        self,
+        path: str,
+        endpoint: Callable[..., Any],
+        *,
+        methods: Optional[List[str]] = None,
+    ) -> None:
+        self.path = self._path_origin = path
+        self.endpoint = endpoint
+        self.methods = methods
+
+    def matches(self, scope: Scope) -> Tuple[bool, Scope]:
+        if match := self.path_regex.match(scope["path"]):
+            return True, {"endpoint": self.endpoint, "path_params": match.groupdict()}
+        return False, {}
+
+    def __eq__(self, other: Any) -> bool:
+        return (
+            isinstance(other, BaseRoute)
+            and self.path == other.path
+            and self.endpoint == other.endpoint
+            and self.methods == other.methods
+        )
+
     def add_path_prefix(self, prefix: str) -> None:
         self.path = prefix + self.path
+        self.path_regex, self.path_format, self.param_convertors = compile_path(
+            self.path
+        )
+
+    def set_defaults(self) -> None:
+        self.path = self._path_origin
+
+
+class WebSocketRoute(BaseRoute):
+    def __init__(
+        self,
+        path: str,
+        endpoint: Callable[..., Any],
+        *,
+        name: Optional[str] = None,
+        include_in_schema: bool = True,
+    ) -> None:
+        self.path = self._path_origin = path
+        self.endpoint = endpoint
+        self.head_params = get_handler_head_params(endpoint)
+        self.head_validator = build_head_validator(self.head_params)
+        self.name = get_callable_name(endpoint) if name is None else name
+        self.include_in_schema = include_in_schema
+
+        if inspect.isfunction(endpoint) or inspect.ismethod(endpoint):
+            # Endpoint is function or method. Treat it as `func(websocket)`.
+            self.app = websocket_session(
+                get_websocket_handler(endpoint, head_validator=self.head_validator)
+            )
+        else:
+            # Endpoint is a class. Treat it as ASGI.
+            self.app = endpoint
+
+        self.path_regex, self.path_format, self.param_convertors = compile_path(path)
 
 
 class NoMatchFound(Exception):
@@ -113,7 +172,7 @@ def compile_path(
     return re.compile(path_regex), path_format, param_convertors
 
 
-def get_request_handler(
+def get_http_handler(
     endpoint: Callable[..., Any],
     head_validator: Optional[Callable[..., Any]] = None,
     body_fields: Optional[List[Any]] = None,
@@ -265,20 +324,20 @@ def get_request_handler(
     return app
 
 
-def get_websocket_app() -> Callable[[WebSocket], Coroutine[Any, Any, Any]]:
+def get_websocket_handler(
+    endpoint: Callable[..., Any],
+    head_validator: Optional[Callable[..., Any]] = None,
+) -> Callable[[WebSocket], Coroutine[Any, Any, Any]]:
     async def app(websocket: WebSocket) -> None:
-        pass
-        # solved_result = await solve_dependencies(
-        #     request=websocket,
-        #     dependant=dependant,
-        #     dependency_overrides_provider=dependency_overrides_provider,
-        # )
-        # values, errors, _, _2, _3 = solved_result
-        # if errors:
-        #     await websocket.close(code=WS_1008_POLICY_VIOLATION)
-        #     raise WebSocketRequestValidationError(errors)
-        # assert dependant.call is not None, "dependant.call must be a function"
-        # await dependant.call(**values)
+        # Head validation
+        if head_validator is not None:
+            kwargs, errors = head_validator(websocket)
+            if errors:
+                await websocket.close(code=WS_1008_POLICY_VIOLATION)
+                raise WebSocketRequestValidationError(errors)
+        else:
+            kwargs = {}
+        await endpoint(websocket, **kwargs)
 
     return app
 
@@ -308,7 +367,7 @@ def build_head_validator(head_params: List[HeadParam]) -> Callable[..., Any]:
     return v.build()
 
 
-class Route:
+class Route(BaseRoute):
     def __init__(
         self,
         path: str,
@@ -321,7 +380,7 @@ class Route:
         assert path.startswith("/"), "Routed paths must start with '/'"
         self.path = path
         self.endpoint = endpoint
-        self.name = get_name(endpoint) if name is None else name
+        self.name = get_callable_name(endpoint) if name is None else name
         self.include_in_schema = include_in_schema
 
         endpoint_handler = endpoint
@@ -329,7 +388,7 @@ class Route:
             endpoint_handler = endpoint_handler.func
         if inspect.isfunction(endpoint_handler) or inspect.ismethod(endpoint_handler):
             # Endpoint is function or method. Treat it as `func(request) -> response`.
-            self.app = get_request_handler(endpoint=endpoint)
+            self.app = get_http_handler(endpoint=endpoint)
             if methods is None:
                 methods = ["GET"]
         else:
@@ -339,55 +398,11 @@ class Route:
         if methods is None:
             self.methods = None
         else:
-            self.methods = {method.upper() for method in methods}
-            if "GET" in self.methods:
-                self.methods.add("HEAD")
+            self.methods = [method.upper() for method in methods]
+            if self.methods is not None and "GET" in self.methods:
+                self.methods.append("HEAD")
 
         self.path_regex, self.path_format, self.param_convertors = compile_path(path)
-
-    def matches(self, scope: Scope) -> Tuple[bool, Scope]:
-        match = self.path_regex.match(scope["path"])
-        if match:
-            return True, {"endpoint": self.endpoint, "path_params": match.groupdict()}
-        return False, {}
-
-    def __eq__(self, other: Any) -> bool:
-        return (
-            isinstance(other, Route)
-            and self.path == other.path
-            and self.endpoint == other.endpoint
-            and self.methods == other.methods
-        )
-
-
-class APIWebSocketRoute(WebSocketRoute):
-    def __init__(
-        self,
-        path: str,
-        endpoint: Callable[..., Any],
-        *,
-        name: Optional[str] = None,
-    ) -> None:
-        self.path = self._path_origin = path
-        self.endpoint = endpoint
-        self.name = get_name(endpoint) if name is None else name
-        self.app = websocket_session(get_websocket_app())
-        self.path_regex, self.path_format, self.param_convertors = compile_path(path)
-
-    def set_defaults(self) -> None:
-        self.path = self._path_origin
-
-    def add_path_prefix(self, prefix: str) -> None:
-        self.path = prefix + self.path
-        self.path_regex, self.path_format, self.param_convertors = compile_path(
-            self.path
-        )
-
-    def matches(self, scope: Scope) -> Tuple[bool, Scope]:
-        match = self.path_regex.match(scope["path"])
-        if match:
-            return True, match.groupdict()
-        return False, {}
 
 
 class APIRoute(Route):
@@ -427,11 +442,11 @@ class APIRoute(Route):
         assert len(request_fields) < 2, "Only one request model allowed"
         self.request_field = request_fields[0] if request_fields else None
 
-        self.name = get_name(endpoint) if name is None else name
+        self.name = get_callable_name(endpoint) if name is None else name
         self.path_regex, self.path_format, self.param_convertors = compile_path(path)
         if methods is None:
             methods = ["GET"]
-        self.methods: Set[str] = {method.upper() for method in methods}
+        self.methods = [method.upper() for method in methods]
         self.unique_id = generate_operation_id_for_path(
             name=self.name, path=self.path_format, method=list(methods)[0]
         )
@@ -458,7 +473,7 @@ class APIRoute(Route):
         self.openapi_extra = openapi_extra
 
     def get_route_handler(self) -> ASGIApp:
-        return get_request_handler(
+        return get_http_handler(
             endpoint=self.endpoint,
             status_code=self.status_code,
             response_class=self.response_class,
@@ -466,13 +481,4 @@ class APIRoute(Route):
             response_field=self.response_field,
             head_validator=self.head_validator,
             body_fields=self.body_fields,
-        )
-
-    def set_defaults(self) -> None:
-        self.path = self._path_origin
-
-    def add_path_prefix(self, prefix: str) -> None:
-        self.path = prefix + self.path
-        self.path_regex, self.path_format, self.param_convertors = compile_path(
-            self.path
         )

@@ -29,6 +29,7 @@ from squall.params import (
     Str,
 )
 from squall.requests import Request
+from starlette.websockets import WebSocket
 
 
 class HeadParam:
@@ -95,6 +96,8 @@ def get_handler_head_params(func: Callable[..., Any]) -> List[HeadParam]:
         source = None
         if isinstance(v.default, (Query, Path, Cookie, Header)):
             source = v.default.in_.value
+        elif v.annotation == WebSocket:
+            continue
         elif v.default is v.empty:
             is_model = is_valid_body_model(v.annotation)
             is_affilated = get_annotation_affiliation(v.annotation)
