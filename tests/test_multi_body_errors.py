@@ -1,17 +1,22 @@
-from decimal import Decimal
-from typing import List
+from dataclasses import dataclass
+from typing import List, Optional
 
-from pydantic import Field, condecimal, dataclasses
+from apischema import validator
 from squall import Squall
 from squall.testclient import TestClient
 
 app = Squall()
 
 
-@dataclasses.dataclass
+@dataclass
 class Item:
-    age: condecimal(gt=Decimal(0.0))  # type: ignore
-    name: str = Field(...)
+    age: float
+    name: Optional[str] = None
+
+    @validator
+    def age_positive(self):
+        if self.age <= 0:
+            raise ValueError("Age should be greater than 0")
 
 
 @app.post("/items/")
@@ -101,39 +106,12 @@ openapi_schema = {
     },
 }
 
-single_error = {
-    "detail": [
-        {
-            "ctx": {"limit_value": 0.0},
-            "loc": ["body", 0, "age"],
-            "msg": "ensure this value is greater than 0",
-            "type": "value_error.number.not_gt",
-        }
-    ]
-}
+single_error = {"details": [{"loc": [0], "msg": "Age should be greater than 0"}]}
 
 multiple_errors = {
-    "detail": [
-        {
-            "loc": ["body", 0, "age"],
-            "msg": "value is not a valid decimal",
-            "type": "type_error.decimal",
-        },
-        {
-            "loc": ["body", 0, "name"],
-            "msg": "field required",
-            "type": "value_error.missing",
-        },
-        {
-            "loc": ["body", 1, "age"],
-            "msg": "value is not a valid decimal",
-            "type": "type_error.decimal",
-        },
-        {
-            "loc": ["body", 1, "name"],
-            "msg": "field required",
-            "type": "value_error.missing",
-        },
+    "details": [
+        {"loc": [0, "age"], "msg": "expected type number, found string"},
+        {"loc": [1, "age"], "msg": "expected type number, found string"},
     ]
 }
 

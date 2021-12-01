@@ -1,6 +1,6 @@
 import inspect
 import re
-from typing import Any, Callable, Dict, Set, Union
+from typing import Any, Callable, Dict, Set, Union, get_args, get_origin
 
 from squall.datastructures import DefaultPlaceholder, DefaultType
 
@@ -50,3 +50,30 @@ def get_value_or_default(
         if not isinstance(item, DefaultPlaceholder):
             return item
     return first_item
+
+
+def get_types(annotation: Any) -> Set[Any]:
+    """Returns all types in the annotation
+
+    :param annotation: variable to get types from
+    :returns: set of available types
+
+    Example:
+        >>> get_types(Optional[List[UserInfoResponse]])
+        {typing.Union, <class 'NoneType'>, <class '__main__.UserInfoResponse'>, <class 'list'>}
+    """
+    result = set()
+
+    if inspect.isclass(annotation):
+        result.add(annotation)
+
+    if alias := get_origin(annotation):
+        result.add(alias)
+        result.update(get_types(alias))
+
+    for i in get_args(annotation):
+        if not get_origin(i):
+            result.add(i)
+        else:
+            result.update(get_types(i))
+    return result

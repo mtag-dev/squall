@@ -19,15 +19,15 @@ from typing import (
     Union,
 )
 
-from apischema import ValidationError, deserialize, serialize
+from apischema import ValidationError, deserialization_method, serialization_method
 from orjson import JSONDecodeError
-from pydantic.error_wrappers import ErrorWrapper
 from squall.bindings import RequestField, ResponseField
 from squall.datastructures import Default, DefaultPlaceholder
 from squall.exceptions import (
     HTTPException,
     RequestHeadValidationError,
     RequestPayloadValidationError,
+    ResponsePayloadValidationError,
     WebSocketRequestValidationError,
 )
 from squall.requests import Request
@@ -179,7 +179,10 @@ def get_http_handler(
     status_code: Optional[int] = None,
     response_class: Union[Type[Response], DefaultPlaceholder] = Default(JSONResponse),
     request_field: Optional[RequestField] = None,
+    request_deserializer: Optional[Callable[..., Any]] = None,
     response_field: Optional[ResponseField] = None,
+    response_deserializer: Optional[Callable[..., Any]] = None,
+    response_serializer: Optional[Callable[..., Any]] = None,
 ) -> ASGIApp:
     is_coroutine = asyncio.iscoroutinefunction(endpoint)
     # is_body_form = body_field and isinstance(body_field.field_info, params.Form)
@@ -188,7 +191,7 @@ def get_http_handler(
     else:
         actual_response_class = response_class
 
-    response_model = response_field.model if response_field else None
+    response_field.model if response_field else None
     request_model = request_model_param = None
     if request_field is not None:
         request_model_param = request_field.name
@@ -208,9 +211,9 @@ def get_http_handler(
         # Body fields and request object
         form = None
         try:
-            if request_model is not None:
+            if request_model is not None and request_deserializer is not None:
                 body = await request.json()
-                kwargs[request_model_param] = deserialize(request_model, body)
+                kwargs[request_model_param] = request_deserializer(body)
 
             if body_fields:
                 for field in body_fields:
@@ -229,9 +232,9 @@ def get_http_handler(
                         kwargs[field["name"]] = form.get(field["name"])
 
         except JSONDecodeError as e:
-            raise RequestPayloadValidationError([ErrorWrapper(e, ("body",))])
+            raise RequestPayloadValidationError([str(e)])
         except ValidationError as e:
-            raise RequestPayloadValidationError([ErrorWrapper(e, ("body",))])
+            raise RequestPayloadValidationError(e.messages, e.children)
         except Exception as e:
             raise HTTPException(
                 status_code=400, detail="There was an error parsing the body"
@@ -251,18 +254,19 @@ def get_http_handler(
         # If status_code was set, use it, otherwise use the default from the
         # response class, in the case of redirect it's 307
 
-        if response_model is not None:
+        if response_serializer is not None and response_deserializer is not None:
             try:
                 if is_dataclass(raw_response):
-                    response_value = serialize(
-                        response_model, raw_response, check_type=True
-                    )
+                    response_value = response_serializer(raw_response, check_type=True)
                 else:
-                    response_value = serialize(
-                        response_model, deserialize(response_model, raw_response)
+                    response_value = response_serializer(
+                        response_deserializer(raw_response)
                     )
+            except ValidationError as e:
+                raise ResponsePayloadValidationError(e.messages, e.children)
             except TypeError as e:
-                raise RequestPayloadValidationError([ErrorWrapper(e, ("response",))])
+                # raise
+                raise RequestPayloadValidationError([str(e)])
 
             # response_value, response_errors = response_field.validate(
             #     raw_response, {}, loc=("response",)
@@ -440,7 +444,11 @@ class APIRoute(Route):
 
         request_fields = get_handler_request_fields(endpoint)
         assert len(request_fields) < 2, "Only one request model allowed"
-        self.request_field = request_fields[0] if request_fields else None
+        self.request_field: Optional[RequestField] = None
+        self.request_deserializer: Optional[Callable[..., Any]] = None
+        if request_fields:
+            self.request_field = request_fields[0]
+            self.request_deserializer = deserialization_method(self.request_field.model)
 
         self.name = get_callable_name(endpoint) if name is None else name
         self.path_regex, self.path_format, self.param_convertors = compile_path(path)
@@ -451,8 +459,14 @@ class APIRoute(Route):
             name=self.name, path=self.path_format, method=list(methods)[0]
         )
         self.response_field: Optional[ResponseField] = None
+        self.response_deserializer: Optional[Callable[..., Any]] = None
+        self.response_serializer: Optional[Callable[..., Any]] = None
         if response_model is not None:
             self.response_field = ResponseField(model=response_model)
+            self.response_deserializer = deserialization_method(
+                self.response_field.model
+            )
+            self.response_serializer = serialization_method(self.response_field.model)
 
         self.status_code = status_code
         self.tags = tags or []
@@ -478,7 +492,10 @@ class APIRoute(Route):
             status_code=self.status_code,
             response_class=self.response_class,
             request_field=self.request_field,
+            request_deserializer=self.request_deserializer,
             response_field=self.response_field,
+            response_deserializer=self.response_deserializer,
+            response_serializer=self.response_serializer,
             head_validator=self.head_validator,
             body_fields=self.body_fields,
         )

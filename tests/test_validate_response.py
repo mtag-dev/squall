@@ -1,14 +1,16 @@
+from dataclasses import dataclass
 from typing import List, Optional
 
 import pytest
-from pydantic import BaseModel, ValidationError
 from squall import Squall
+from squall.exceptions import ResponsePayloadValidationError
 from squall.testclient import TestClient
 
 app = Squall()
 
 
-class Item(BaseModel):
+@dataclass
+class Item:
     name: str
     price: Optional[float] = None
     owner_ids: Optional[List[int]] = None
@@ -37,15 +39,15 @@ client = TestClient(app)
 
 
 def test_invalid():
-    with pytest.raises(ValidationError):
+    with pytest.raises(ResponsePayloadValidationError):
         client.get("/items/invalid")
 
 
 def test_double_invalid():
-    with pytest.raises(ValidationError):
+    with pytest.raises(ResponsePayloadValidationError):
         client.get("/items/innerinvalid")
 
 
 def test_invalid_list():
-    with pytest.raises(ValidationError):
+    with pytest.raises(ResponsePayloadValidationError):
         client.get("/items/invalidlist")

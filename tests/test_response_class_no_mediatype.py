@@ -1,6 +1,6 @@
 import typing
+from dataclasses import dataclass
 
-from pydantic import BaseModel
 from squall import Response, Squall
 from squall.responses import JSONResponse
 from squall.testclient import TestClient
@@ -12,12 +12,14 @@ class JsonApiResponse(JSONResponse):
     media_type = "application/vnd.api+json"
 
 
-class Error(BaseModel):
+@dataclass
+class Error:
     status: str
     title: str
 
 
-class JsonApiError(BaseModel):
+@dataclass
+class JsonApiError:
     errors: typing.List[Error]
 
 

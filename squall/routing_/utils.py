@@ -8,7 +8,6 @@ from typing import (
     Dict,
     List,
     Optional,
-    Set,
     Tuple,
     Union,
     get_args,
@@ -29,6 +28,7 @@ from squall.params import (
     Str,
 )
 from squall.requests import Request
+from squall.utils import get_types
 from starlette.websockets import WebSocket
 
 
@@ -127,33 +127,6 @@ def get_annotation_affiliation(annotation: Any) -> Optional[Any]:
     # elif isinstance(v.default, (Form, File)):
     #     return "form"
     return None
-
-
-def get_types(annotation: Any) -> Set[Any]:
-    """Returns all types in the annotation
-
-    :param annotation: variable to get types from
-    :returns: set of available types
-
-    Example:
-        >>> get_types(Optional[List[UserInfoResponse]])
-        {typing.Union, <class 'NoneType'>, <class '__main__.UserInfoResponse'>, <class 'list'>}
-    """
-    result = set()
-
-    if inspect.isclass(annotation):
-        result.add(annotation)
-
-    if alias := get_origin(annotation):
-        result.add(alias)
-        result.update(get_types(alias))
-
-    for i in get_args(annotation):
-        if not get_origin(i):
-            result.add(i)
-        else:
-            result.update(get_types(i))
-    return result
 
 
 def is_valid_body_model(annotation: Any) -> bool:

@@ -1,11 +1,12 @@
+from dataclasses import dataclass
 from typing import List
 
-from pydantic import BaseModel
 from squall import Squall
 from squall.testclient import TestClient
 
 
-class Model(BaseModel):
+@dataclass
+class Model:
     name: str
 
 
