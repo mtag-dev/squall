@@ -58,7 +58,7 @@ def test_nesting():
     nested_router = Router(prefix="/n", default_response_class=HTMLResponse)
 
     @nested_router.get("/html")
-    def get_default():
+    def get_default_nested():
         return "Hello HTML"
 
     @router.get("/override")

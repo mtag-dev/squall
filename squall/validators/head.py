@@ -119,7 +119,7 @@ class Validator:
 
         checker = self.main_branching(
             default=default,
-            on_undefined=[self.add_violate(attribute, key, f"Mandatory field missed")],
+            on_undefined=[self.add_violate(attribute, key, "Mandatory field missed")],
             on_default=[setitem("results", name, ast.Constant(value=default))],
             on_defined=[
                 self.convert_candidate(

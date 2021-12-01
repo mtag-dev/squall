@@ -14,7 +14,7 @@ async def index(websocket: WebSocket):
 
 
 @app.websocket("/some/{param}")
-async def index(websocket: WebSocket, param: str):
+async def index_with_param(websocket: WebSocket, param: str):
     await websocket.accept()
     await websocket.send_text(f"Param: {param}")
     await websocket.close()

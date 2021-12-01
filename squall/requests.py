@@ -219,16 +219,16 @@ class Request(HTTPConnection):
         yield b""
 
     async def body(self) -> bytes:
-        body: Optional[bytes] = getattr(self, "_body", None)
-        if body is not None:
-            return body
+        cached_body: Optional[bytes] = getattr(self, "_body", None)
+        if cached_body is not None:
+            return cached_body
 
         message_get = dict.get
 
         chunks = []
         message = await self._receive()
         if message["type"] == "http.request":
-            body = message_get(message, "body", b"")
+            body: bytes = message_get(message, "body", b"")
             if not message_get(message, "more_body"):
                 self._body = body
                 return body
@@ -240,7 +240,7 @@ class Request(HTTPConnection):
         while True:
             message = await self._receive()
             if message["type"] == "http.request":
-                if body := message_get(message, "body"):
+                if body := message_get(message, "body", b""):
                     chunks.append(body)
                 if not message_get(message, "more_body"):
                     self._body = _body = b"".join(chunks)
@@ -253,8 +253,8 @@ class Request(HTTPConnection):
         if hasattr(self, "_json"):
             return self._json
 
-        if body := getattr(self, "_body", None) is not None:
-            self._json = _json = json_loads(body)
+        if cached_body := getattr(self, "_body", None) is not None:
+            self._json = _json = json_loads(cached_body)  # type: ignore
             return _json
 
         if self._stream_consumed:

@@ -43,6 +43,7 @@ from squall.utils import generate_operation_id_for_path, get_callable_name
 from squall.validators.head import Validator
 from squall.websockets import WebSocket
 from starlette.concurrency import run_in_threadpool
+from starlette.convertors import CONVERTOR_TYPES, Convertor
 from starlette.routing import websocket_session
 from starlette.status import WS_1008_POLICY_VIOLATION
 from starlette.types import Receive, Scope, Send
@@ -117,8 +118,6 @@ class NoMatchFound(Exception):
     if no matching route exists.
     """
 
-
-from starlette.convertors import CONVERTOR_TYPES, Convertor
 
 # Match parameters in URL paths, eg. '{param}', and '{param:int}'
 PARAM_REGEX = re.compile("{([a-zA-Z_][a-zA-Z0-9_]*)(:[a-zA-Z_][a-zA-Z0-9_]*)?}")
