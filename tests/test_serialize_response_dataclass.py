@@ -1,7 +1,9 @@
+from dataclasses import dataclass
 from typing import List, Optional
 
-from pydantic.dataclasses import dataclass
+import pytest
 from squall import Squall
+from squall.exceptions import ResponsePayloadValidationError
 from squall.testclient import TestClient
 
 app = Squall()
@@ -20,7 +22,7 @@ def get_valid():
 
 
 @app.get("/items/object", response_model=Item)
-def get_object():
+def get_object() -> Item:
     return Item(name="object", price=1.0, owner_ids=[1, 2, 3])
 
 
@@ -39,7 +41,7 @@ def get_validlist():
 
 
 @app.get("/items/objectlist", response_model=List[Item])
-def get_objectlist():
+def get_objectlist() -> List[Item]:
     return [
         Item(name="foo"),
         Item(name="bar", price=1.0),
@@ -48,12 +50,12 @@ def get_objectlist():
 
 
 @app.get("/items/no-response-model/object")
-def get_no_response_model_object():
+def get_no_response_model_object() -> Item:
     return Item(name="object", price=1.0, owner_ids=[1, 2, 3])
 
 
 @app.get("/items/no-response-model/objectlist")
-def get_no_response_model_objectlist():
+def get_no_response_model_objectlist() -> List[Item]:
     return [
         Item(name="foo"),
         Item(name="bar", price=1.0),
@@ -77,9 +79,8 @@ def test_object():
 
 
 def test_coerce():
-    response = client.get("/items/coerce")
-    response.raise_for_status()
-    assert response.json() == {"name": "coerce", "price": 1.0, "owner_ids": None}
+    with pytest.raises(ResponsePayloadValidationError):
+        client.get("/items/coerce")
 
 
 def test_validlist():

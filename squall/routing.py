@@ -3,7 +3,6 @@ import enum
 import functools
 import inspect
 import re
-from dataclasses import is_dataclass
 from decimal import Decimal
 from typing import (
     Any,
@@ -254,31 +253,21 @@ def get_http_handler(
         # If status_code was set, use it, otherwise use the default from the
         # response class, in the case of redirect it's 307
 
-        if response_serializer is not None and response_deserializer is not None:
-            try:
-                if is_dataclass(raw_response):
-                    response_value = response_serializer(raw_response, check_type=True)
-                else:
-                    response_value = response_serializer(
-                        response_deserializer(raw_response)
-                    )
-            except ValidationError as e:
-                raise ResponsePayloadValidationError(e.messages, e.children)
-            except TypeError as e:
-                # raise
-                raise RequestPayloadValidationError([str(e)])
-
-            # response_value, response_errors = response_field.validate(
-            #     raw_response, {}, loc=("response",)
-            # )
-            # if response_errors:
-            #     raise ValidationError([response_errors], response_field.type_)
-        else:
-            response_value = raw_response
+        try:
+            if response_deserializer and response_serializer:
+                result = response_serializer(response_deserializer(raw_response))
+            elif response_serializer:
+                result = response_serializer(raw_response)
+            else:
+                result = raw_response
+        except ValidationError as e:
+            raise ResponsePayloadValidationError(e.messages, e.children)
+        except TypeError as e:
+            raise ResponsePayloadValidationError([str(e)])
 
         if status_code is not None:
             response_args["status_code"] = status_code
-        response = actual_response_class(response_value, **response_args)
+        response = actual_response_class(result, **response_args)
         await send(response.send_start)
         await send(response.send_body)
 
@@ -461,16 +450,29 @@ class APIRoute(Route):
         self.response_field: Optional[ResponseField] = None
         self.response_deserializer: Optional[Callable[..., Any]] = None
         self.response_serializer: Optional[Callable[..., Any]] = None
+
+        endpoint_returns = inspect.signature(endpoint).return_annotation
+        res_deserialize = True
+        if response_model == endpoint_returns:
+            res_deserialize = False
+        # elif endpoint_returns != inspect._empty and response_model is None:
+        #     response_model = endpoint_returns
+        #     res_deserialize = False
+
         if response_model is not None:
             self.response_field = ResponseField(model=response_model)
-            self.response_deserializer = deserialization_method(
-                self.response_field.model
+            check_type_on_serialization = True
+            if res_deserialize:
+                self.response_deserializer = deserialization_method(
+                    self.response_field.model
+                )
+                check_type_on_serialization = False
+            self.response_serializer = serialization_method(
+                self.response_field.model, check_type=check_type_on_serialization
             )
-            self.response_serializer = serialization_method(self.response_field.model)
 
         self.status_code = status_code
         self.tags = tags or []
-        # self.dependencies = list(dependencies) if dependencies else []
         self.summary = summary
         self.description = description or inspect.cleandoc(self.endpoint.__doc__ or "")
         self.description = self.description.split("\f")[0]

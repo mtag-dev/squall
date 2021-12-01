@@ -150,7 +150,7 @@ class OpenAPIRoute:
             response_schema: Mapping[str, Any] = {"type": "string"}
             if self.response_class in (JSONResponse, PrettyJSONResponse):
                 if self.route.response_field:
-                    response_schema = deserialization_schema(
+                    response_schema = serialization_schema(
                         self.route.response_field.model,
                         all_refs=True,
                         version=self.version,
@@ -173,14 +173,15 @@ class OpenAPIRoute:
                 },
             }
         # For request_field
-        # responses["422"] = {
-        #     "description": "Request Body Validation Error",
-        #     "content": {
-        #         "application/json": {
-        #             "schema": {"$ref": REF_PREFIX + "HTTPValidationError"}
-        #         }
-        #     },
-        # }
+        if self.route.request_field is not None:
+            responses["422"] = {
+                "description": "Request Body Validation Error",
+                "content": {
+                    "application/json": {
+                        "schema": {"$ref": REF_PREFIX + "HTTPValidationError"}
+                    }
+                },
+            }
 
         # User defined responses
         for status_code, response in self.route.responses.items():
@@ -189,12 +190,13 @@ class OpenAPIRoute:
                 responses[status_code] = {}
 
             if model := response.get("model"):
-                response_schema = deserialization_schema(
+                response_schema = serialization_schema(
                     model, all_refs=True, version=self.version
                 )
                 responses[status_code]["content"] = {
                     self.response_class.media_type: {"schema": response_schema}
                 }
+                self.response_schemas.add(model)
             if description := response.get("description"):
                 responses[status_code]["description"] = description
 
@@ -212,7 +214,7 @@ class OpenAPIRoute:
             return None
 
         self.request_schemas.add(self.route.request_field.model)
-        response_schema = serialization_schema(
+        response_schema = deserialization_schema(
             self.route.request_field.model,
             all_refs=True,
             version=self.version,
