@@ -25,7 +25,7 @@ async def b():
     "/c",
     responses={
         "400": {"description": "Error with str"},
-        "5xx": {"description": "Error with range, lower"},
+        "5XX": {"description": "Error with range"},
         "default": {"description": "A default response"},
     },
 )
@@ -70,7 +70,7 @@ openapi_schema = {
             "get": {
                 "responses": {
                     "400": {"description": "Error with str"},
-                    "5XX": {"description": "Error with range, lower"},
+                    "5XX": {"description": "Error with range"},
                     "200": {
                         "description": "Successful Response",
                         "content": {"application/json": {"schema": {}}},

@@ -16,7 +16,7 @@ from squall.openapi.constants import (
     STATUS_CODES_WITH_NO_BODY,
 )
 from squall.params import Body
-from squall.responses import JSONResponse, PrettyJSONResponse, Response
+from squall.responses import Response
 from squall.routing import APIRoute, WebSocketRoute
 from squall.routing_.utils import HeadParam
 from squall.utils import generate_operation_id_for_path
@@ -148,7 +148,10 @@ class OpenAPIRoute:
             and status_code not in STATUS_CODES_WITH_NO_BODY
         ):
             response_schema: Mapping[str, Any] = {"type": "string"}
-            if self.response_class in (JSONResponse, PrettyJSONResponse):
+            if (
+                self.response_class.media_type is not None
+                and self.response_class.media_type[-4:] == "json"
+            ):
                 if self.route.response_field:
                     response_schema = serialization_schema(
                         self.route.response_field.model,
@@ -158,8 +161,12 @@ class OpenAPIRoute:
                     self.response_schemas.add(self.route.response_field.model)
                 else:
                     response_schema = {}
+            media_type = self.response_class.media_type
+
+            if media_type is None and response_schema:
+                media_type = "application/json"
             responses[status_code]["content"] = {
-                self.response_class.media_type: {"schema": response_schema}
+                media_type: {"schema": response_schema}
             }
 
         # Errors
@@ -185,7 +192,9 @@ class OpenAPIRoute:
 
         # User defined responses
         for status_code, response in self.route.responses.items():
-            status_code = str(status_code)
+            if status_code not in status_code_ranges and status_code != "default":
+                status_code = str(int(status_code))
+
             if status_code not in responses:
                 responses[status_code] = {}
 
@@ -193,8 +202,10 @@ class OpenAPIRoute:
                 response_schema = serialization_schema(
                     model, all_refs=True, version=self.version
                 )
+                media_type = self.response_class.media_type or "application/json"
+
                 responses[status_code]["content"] = {
-                    self.response_class.media_type: {"schema": response_schema}
+                    media_type: {"schema": response_schema}
                 }
                 self.response_schemas.add(model)
             if description := response.get("description"):
@@ -311,6 +322,9 @@ class OpenAPIRoute:
                 operation["parameters"] = parameters
             operation["responses"] = self.responses
 
+            if self.route.openapi_extra is not None:
+                operation.update(self.route.openapi_extra)
+
             if method in METHODS_WITH_BODY:
                 if request_body := self.request_body:
                     operation["requestBody"] = request_body
@@ -359,7 +373,10 @@ def get_openapi(
             continue
 
         openapi_route = OpenAPIRoute(route, version=_version)
-        paths[route.path_format] = openapi_route.spec
+        if route.path_format in paths:
+            paths[route.path_format].update(openapi_route.spec)
+        else:
+            paths[route.path_format] = openapi_route.spec
         response_schemas.update(openapi_route.response_schemas)
         request_schemas.update(openapi_route.request_schemas)
 
@@ -372,12 +389,13 @@ def get_openapi(
         )
 
         # Should be removed from here. Schema should be defined via handlers
-        if "ValidationError" not in components["schemas"]:
-            components["schemas"]["ValidationError"] = validation_error_definition
-        if "HTTPValidationError" not in components["schemas"]:
-            components["schemas"][
-                "HTTPValidationError"
-            ] = validation_error_response_definition
+        if request_schemas:
+            if "ValidationError" not in components["schemas"]:
+                components["schemas"]["ValidationError"] = validation_error_definition
+            if "HTTPValidationError" not in components["schemas"]:
+                components["schemas"][
+                    "HTTPValidationError"
+                ] = validation_error_response_definition
         if "HTTPBadRequestError" not in components["schemas"]:
             components["schemas"][
                 "HTTPBadRequestError"

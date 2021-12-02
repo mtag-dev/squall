@@ -179,7 +179,6 @@ def get_http_handler(
     response_class: Union[Type[Response], DefaultPlaceholder] = Default(JSONResponse),
     request_field: Optional[RequestField] = None,
     request_deserializer: Optional[Callable[..., Any]] = None,
-    response_field: Optional[ResponseField] = None,
     response_deserializer: Optional[Callable[..., Any]] = None,
     response_serializer: Optional[Callable[..., Any]] = None,
 ) -> ASGIApp:
@@ -244,7 +243,8 @@ def get_http_handler(
             raw_response = await run_in_threadpool(endpoint, **kwargs)
 
         if isinstance(raw_response, Response):
-            await raw_response(scope, receive, send)
+            await send(raw_response.send_start)
+            await send(raw_response.send_body)
             return
 
         response_args: Dict[str, Any] = {}
@@ -253,9 +253,9 @@ def get_http_handler(
         # response class, in the case of redirect it's 307
 
         try:
-            if response_deserializer and response_serializer:
+            if response_deserializer is not None and response_serializer is not None:
                 result = response_serializer(response_deserializer(raw_response))
-            elif response_serializer:
+            elif response_serializer is not None:
                 result = response_serializer(raw_response)
             else:
                 result = raw_response
@@ -494,7 +494,6 @@ class APIRoute(Route):
             response_class=self.response_class,
             request_field=self.request_field,
             request_deserializer=self.request_deserializer,
-            response_field=self.response_field,
             response_deserializer=self.response_deserializer,
             response_serializer=self.response_serializer,
             head_validator=self.head_validator,
