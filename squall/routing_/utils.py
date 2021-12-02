@@ -100,7 +100,7 @@ def get_handler_head_params(func: Callable[..., Any]) -> List[HeadParam]:
             continue
         elif v.default is v.empty:
             is_model = is_valid_body_model(v.annotation)
-            is_affilated = get_annotation_affiliation(v.annotation)
+            is_affilated = get_annotation_affiliation(v.annotation, v.default)
             if not (is_model or is_affilated):
                 source = "path_params"
         elif type(v.default) in (int, float, Decimal, str, bytes, type(None)):
@@ -112,7 +112,7 @@ def get_handler_head_params(func: Callable[..., Any]) -> List[HeadParam]:
     return results
 
 
-def get_annotation_affiliation(annotation: Any) -> Optional[Any]:
+def get_annotation_affiliation(annotation: Any, default: Any) -> Optional[Any]:
     """Helper for classifying affiliation of parameter
 
     :param annotation: annotation record
@@ -124,8 +124,8 @@ def get_annotation_affiliation(annotation: Any) -> Optional[Any]:
 
     if annotation == Request:
         return "request"
-    # elif isinstance(v.default, (Form, File)):
-    #     return "form"
+    elif isinstance(default, (Form, File)):
+        return "form"
     return None
 
 

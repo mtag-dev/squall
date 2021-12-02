@@ -212,6 +212,7 @@ def get_http_handler(
                 kwargs[request_model_param] = request_deserializer(body)
 
             if body_fields:
+                form_missed = []
                 for field in body_fields:
                     kind = field["kind"]
                     if kind == "request":
@@ -225,8 +226,18 @@ def get_http_handler(
                     elif kind == "form":
                         if form is None:
                             form = await request.form()
-                        kwargs[field["name"]] = form.get(field["name"])
-
+                        value = form.get(field["name"])
+                        if value is None:
+                            form_missed.append(
+                                {
+                                    "loc": ["form", field["name"]],
+                                    "msg": "field required",
+                                }
+                            )
+                        else:
+                            kwargs[field["name"]] = form.get(field["name"])
+                if form_missed:
+                    raise ValidationError.from_errors(form_missed)  # type: ignore
         except JSONDecodeError as e:
             raise RequestPayloadValidationError([str(e)])
         except ValidationError as e:
