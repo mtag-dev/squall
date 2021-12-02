@@ -190,7 +190,6 @@ def get_http_handler(
     else:
         actual_response_class = response_class
 
-    response_field.model if response_field else None
     request_model = request_model_param = None
     if request_field is not None:
         request_model_param = request_field.name

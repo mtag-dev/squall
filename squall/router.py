@@ -736,21 +736,23 @@ class RootRouter(Router):
     ) -> Tuple[List[APIRoute], List[APIRoute]]:
         last = self._fast_path_route_http
         locations = []
+        get = dict.get
         try:
             for key in path.strip("/").split("/"):
-                last = last.get(key) or last[PLACEHOLDER_DYNAMIC]
+                last = get(last, key) or last[PLACEHOLDER_DYNAMIC]
                 if PLACEHOLDER_LOCATION in last:
                     locations.append(last[PLACEHOLDER_LOCATION])
         except KeyError:
             return [], locations
-        routes: List[APIRoute] = last.get("#routes#", {}).get(method, [])
+        routes: List[APIRoute] = get(get(last, "#routes#", {}), method, [])
         return routes, locations
 
     def get_ws_routes(self, path: str) -> List[WebSocketRoute]:
         last = self._fast_path_route_ws
+        get = dict.get
         try:
             for key in path.strip("/").split("/"):
-                last = last.get(key) or last[PLACEHOLDER_DYNAMIC]
+                last = get(last, key) or last[PLACEHOLDER_DYNAMIC]
         except KeyError:
             return []
         return last.get("#routes#", [])
