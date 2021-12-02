@@ -17,8 +17,8 @@ def test_typing():
         app = Squall()
 
         @app.post("/", response_model=test_type)
-        def post_endpoint(input: test_type):
-            return input
+        def post_endpoint():
+            return expect
 
         res = TestClient(app).post("/", json=expect)
         assert res.status_code == 200, res.json()

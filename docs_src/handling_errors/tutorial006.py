@@ -1,9 +1,9 @@
 from squall import HTTPException, Squall
 from squall.exception_handlers import (
     http_exception_handler,
-    request_validation_exception_handler,
+    request_payload_validation_exception_handler,
 )
-from squall.exceptions import RequestValidationError
+from squall.exceptions import RequestPayloadValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 app = Squall()
@@ -15,10 +15,10 @@ async def custom_http_exception_handler(request, exc):
     return await http_exception_handler(request, exc)
 
 
-@app.exception_handler(RequestValidationError)
+@app.exception_handler(RequestPayloadValidationError)
 async def validation_exception_handler(request, exc):
     print(f"OMG! The client sent invalid data!: {exc}")
-    return await request_validation_exception_handler(request, exc)
+    return await request_payload_validation_exception_handler(request, exc)
 
 
 @app.get("/items/{item_id}")

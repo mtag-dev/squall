@@ -2,6 +2,7 @@ import http
 from typing import Optional
 
 from squall import Path, Query, Squall
+from squall.params import Num, Str
 
 app = Squall()
 
@@ -43,11 +44,6 @@ def get_float_id(item_id: float):
     return item_id
 
 
-@app.get("/path/bool/{item_id}")
-def get_bool_id(item_id: bool):
-    return item_id
-
-
 @app.get("/path/param/{item_id}")
 def get_path_param_id(item_id: Optional[str] = Path(None)):
     return item_id
@@ -59,87 +55,89 @@ def get_path_param_required_id(item_id: str = Path(...)):
 
 
 @app.get("/path/param-minlength/{item_id}")
-def get_path_param_min_length(item_id: str = Path(..., min_length=3)):
+def get_path_param_min_len(item_id: str = Path(..., valid=Str(min_len=3))):
     return item_id
 
 
 @app.get("/path/param-maxlength/{item_id}")
-def get_path_param_max_length(item_id: str = Path(..., max_length=3)):
+def get_path_param_max_len(item_id: str = Path(..., valid=Str(max_len=3))):
     return item_id
 
 
 @app.get("/path/param-min_maxlength/{item_id}")
-def get_path_param_min_max_length(item_id: str = Path(..., max_length=3, min_length=2)):
+def get_path_param_min_max_len(
+    item_id: str = Path(..., valid=Str(max_len=3, min_len=2))
+):
     return item_id
 
 
 @app.get("/path/param-gt/{item_id}")
-def get_path_param_gt(item_id: float = Path(..., gt=3)):
+def get_path_param_gt(item_id: float = Path(..., valid=Num(gt=3))):
     return item_id
 
 
 @app.get("/path/param-gt0/{item_id}")
-def get_path_param_gt0(item_id: float = Path(..., gt=0)):
+def get_path_param_gt0(item_id: float = Path(..., valid=Num(gt=0))):
     return item_id
 
 
 @app.get("/path/param-ge/{item_id}")
-def get_path_param_ge(item_id: float = Path(..., ge=3)):
+def get_path_param_ge(item_id: float = Path(..., valid=Num(ge=3))):
     return item_id
 
 
 @app.get("/path/param-lt/{item_id}")
-def get_path_param_lt(item_id: float = Path(..., lt=3)):
+def get_path_param_lt(item_id: float = Path(..., valid=Num(lt=3))):
     return item_id
 
 
 @app.get("/path/param-lt0/{item_id}")
-def get_path_param_lt0(item_id: float = Path(..., lt=0)):
+def get_path_param_lt0(item_id: float = Path(..., valid=Num(lt=0))):
     return item_id
 
 
 @app.get("/path/param-le/{item_id}")
-def get_path_param_le(item_id: float = Path(..., le=3)):
+def get_path_param_le(item_id: float = Path(..., valid=Num(le=3))):
     return item_id
 
 
 @app.get("/path/param-lt-gt/{item_id}")
-def get_path_param_lt_gt(item_id: float = Path(..., lt=3, gt=1)):
+def get_path_param_lt_gt(item_id: float = Path(..., valid=Num(lt=3, gt=1))):
     return item_id
 
 
 @app.get("/path/param-le-ge/{item_id}")
-def get_path_param_le_ge(item_id: float = Path(..., le=3, ge=1)):
+def get_path_param_le_ge(item_id: float = Path(..., valid=Num(le=3, ge=1))):
     return item_id
 
 
 @app.get("/path/param-lt-int/{item_id}")
-def get_path_param_lt_int(item_id: int = Path(..., lt=3)):
+def get_path_param_lt_int(item_id: int = Path(..., valid=Num(lt=3))):
     return item_id
 
 
 @app.get("/path/param-gt-int/{item_id}")
-def get_path_param_gt_int(item_id: int = Path(..., gt=3)):
+def get_path_param_gt_int(item_id: int = Path(..., valid=Num(gt=3))):
     return item_id
 
 
 @app.get("/path/param-le-int/{item_id}")
-def get_path_param_le_int(item_id: int = Path(..., le=3)):
+def get_path_param_le_int(item_id: int = Path(..., valid=Num(le=3))):
     return item_id
 
 
 @app.get("/path/param-ge-int/{item_id}")
-def get_path_param_ge_int(item_id: int = Path(..., ge=3)):
+def get_path_param_ge_int(item_id: int = Path(..., valid=Num(ge=3))):
     return item_id
 
 
 @app.get("/path/param-lt-gt-int/{item_id}")
-def get_path_param_lt_gt_int(item_id: int = Path(..., lt=3, gt=1)):
+def get_path_param_lt_gt_int(item_id: int = Path(..., valid=Num(lt=3, gt=1))):
     return item_id
 
 
 @app.get("/path/param-le-ge-int/{item_id}")
-def get_path_param_le_ge_int(item_id: int = Path(..., le=3, ge=1)):
+def get_path_param_le_ge_int(item_id: int = Path(..., valid=Num(le=3, ge=1))):
     return item_id
 
 

@@ -1,6 +1,6 @@
 import typing
+from dataclasses import dataclass
 
-from pydantic import BaseModel
 from squall import Response, Squall
 from squall.responses import JSONResponse
 from squall.testclient import TestClient
@@ -12,12 +12,14 @@ class JsonApiResponse(JSONResponse):
     media_type = "application/vnd.api+json"
 
 
-class Error(BaseModel):
+@dataclass
+class Error:
     status: str
     title: str
 
 
-class JsonApiError(BaseModel):
+@dataclass
+class JsonApiError:
     errors: typing.List[Error]
 
 
@@ -38,69 +40,79 @@ async def b():
 openapi_schema = {
     "openapi": "3.0.2",
     "info": {"title": "Squall", "version": "0.1.0"},
+    "components": {
+        "schemas": {
+            "JsonApiError": {
+                "type": "object",
+                "properties": {
+                    "errors": {
+                        "type": "array",
+                        "items": {"$ref": "#/components/schemas/Error"},
+                    }
+                },
+                "required": ["errors"],
+                "additionalProperties": False,
+            },
+            "Error": {
+                "type": "object",
+                "properties": {
+                    "status": {"type": "string"},
+                    "title": {"type": "string"},
+                },
+                "required": ["status", "title"],
+                "additionalProperties": False,
+            },
+            "HTTPBadRequestError": {
+                "title": "HTTPBadRequestError",
+                "type": "object",
+                "properties": {
+                    "details": {
+                        "title": "Detail",
+                        "type": "array",
+                        "items": {"$ref": "#/components/schemas/ValidationError"},
+                    }
+                },
+            },
+        }
+    },
     "paths": {
         "/a": {
             "get": {
+                "summary": "A",
+                "operationId": "a_a_get",
                 "responses": {
+                    "200": {"description": "Successful Response"},
                     "500": {
-                        "description": "Error",
                         "content": {
                             "application/json": {
                                 "schema": {"$ref": "#/components/schemas/JsonApiError"}
                             }
                         },
+                        "description": "Error",
                     },
-                    "200": {"description": "Successful Response"},
                 },
-                "summary": "A",
-                "operationId": "a_a_get",
             }
         },
         "/b": {
             "get": {
+                "summary": "B",
+                "operationId": "b_b_get",
                 "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {"application/json": {"schema": {}}},
+                    },
                     "500": {
-                        "description": "Error",
                         "content": {
                             "application/json": {
                                 "schema": {"$ref": "#/components/schemas/Error"}
                             }
                         },
-                    },
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {"application/json": {"schema": {}}},
+                        "description": "Error",
                     },
                 },
-                "summary": "B",
-                "operationId": "b_b_get",
             }
         },
-    },
-    "components": {
-        "schemas": {
-            "Error": {
-                "title": "Error",
-                "required": ["status", "title"],
-                "type": "object",
-                "properties": {
-                    "status": {"title": "Status", "type": "string"},
-                    "title": {"title": "Title", "type": "string"},
-                },
-            },
-            "JsonApiError": {
-                "title": "JsonApiError",
-                "required": ["errors"],
-                "type": "object",
-                "properties": {
-                    "errors": {
-                        "title": "Errors",
-                        "type": "array",
-                        "items": {"$ref": "#/components/schemas/Error"},
-                    }
-                },
-            },
-        }
     },
 }
 

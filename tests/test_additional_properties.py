@@ -1,13 +1,14 @@
+from dataclasses import dataclass
 from typing import Dict
 
-from pydantic import BaseModel
 from squall import Squall
 from squall.testclient import TestClient
 
 app = Squall()
 
 
-class Items(BaseModel):
+@dataclass
+class Items:
     items: Dict[str, int]
 
 
@@ -22,55 +23,21 @@ client = TestClient(app)
 openapi_schema = {
     "openapi": "3.0.2",
     "info": {"title": "Squall", "version": "0.1.0"},
-    "paths": {
-        "/foo": {
-            "post": {
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {"application/json": {"schema": {}}},
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        },
-                    },
-                },
-                "summary": "Foo",
-                "operationId": "foo_foo_post",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {"$ref": "#/components/schemas/Items"}
-                        }
-                    },
-                    "required": True,
-                },
-            }
-        }
-    },
     "components": {
         "schemas": {
             "Items": {
-                "title": "Items",
-                "required": ["items"],
                 "type": "object",
                 "properties": {
                     "items": {
-                        "title": "Items",
                         "type": "object",
                         "additionalProperties": {"type": "integer"},
                     }
                 },
+                "required": ["items"],
+                "additionalProperties": False,
             },
             "ValidationError": {
                 "title": "ValidationError",
-                "required": ["loc", "msg", "type"],
                 "type": "object",
                 "properties": {
                     "loc": {
@@ -81,6 +48,7 @@ openapi_schema = {
                     "msg": {"title": "Message", "type": "string"},
                     "type": {"title": "Error Type", "type": "string"},
                 },
+                "required": ["loc", "msg", "type"],
             },
             "HTTPValidationError": {
                 "title": "HTTPValidationError",
@@ -93,6 +61,49 @@ openapi_schema = {
                     }
                 },
             },
+            "HTTPBadRequestError": {
+                "title": "HTTPBadRequestError",
+                "type": "object",
+                "properties": {
+                    "details": {
+                        "title": "Detail",
+                        "type": "array",
+                        "items": {"$ref": "#/components/schemas/ValidationError"},
+                    }
+                },
+            },
+        }
+    },
+    "paths": {
+        "/foo": {
+            "post": {
+                "summary": "Foo",
+                "operationId": "foo_foo_post",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {"application/json": {"schema": {}}},
+                    },
+                    "422": {
+                        "description": "Request Body Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        },
+                    },
+                },
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {"$ref": "#/components/schemas/Items"}
+                        }
+                    },
+                },
+            }
         }
     },
 }

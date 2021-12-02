@@ -12,11 +12,9 @@ def test_add_api_route_defaults(mocker):
         response_model=None,
         status_code=None,
         tags=[],
-        dependencies=[],
         summary=None,
         description=None,
         response_description="Successful Response",
-        dependency_overrides_provider=None,
         responses={},
         deprecated=None,
         methods=["GET"],
@@ -34,7 +32,7 @@ def test_add_api_route_custom(mocker):
     response_class = mocker.Mock()
     status_code = 200
     tags = ["happiness"]
-    dependencies = [mocker.Mock()]
+    [mocker.Mock()]
     summary = "summary"
     description = "description"
     response_description = "response_description"
@@ -51,7 +49,6 @@ def test_add_api_route_custom(mocker):
         response_model=response_model,
         status_code=status_code,
         tags=tags,
-        dependencies=dependencies,
         summary=summary,
         description=description,
         response_description=response_description,
@@ -69,8 +66,6 @@ def test_add_api_route_custom(mocker):
         response_model=response_model,
         status_code=status_code,
         tags=tags,
-        dependencies=dependencies,
-        dependency_overrides_provider=None,
         summary=summary,
         description=description,
         response_description=response_description,

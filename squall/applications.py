@@ -1,14 +1,21 @@
 import typing
+from asyncio import iscoroutinefunction
 from typing import Any, Callable, Dict, List, Optional, Sequence, Type, Union
 
 from squall import router
-from squall.concurrency import AsyncExitStack
+from squall.concurrency import run_in_threadpool
 from squall.datastructures import Default
+from squall.errors import get_default_debug_response
 from squall.exception_handlers import (
     http_exception_handler,
-    request_validation_exception_handler,
+    request_head_validation_exception_handler,
+    request_payload_validation_exception_handler,
 )
-from squall.exceptions import RequestValidationError
+from squall.exceptions import (
+    HTTPException,
+    RequestHeadValidationError,
+    RequestPayloadValidationError,
+)
 from squall.lifespan import LifespanContext, lifespan
 from squall.logger import logger
 from squall.openapi.docs import (
@@ -17,31 +24,31 @@ from squall.openapi.docs import (
     get_swagger_ui_oauth2_redirect_html,
 )
 from squall.openapi.utils import get_openapi
-from squall.params import Depends
 from squall.requests import Request
-from squall.responses import HTMLResponse, JSONResponse, Response
-from squall.routing import APIRoute, APIWebSocketRoute
+from squall.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
+from squall.routing import APIRoute, WebSocketRoute
 from squall.types import AnyFunc, ASGIApp, Receive, Scope, Send
 from starlette.datastructures import State
-from starlette.exceptions import ExceptionMiddleware, HTTPException
 from starlette.middleware import Middleware
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.middleware.errors import ServerErrorMiddleware
 
 
 class Squall:
+    _default_error_response = PlainTextResponse(
+        "Internal Server Error", status_code=500
+    )
+
     def __init__(
         self,
         *,
         debug: bool = False,
-        routes: Optional[Optional[List[Union[APIRoute, APIWebSocketRoute]]]] = None,
+        routes: Optional[Optional[List[Union[APIRoute, WebSocketRoute]]]] = None,
         title: str = "Squall",
         description: str = "",
         version: str = "0.1.0",
         openapi_url: Optional[str] = "/openapi.json",
         openapi_tags: Optional[List[Dict[str, Any]]] = None,
         servers: Optional[List[Dict[str, Union[str, Any]]]] = None,
-        dependencies: Optional[Sequence[Depends]] = None,
         default_response_class: Type[Response] = Default(JSONResponse),
         docs_url: Optional[str] = "/docs",
         redoc_url: Optional[str] = "/redoc",
@@ -62,17 +69,17 @@ class Squall:
         include_in_schema: bool = True,
         **extra: Any,
     ) -> None:
-        self._debug: bool = debug
+        self.debug: bool = debug
         self.state: State = State()
 
         self.router: router.RootRouter = router.RootRouter(
             routes=routes,
             default_response_class=default_response_class,
-            dependencies=dependencies,
+            # dependencies=dependencies,
             deprecated=deprecated,
             include_in_schema=include_in_schema,
             responses=responses,
-            dependency_overrides_provider=self,
+            # dependency_overrides_provider=self,
         )
         # Router methods linking for better user experience like having
         # @app.get(...) instead of @app.get(...)
@@ -96,8 +103,14 @@ class Squall:
         )
         self.exception_handlers.setdefault(HTTPException, http_exception_handler)
         self.exception_handlers.setdefault(
-            RequestValidationError, request_validation_exception_handler
+            RequestPayloadValidationError, request_payload_validation_exception_handler
         )
+        self.exception_handlers.setdefault(
+            RequestHeadValidationError, request_head_validation_exception_handler
+        )
+        # self.exception_handlers.setdefault(
+        #     ResponsePayloadValidationError, response_payload_validation_exception_handler
+        # )
 
         self.user_middleware: List[Middleware] = (
             [] if middleware is None else list(middleware)
@@ -128,7 +141,7 @@ class Squall:
         self.swagger_ui_oauth2_redirect_url = swagger_ui_oauth2_redirect_url
         self.swagger_ui_init_oauth = swagger_ui_init_oauth
         self.extra = extra
-        self.dependency_overrides: Dict[Callable[..., Any], Callable[..., Any]] = {}
+        # self.dependency_overrides: Dict[Callable[..., Any], Callable[..., Any]] = {}
 
         self.openapi_version = "3.0.2"
 
@@ -141,17 +154,6 @@ class Squall:
         self.lifespan_ctx = LifespanContext(self.on_startup, self.on_shutdown)
 
         self._setup()
-
-    @property
-    def debug(self) -> bool:
-        """Returns debug flag."""
-        return self._debug
-
-    @debug.setter
-    def debug(self, value: bool) -> None:
-        """Set debug flag."""
-        self._debug = value
-        self.middleware_stack = self._build_middleware_stack()
 
     def add_event_handler(self, event: str, handler: AnyFunc) -> None:
         """Registrates event hooks.
@@ -216,7 +218,6 @@ class Squall:
             >>> app.add_exception_handler(BackEndException, backend_exception_handler)
         """
         self.exception_handlers[exc_class_or_status_code] = handler
-        self.middleware_stack = self._build_middleware_stack()
 
     def exception_handler(
         self, exc_class_or_status_code: typing.Union[int, typing.Type[Exception]]
@@ -284,39 +285,61 @@ class Squall:
         """ASGI calls entrypoint."""
         if self.root_path:
             scope["root_path"] = self.root_path
-
         scope["app"] = self
+
         if scope["type"] == "lifespan":
             await lifespan(self.lifespan_ctx, scope, receive, send)
             return
 
-        async with AsyncExitStack() as stack:
-            scope["squall_astack"] = stack
+        try:
             await self.middleware_stack(scope, receive, send)
+        except Exception as exc:
+            handler = None
+
+            if isinstance(exc, HTTPException):
+                handler = self.exception_handlers.get(exc.status_code)
+
+            if handler is None:
+                handler = self._lookup_exception_handler(exc)
+
+            request = Request(scope)
+            if handler:
+                if iscoroutinefunction(handler):
+                    response = await handler(request, exc)
+                else:
+                    response = await run_in_threadpool(handler, request, exc)
+            elif self.debug:
+                # In debug mode, return traceback responses.
+                response = get_default_debug_response(request, exc)
+            else:
+                # Use our default 500 error handler.
+                response = self._default_error_response
+
+            await send(response.send_start)
+            await send(response.send_body)
+
+            if not handler:
+                raise exc
+
+    def _lookup_exception_handler(
+        self, exc: Exception
+    ) -> typing.Optional[typing.Callable[..., Any]]:
+        exception_class = type(exc)
+        try:
+            return self.exception_handlers[exception_class]
+        except KeyError:
+            for cls in type(exc).__mro__:
+                if cls in self.exception_handlers:
+                    self.exception_handlers[exception_class] = self.exception_handlers[
+                        cls
+                    ]
+                    return self.exception_handlers[cls]
+        return None
 
     def _build_middleware_stack(self) -> ASGIApp:
         """Build stack for middlewares pipelining"""
-        error_handler = None
-        exception_handlers = {}
-
-        for key, value in self.exception_handlers.items():
-            if key in (500, Exception):
-                error_handler = value
-            else:
-                exception_handlers[key] = value
-
-        middleware = (
-            [Middleware(ServerErrorMiddleware, handler=error_handler, debug=self.debug)]
-            + self.user_middleware
-            + [
-                Middleware(
-                    ExceptionMiddleware, handlers=exception_handlers, debug=self.debug
-                )
-            ]
-        )
-
         app = self.router
-        for cls, options in reversed(middleware):
+        for cls, options in reversed(self.user_middleware):
             app = cls(app=app, **options)
         return app
 
@@ -338,6 +361,7 @@ class Squall:
 
     def _setup(self) -> None:
         """Setups OpenAPI functionality"""
+        # return
         if self.openapi_url:
             urls = (server_data.get("url") for server_data in self.servers)
             server_urls = {url for url in urls if url}
@@ -349,7 +373,7 @@ class Squall:
                         self.servers.insert(0, {"url": root_path})
                         server_urls.add(root_path)
                 return JSONResponse(
-                    self.openapi().dict(exclude_unset=True, by_alias=True)  # type: ignore
+                    self.openapi()  # .dict(exclude_unset=True, by_alias=True)  # type: ignore
                 )
 
             self.router.add_api_route(

@@ -121,11 +121,11 @@ You can override these exception handlers with your own.
 
 ### Override request validation exceptions
 
-When a request contains invalid data, **Squall** internally raises a `RequestValidationError`.
+When a request contains invalid data, **Squall** internally raises a `RequestPayloadValidationError`.
 
 And it also includes a default exception handler for it.
 
-To override it, import the `RequestValidationError` and use it with `@app.exception_handler(RequestValidationError)` to decorate the exception handler.
+To override it, import the `RequestPayloadValidationError` and use it with `@app.exception_handler(RequestPayloadValidationError)` to decorate the exception handler.
 
 The exception handler will receive a `Request` and the exception.
 
@@ -158,12 +158,12 @@ path -> item_id
   value is not a valid integer (type=type_error.integer)
 ```
 
-#### `RequestValidationError` vs `ValidationError`
+#### `RequestPayloadValidationError` vs `ValidationError`
 
 !!! warning
     These are technical details that you might skip if it's not important for you now.
 
-`RequestValidationError` is a sub-class of Pydantic's <a href="https://pydantic-docs.helpmanual.io/#error-handling" class="external-link" target="_blank">`ValidationError`</a>.
+`RequestPayloadValidationError` is a sub-class of Pydantic's <a href="https://pydantic-docs.helpmanual.io/#error-handling" class="external-link" target="_blank">`ValidationError`</a>.
 
 **Squall** uses it so that, if you use a Pydantic model in `response_model`, and your data has an error, you will see the error in your log.
 
@@ -188,9 +188,9 @@ For example, you could want to return a plain text response instead of JSON for 
 
     **Squall** provides the same `starlette.responses` as `squall.responses` just as a convenience for you, the developer. But most of the available responses come directly from Starlette.
 
-### Use the `RequestValidationError` body
+### Use the `RequestPayloadValidationError` body
 
-The `RequestValidationError` contains the `body` it received with invalid data.
+The `RequestPayloadValidationError` contains the `body` it received with invalid data.
 
 You could use it while developing your app to log the body and debug it, return it to the user, etc.
 

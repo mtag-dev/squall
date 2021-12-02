@@ -7,6 +7,7 @@ from starlette.datastructures import Headers as Headers  # noqa: F401
 from starlette.datastructures import QueryParams as QueryParams  # noqa: F401
 from starlette.datastructures import State as State  # noqa: F401
 from starlette.datastructures import UploadFile as StarletteUploadFile
+from starlette.datastructures import URLPath as URLPath  # noqa: F401
 
 
 class UploadFile(StarletteUploadFile):

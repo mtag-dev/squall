@@ -1,7 +1,7 @@
-import enum
 import re
 from typing import (
     Any,
+    Awaitable,
     Callable,
     Dict,
     List,
@@ -13,21 +13,17 @@ from typing import (
     Union,
 )
 
-from squall import params
 from squall.datastructures import Default
 from squall.exceptions import HTTPException
 from squall.responses import JSONResponse, PlainTextResponse, RedirectResponse, Response
-from squall.routing import APIRoute, APIWebSocketRoute
+from squall.routing import APIRoute, WebSocketRoute
 from squall.types import ASGIApp, DecoratedCallable, Receive, Scope, Send
 from squall.utils import get_value_or_default
 from starlette.datastructures import URL
-from starlette.routing import Match as SlMatch
 from starlette.websockets import WebSocketClose
 
-
-class PathPlaceholder(enum.Enum):
-    DYNAMIC = "*"
-    LOCATION = "**"
+PLACEHOLDER_DYNAMIC = "*"
+PLACEHOLDER_LOCATION = "**"
 
 
 class Router:
@@ -35,26 +31,26 @@ class Router:
         self,
         prefix: str = "",
         tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
+        # dependencies: Optional[Sequence[params.Depends]] = None,
         default_response_class: Type[Response] = Default(JSONResponse),
         responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
-        routes: Optional[List[Union[APIRoute, APIWebSocketRoute]]] = None,
+        routes: Optional[List[Union[APIRoute, WebSocketRoute]]] = None,
         route_class: Type[APIRoute] = APIRoute,
         deprecated: Optional[bool] = None,
         include_in_schema: bool = True,
-        dependency_overrides_provider: Optional[Any] = None,
+        # dependency_overrides_provider: Optional[Any] = None,
     ) -> None:
         self._prefix = prefix
         self._tags = tags or []
-        self._dependencies = list(dependencies or []) or []
+        # self._dependencies = list(dependencies or []) or []
         self._default_response_class = default_response_class
         self.route_class = route_class
         self._deprecated = deprecated
         self._include_in_schema = include_in_schema
         self._responses = responses or {}
-        self.dependency_overrides_provider = dependency_overrides_provider
+        # self.dependency_overrides_provider = dependency_overrides_provider
 
-        self._routes: List[Union[APIRoute, APIWebSocketRoute]] = routes or []
+        self._routes: List[Union[APIRoute, WebSocketRoute]] = routes or []
 
     def add_api_route(
         self,
@@ -64,7 +60,7 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
+        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -87,16 +83,16 @@ class Router:
         current_tags = self._tags.copy()
         if tags:
             current_tags.extend(tags)
-        current_dependencies = self._dependencies.copy()
-        if dependencies:
-            current_dependencies.extend(dependencies)
+        # current_dependencies = self._dependencies.copy()
+        # if dependencies:
+        #     current_dependencies.extend(dependencies)
         route = route_class(
             self._prefix + path,
             endpoint=endpoint,
             response_model=response_model,
             status_code=status_code,
             tags=current_tags,
-            dependencies=current_dependencies,
+            # dependencies=current_dependencies,
             summary=summary,
             description=description,
             response_description=response_description,
@@ -108,7 +104,7 @@ class Router:
             response_class=current_response_class,
             name=name,
             openapi_extra=openapi_extra,
-            dependency_overrides_provider=self.dependency_overrides_provider,
+            # dependency_overrides_provider=self.dependency_overrides_provider,
         )
         self.route_register(route)
 
@@ -120,7 +116,7 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
+        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -143,16 +139,16 @@ class Router:
         current_tags = self._tags.copy()
         if tags:
             current_tags.extend(tags)
-        current_dependencies = self._dependencies.copy()
-        if dependencies:
-            current_dependencies.extend(dependencies)
+        # current_dependencies = self._dependencies.copy()
+        # if dependencies:
+        #     current_dependencies.extend(dependencies)
         route = route_class(
             self._prefix + path,
             endpoint=endpoint,
             response_model=response_model,
             status_code=status_code,
             tags=current_tags,
-            dependencies=current_dependencies,
+            # dependencies=current_dependencies,
             summary=summary,
             description=description,
             response_description=response_description,
@@ -164,11 +160,11 @@ class Router:
             response_class=current_response_class,
             name=name,
             openapi_extra=openapi_extra,
-            dependency_overrides_provider=self.dependency_overrides_provider,
+            # dependency_overrides_provider=self.dependency_overrides_provider,
         )
         self.route_register(route)
 
-    def route_register(self, route: Union[APIRoute, APIWebSocketRoute]) -> None:
+    def route_register(self, route: Union[APIRoute, WebSocketRoute]) -> None:
         self._routes.append(route)
 
     def add_api(
@@ -178,7 +174,7 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
+        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -208,7 +204,7 @@ class Router:
                 response_model=response_model,
                 status_code=status_code,
                 tags=tags,
-                dependencies=dependencies,
+                # dependencies=dependencies,
                 summary=summary,
                 description=description,
                 response_description=response_description,
@@ -232,11 +228,10 @@ class Router:
         *,
         name: Optional[str] = None,
     ) -> None:
-        route = APIWebSocketRoute(
+        route = WebSocketRoute(
             self._prefix + path,
             endpoint=endpoint,
             name=name,
-            dependency_overrides_provider=self.dependency_overrides_provider,
         )
         self.route_register(route)
 
@@ -280,7 +275,7 @@ class Router:
             self.route_register(route)
 
     @property
-    def routes(self) -> List[Union[APIRoute, APIWebSocketRoute]]:
+    def routes(self) -> List[Union[APIRoute, WebSocketRoute]]:
         return self._routes
 
     def get(
@@ -290,7 +285,7 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
+        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -307,7 +302,7 @@ class Router:
             response_model=response_model,
             status_code=status_code,
             tags=tags,
-            dependencies=dependencies,
+            # dependencies=dependencies,
             summary=summary,
             description=description,
             response_description=response_description,
@@ -328,7 +323,7 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
+        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -345,7 +340,7 @@ class Router:
             response_model=response_model,
             status_code=status_code,
             tags=tags,
-            dependencies=dependencies,
+            # dependencies=dependencies,
             summary=summary,
             description=description,
             response_description=response_description,
@@ -366,7 +361,7 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
+        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -383,7 +378,7 @@ class Router:
             response_model=response_model,
             status_code=status_code,
             tags=tags,
-            dependencies=dependencies,
+            # dependencies=dependencies,
             summary=summary,
             description=description,
             response_description=response_description,
@@ -404,7 +399,7 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
+        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -421,7 +416,7 @@ class Router:
             response_model=response_model,
             status_code=status_code,
             tags=tags,
-            dependencies=dependencies,
+            # dependencies=dependencies,
             summary=summary,
             description=description,
             response_description=response_description,
@@ -442,7 +437,7 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
+        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -459,7 +454,7 @@ class Router:
             response_model=response_model,
             status_code=status_code,
             tags=tags,
-            dependencies=dependencies,
+            # dependencies=dependencies,
             summary=summary,
             description=description,
             response_description=response_description,
@@ -480,7 +475,7 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
+        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -497,7 +492,7 @@ class Router:
             response_model=response_model,
             status_code=status_code,
             tags=tags,
-            dependencies=dependencies,
+            # dependencies=dependencies,
             summary=summary,
             description=description,
             response_description=response_description,
@@ -518,7 +513,7 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
+        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -535,7 +530,7 @@ class Router:
             response_model=response_model,
             status_code=status_code,
             tags=tags,
-            dependencies=dependencies,
+            # dependencies=dependencies,
             summary=summary,
             description=description,
             response_description=response_description,
@@ -556,7 +551,7 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
+        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -574,7 +569,7 @@ class Router:
             response_model=response_model,
             status_code=status_code,
             tags=tags,
-            dependencies=dependencies,
+            # dependencies=dependencies,
             summary=summary,
             description=description,
             response_description=response_description,
@@ -594,10 +589,10 @@ class RootRouter(Router):
         self,
         prefix: str = "",
         tags: Optional[List[str]] = None,
-        dependencies: Optional[Sequence[params.Depends]] = None,
+        # dependencies: Optional[Sequence[params.Depends]] = None,
         default_response_class: Type[Response] = Default(JSONResponse),
         responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
-        routes: Optional[List[Union[APIRoute, APIWebSocketRoute]]] = None,
+        routes: Optional[List[Union[APIRoute, WebSocketRoute]]] = None,
         redirect_slashes: bool = True,
         default: Optional[ASGIApp] = None,
         route_class: Type[APIRoute] = APIRoute,
@@ -609,14 +604,14 @@ class RootRouter(Router):
         super(RootRouter, self).__init__(
             prefix=prefix,
             tags=tags,
-            dependencies=dependencies,
+            # dependencies=dependencies,
             default_response_class=default_response_class,
             routes=routes,
             route_class=route_class,
             deprecated=deprecated,
             include_in_schema=include_in_schema,
             responses=responses,
-            dependency_overrides_provider=dependency_overrides_provider,
+            # dependency_overrides_provider=dependency_overrides_provider,
         )
         self.redirect_slashes = redirect_slashes
         self.default = default or self.not_found
@@ -624,14 +619,14 @@ class RootRouter(Router):
         self._fast_path_route_ws: Dict[str, Any] = {}
         # self.lifespan_context: Callable[[Any], AsyncContextManager] = RouterLifespan(self)
 
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+    def __call__(self, scope: Scope, receive: Receive, send: Send) -> Awaitable[Any]:
         """
         The main entry point to the Router class.
         """
         if "router" not in scope:
             scope["router"] = self
 
-        routes: Sequence[Union[APIRoute, APIWebSocketRoute]]
+        routes: Sequence[Union[APIRoute, WebSocketRoute]]
         if scope["type"] == "http":
             routes, _locations = self.get_http_routes(scope["method"], scope["path"])
         elif scope["type"] == "websocket":
@@ -643,14 +638,13 @@ class RootRouter(Router):
             # Determine if any route matches the incoming scope,
             # and hand over to the matching route if found.
             match, child_scope = route.matches(scope)
-            if match == SlMatch.FULL:
+            if match:
                 scope.update(child_scope)
-                await route.handle(scope, receive, send)
-                return
+                return route.app(scope, receive, send)
 
         # for location in reversed(_locations):
         #     match, child_scope = location.matches(scope)
-        #     if match == SlMatch.FULL:
+        #     if match:
         #         scope.update(child_scope)
         #         await location.handle(scope, receive, send)
         #         return
@@ -667,13 +661,13 @@ class RootRouter(Router):
             )
             for route in routes:
                 match, child_scope = route.matches(redirect_scope)
-                if match != SlMatch.NONE:
+                if match:
                     redirect_url = URL(scope=redirect_scope)
                     response = RedirectResponse(url=str(redirect_url))
-                    await response(scope, receive, send)
-                    return
+                    return response(scope, receive, send)
+                    # return
 
-        await self.default(scope, receive, send)
+        return self.default(scope, receive, send)
 
     @staticmethod
     async def not_found(scope: Scope, receive: Receive, send: Send) -> None:
@@ -693,28 +687,24 @@ class RootRouter(Router):
 
     @staticmethod
     def _get_fast_path_octets(path: str) -> List[str]:
-        no_regex = re.sub(r"(\([^)]*\))", PathPlaceholder.DYNAMIC.value, path)
-        no_format = re.sub(r"{([^}]*)}", PathPlaceholder.DYNAMIC.value, no_regex)
+        no_regex = re.sub(r"(\([^)]*\))", PLACEHOLDER_DYNAMIC, path)
+        no_format = re.sub(r"{([^}]*)}", PLACEHOLDER_DYNAMIC, no_regex)
         result = []
         for i in no_format.strip("/").split("/"):
-            value = (
-                PathPlaceholder.DYNAMIC.value
-                if PathPlaceholder.DYNAMIC.value in i
-                else i
-            )
+            value = PLACEHOLDER_DYNAMIC if PLACEHOLDER_DYNAMIC in i else i
             result.append(value)
         return result
 
     def _add_fast_path_route(
-        self, route: Union[APIRoute, APIWebSocketRoute], websocket: bool = False
+        self, route: Union[APIRoute, WebSocketRoute], websocket: bool = False
     ) -> None:
         layer = self._fast_path_route_ws if websocket else self._fast_path_route_http
 
         for octet in self._get_fast_path_octets(route.path):
             if octet not in layer:
                 layer[octet] = {}
-                if octet != "*":
-                    layer[octet]["*"] = {}
+                if octet != PLACEHOLDER_DYNAMIC:
+                    layer[octet][PLACEHOLDER_DYNAMIC] = {}
             layer = layer[octet]
 
         if "#routes#" not in layer:
@@ -734,10 +724,10 @@ class RootRouter(Router):
                 layer["#routes#"][method] = []
             layer["#routes#"][method].append(route)
 
-    def route_register(self, route: Union[APIRoute, APIWebSocketRoute]) -> None:
+    def route_register(self, route: Union[APIRoute, WebSocketRoute]) -> None:
         if isinstance(route, APIRoute):
             self._add_fast_path_route(route, websocket=False)
-        elif isinstance(route, APIWebSocketRoute):
+        elif isinstance(route, WebSocketRoute):
             self._add_fast_path_route(route, websocket=True)
         self._routes.append(route)
 
@@ -746,21 +736,23 @@ class RootRouter(Router):
     ) -> Tuple[List[APIRoute], List[APIRoute]]:
         last = self._fast_path_route_http
         locations = []
+        get = dict.get
         try:
             for key in path.strip("/").split("/"):
-                last = last.get(key) or last[PathPlaceholder.DYNAMIC.value]
-                if PathPlaceholder.LOCATION.value in last:
-                    locations.append(last[PathPlaceholder.LOCATION.value])
+                last = get(last, key) or last[PLACEHOLDER_DYNAMIC]
+                if PLACEHOLDER_LOCATION in last:
+                    locations.append(last[PLACEHOLDER_LOCATION])
         except KeyError:
             return [], locations
-        routes: List[APIRoute] = last.get("#routes#", {}).get(method, [])
+        routes: List[APIRoute] = get(get(last, "#routes#", {}), method, [])
         return routes, locations
 
-    def get_ws_routes(self, path: str) -> List[APIWebSocketRoute]:
+    def get_ws_routes(self, path: str) -> List[WebSocketRoute]:
         last = self._fast_path_route_ws
+        get = dict.get
         try:
             for key in path.strip("/").split("/"):
-                last = last.get(key) or last[PathPlaceholder.DYNAMIC.value]
+                last = get(last, key) or last[PLACEHOLDER_DYNAMIC]
         except KeyError:
             return []
         return last.get("#routes#", [])

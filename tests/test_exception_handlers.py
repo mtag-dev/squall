@@ -1,21 +1,21 @@
 from squall import HTTPException, Squall
-from squall.exceptions import RequestValidationError
+from squall.exceptions import RequestPayloadValidationError
+from squall.responses import PrettyJSONResponse
 from squall.testclient import TestClient
-from starlette.responses import JSONResponse
 
 
 def http_exception_handler(request, exception):
-    return JSONResponse({"exception": "http-exception"})
+    return PrettyJSONResponse({"exception": "http-exception"})
 
 
 def request_validation_exception_handler(request, exception):
-    return JSONResponse({"exception": "request-validation"})
+    return PrettyJSONResponse({"exception": "request-validation"})
 
 
 app = Squall(
     exception_handlers={
         HTTPException: http_exception_handler,
-        RequestValidationError: request_validation_exception_handler,
+        RequestPayloadValidationError: request_validation_exception_handler,
     }
 )
 
@@ -40,5 +40,13 @@ def test_override_http_exception():
 
 def test_override_request_validation_exception():
     response = client.get("/request-validation/invalid")
-    assert response.status_code == 200
-    assert response.json() == {"exception": "request-validation"}
+    assert response.status_code == 400
+    assert response.json() == {
+        "details": [
+            {
+                "loc": ["path_params", "param"],
+                "msg": "Cast of `int` failed",
+                "val": "invalid",
+            }
+        ]
+    }

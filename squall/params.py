@@ -1,370 +1,102 @@
+from dataclasses import dataclass
+from decimal import Decimal
 from enum import Enum
-from typing import Any, Callable, Dict, Optional, Sequence
+from typing import Any, Dict, Optional, Union
 
-from pydantic.fields import FieldInfo, Undefined
+Number = Union[int, float, Decimal]
+
+
+class ValidatorTypes(Enum):
+    numeric = "numeric"
+    string = "string"
+
+
+@dataclass
+class Num:
+    in_ = ValidatorTypes.numeric
+    gt: Optional[Number] = None
+    ge: Optional[Number] = None
+    lt: Optional[Number] = None
+    le: Optional[Number] = None
+
+
+@dataclass
+class Str:
+    in_ = ValidatorTypes.string
+    min_len: Optional[int] = None
+    max_len: Optional[int] = None
 
 
 class ParamTypes(Enum):
+    query = "query_params"
+    header = "headers"
+    path = "path_params"
+    cookie = "cookies"
+
+
+class ParamOpenAPI(Enum):
     query = "query"
     header = "header"
     path = "path"
     cookie = "cookie"
 
 
-class Param(FieldInfo):
-    in_: ParamTypes
-
-    def __init__(
-        self,
-        default: Any,
-        *,
-        alias: Optional[str] = None,
-        title: Optional[str] = None,
-        description: Optional[str] = None,
-        gt: Optional[float] = None,
-        ge: Optional[float] = None,
-        lt: Optional[float] = None,
-        le: Optional[float] = None,
-        min_length: Optional[int] = None,
-        max_length: Optional[int] = None,
-        regex: Optional[str] = None,
-        example: Any = Undefined,
-        examples: Optional[Dict[str, Any]] = None,
-        deprecated: Optional[bool] = None,
-        **extra: Any,
-    ):
-        self.deprecated = deprecated
-        self.example = example
-        self.examples = examples
-        super().__init__(
-            default,
-            alias=alias,
-            title=title,
-            description=description,
-            gt=gt,
-            ge=ge,
-            lt=lt,
-            le=le,
-            min_length=min_length,
-            max_length=max_length,
-            regex=regex,
-            **extra,
-        )
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.default})"
+@dataclass
+class CommonParam:
+    # in_: ParamTypes
+    default: Any = Ellipsis
+    alias: Optional[str] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    valid: Optional[Union[Str, Num]] = None
+    example: Optional[Any] = None
+    examples: Optional[Dict[str, Any]] = None
+    deprecated: Optional[bool] = None
 
 
-class Path(Param):
+@dataclass
+class Path(CommonParam):
     in_ = ParamTypes.path
-
-    def __init__(
-        self,
-        default: Any,
-        *,
-        alias: Optional[str] = None,
-        title: Optional[str] = None,
-        description: Optional[str] = None,
-        gt: Optional[float] = None,
-        ge: Optional[float] = None,
-        lt: Optional[float] = None,
-        le: Optional[float] = None,
-        min_length: Optional[int] = None,
-        max_length: Optional[int] = None,
-        regex: Optional[str] = None,
-        example: Any = Undefined,
-        examples: Optional[Dict[str, Any]] = None,
-        deprecated: Optional[bool] = None,
-        **extra: Any,
-    ):
-        self.in_ = self.in_
-        super().__init__(
-            ...,
-            alias=alias,
-            title=title,
-            description=description,
-            gt=gt,
-            ge=ge,
-            lt=lt,
-            le=le,
-            min_length=min_length,
-            max_length=max_length,
-            regex=regex,
-            deprecated=deprecated,
-            example=example,
-            examples=examples,
-            **extra,
-        )
+    openapi_ = ParamOpenAPI.path
 
 
-class Query(Param):
+@dataclass
+class Query(CommonParam):
     in_ = ParamTypes.query
-
-    def __init__(
-        self,
-        default: Any,
-        *,
-        alias: Optional[str] = None,
-        title: Optional[str] = None,
-        description: Optional[str] = None,
-        gt: Optional[float] = None,
-        ge: Optional[float] = None,
-        lt: Optional[float] = None,
-        le: Optional[float] = None,
-        min_length: Optional[int] = None,
-        max_length: Optional[int] = None,
-        regex: Optional[str] = None,
-        example: Any = Undefined,
-        examples: Optional[Dict[str, Any]] = None,
-        deprecated: Optional[bool] = None,
-        **extra: Any,
-    ):
-        super().__init__(
-            default,
-            alias=alias,
-            title=title,
-            description=description,
-            gt=gt,
-            ge=ge,
-            lt=lt,
-            le=le,
-            min_length=min_length,
-            max_length=max_length,
-            regex=regex,
-            deprecated=deprecated,
-            example=example,
-            examples=examples,
-            **extra,
-        )
+    openapi_ = ParamOpenAPI.query
 
 
-class Header(Param):
+@dataclass
+class Header(CommonParam):
     in_ = ParamTypes.header
-
-    def __init__(
-        self,
-        default: Any,
-        *,
-        alias: Optional[str] = None,
-        convert_underscores: bool = True,
-        title: Optional[str] = None,
-        description: Optional[str] = None,
-        gt: Optional[float] = None,
-        ge: Optional[float] = None,
-        lt: Optional[float] = None,
-        le: Optional[float] = None,
-        min_length: Optional[int] = None,
-        max_length: Optional[int] = None,
-        regex: Optional[str] = None,
-        example: Any = Undefined,
-        examples: Optional[Dict[str, Any]] = None,
-        deprecated: Optional[bool] = None,
-        **extra: Any,
-    ):
-        self.convert_underscores = convert_underscores
-        super().__init__(
-            default,
-            alias=alias,
-            title=title,
-            description=description,
-            gt=gt,
-            ge=ge,
-            lt=lt,
-            le=le,
-            min_length=min_length,
-            max_length=max_length,
-            regex=regex,
-            deprecated=deprecated,
-            example=example,
-            examples=examples,
-            **extra,
-        )
+    openapi_ = ParamOpenAPI.header
 
 
-class Cookie(Param):
+@dataclass
+class Cookie(CommonParam):
     in_ = ParamTypes.cookie
-
-    def __init__(
-        self,
-        default: Any,
-        *,
-        alias: Optional[str] = None,
-        title: Optional[str] = None,
-        description: Optional[str] = None,
-        gt: Optional[float] = None,
-        ge: Optional[float] = None,
-        lt: Optional[float] = None,
-        le: Optional[float] = None,
-        min_length: Optional[int] = None,
-        max_length: Optional[int] = None,
-        regex: Optional[str] = None,
-        example: Any = Undefined,
-        examples: Optional[Dict[str, Any]] = None,
-        deprecated: Optional[bool] = None,
-        **extra: Any,
-    ):
-        super().__init__(
-            default,
-            alias=alias,
-            title=title,
-            description=description,
-            gt=gt,
-            ge=ge,
-            lt=lt,
-            le=le,
-            min_length=min_length,
-            max_length=max_length,
-            regex=regex,
-            deprecated=deprecated,
-            example=example,
-            examples=examples,
-            **extra,
-        )
+    openapi_ = ParamOpenAPI.cookie
 
 
-class Body(FieldInfo):
-    def __init__(
-        self,
-        default: Any,
-        *,
-        embed: bool = False,
-        media_type: str = "application/json",
-        alias: Optional[str] = None,
-        title: Optional[str] = None,
-        description: Optional[str] = None,
-        gt: Optional[float] = None,
-        ge: Optional[float] = None,
-        lt: Optional[float] = None,
-        le: Optional[float] = None,
-        min_length: Optional[int] = None,
-        max_length: Optional[int] = None,
-        regex: Optional[str] = None,
-        example: Any = Undefined,
-        examples: Optional[Dict[str, Any]] = None,
-        **extra: Any,
-    ):
-        self.embed = embed
-        self.media_type = media_type
-        self.example = example
-        self.examples = examples
-        super().__init__(
-            default,
-            alias=alias,
-            title=title,
-            description=description,
-            gt=gt,
-            ge=ge,
-            lt=lt,
-            le=le,
-            min_length=min_length,
-            max_length=max_length,
-            regex=regex,
-            **extra,
-        )
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.default})"
+@dataclass
+class Body:
+    default: Any = Ellipsis
+    media_type: str = "application/json"
+    embed: bool = False
+    title: Optional[str] = None
+    description: Optional[str] = None
+    required: Optional[bool] = None
+    example: Optional[Any] = None
+    examples: Optional[Dict[str, Any]] = None
 
 
+@dataclass
 class Form(Body):
-    def __init__(
-        self,
-        default: Any,
-        *,
-        media_type: str = "application/x-www-form-urlencoded",
-        alias: Optional[str] = None,
-        title: Optional[str] = None,
-        description: Optional[str] = None,
-        gt: Optional[float] = None,
-        ge: Optional[float] = None,
-        lt: Optional[float] = None,
-        le: Optional[float] = None,
-        min_length: Optional[int] = None,
-        max_length: Optional[int] = None,
-        regex: Optional[str] = None,
-        example: Any = Undefined,
-        examples: Optional[Dict[str, Any]] = None,
-        **extra: Any,
-    ):
-        super().__init__(
-            default,
-            embed=True,
-            media_type=media_type,
-            alias=alias,
-            title=title,
-            description=description,
-            gt=gt,
-            ge=ge,
-            lt=lt,
-            le=le,
-            min_length=min_length,
-            max_length=max_length,
-            regex=regex,
-            example=example,
-            examples=examples,
-            **extra,
-        )
+    media_type: str = "application/x-www-form-urlencoded"
+    alias: Optional[str] = None
 
 
-class File(Form):
-    def __init__(
-        self,
-        default: Any,
-        *,
-        media_type: str = "multipart/form-data",
-        alias: Optional[str] = None,
-        title: Optional[str] = None,
-        description: Optional[str] = None,
-        gt: Optional[float] = None,
-        ge: Optional[float] = None,
-        lt: Optional[float] = None,
-        le: Optional[float] = None,
-        min_length: Optional[int] = None,
-        max_length: Optional[int] = None,
-        regex: Optional[str] = None,
-        example: Any = Undefined,
-        examples: Optional[Dict[str, Any]] = None,
-        **extra: Any,
-    ):
-        super().__init__(
-            default,
-            media_type=media_type,
-            alias=alias,
-            title=title,
-            description=description,
-            gt=gt,
-            ge=ge,
-            lt=lt,
-            le=le,
-            min_length=min_length,
-            max_length=max_length,
-            regex=regex,
-            example=example,
-            examples=examples,
-            **extra,
-        )
-
-
-class Depends:
-    def __init__(
-        self, dependency: Optional[Callable[..., Any]] = None, *, use_cache: bool = True
-    ):
-        self.dependency = dependency
-        self.use_cache = use_cache
-
-    def __repr__(self) -> str:
-        attr = getattr(self.dependency, "__name__", type(self.dependency).__name__)
-        cache = "" if self.use_cache else ", use_cache=False"
-        return f"{self.__class__.__name__}({attr}{cache})"
-
-
-class Security(Depends):
-    def __init__(
-        self,
-        dependency: Optional[Callable[..., Any]] = None,
-        *,
-        scopes: Optional[Sequence[str]] = None,
-        use_cache: bool = True,
-    ):
-        super().__init__(dependency=dependency, use_cache=use_cache)
-        self.scopes = scopes or []
+@dataclass
+class File(Body):
+    media_type: str = "multipart/form-data"
+    alias: Optional[str] = None

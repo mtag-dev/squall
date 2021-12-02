@@ -29,6 +29,35 @@ def f():
 openapi_schema = {
     "openapi": "3.0.2",
     "info": {"title": "Squall", "version": "0.1.0"},
+    "components": {
+        "schemas": {
+            "Model3": {
+                "type": "object",
+                "properties": {
+                    "c": {"$ref": "#/components/schemas/Model"},
+                    "d": {"$ref": "#/components/schemas/Model2"},
+                },
+                "additionalProperties": False,
+            },
+            "Model": {"type": "object", "additionalProperties": False},
+            "Model2": {
+                "type": "object",
+                "properties": {"a": {"$ref": "#/components/schemas/Model"}},
+                "additionalProperties": False,
+            },
+            "HTTPBadRequestError": {
+                "title": "HTTPBadRequestError",
+                "type": "object",
+                "properties": {
+                    "details": {
+                        "title": "Detail",
+                        "type": "array",
+                        "items": {"$ref": "#/components/schemas/ValidationError"},
+                    }
+                },
+            },
+        }
+    },
     "paths": {
         "/": {
             "get": {
@@ -45,26 +74,6 @@ openapi_schema = {
                     }
                 },
             }
-        }
-    },
-    "components": {
-        "schemas": {
-            "Model": {"title": "Model", "type": "object", "properties": {}},
-            "Model2": {
-                "title": "Model2",
-                "required": ["a"],
-                "type": "object",
-                "properties": {"a": {"$ref": "#/components/schemas/Model"}},
-            },
-            "Model3": {
-                "title": "Model3",
-                "required": ["c", "d"],
-                "type": "object",
-                "properties": {
-                    "c": {"$ref": "#/components/schemas/Model"},
-                    "d": {"$ref": "#/components/schemas/Model2"},
-                },
-            },
         }
     },
 }

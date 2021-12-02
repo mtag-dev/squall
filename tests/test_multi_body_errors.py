@@ -1,17 +1,22 @@
-from decimal import Decimal
-from typing import List
+from dataclasses import dataclass
+from typing import List, Optional
 
-from pydantic import Field, condecimal, dataclasses
+from apischema import validator
 from squall import Squall
 from squall.testclient import TestClient
 
 app = Squall()
 
 
-@dataclasses.dataclass
+@dataclass
 class Item:
-    age: condecimal(gt=Decimal(0.0))  # type: ignore
-    name: str = Field(...)
+    age: float
+    name: Optional[str] = None
+
+    @validator
+    def age_positive(self):
+        if self.age <= 0:
+            raise ValueError("Age should be greater than 0")
 
 
 @app.post("/items/")
@@ -25,56 +30,19 @@ client = TestClient(app)
 openapi_schema = {
     "openapi": "3.0.2",
     "info": {"title": "Squall", "version": "0.1.0"},
-    "paths": {
-        "/items/": {
-            "post": {
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {"application/json": {"schema": {}}},
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        },
-                    },
-                },
-                "summary": "Save Item No Body",
-                "operationId": "save_item_no_body_items__post",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "title": "Item",
-                                "type": "array",
-                                "items": {"$ref": "#/components/schemas/Item"},
-                            }
-                        }
-                    },
-                    "required": True,
-                },
-            }
-        }
-    },
     "components": {
         "schemas": {
             "Item": {
-                "title": "Item",
-                "required": ["age", "name"],
                 "type": "object",
                 "properties": {
-                    "name": {"title": "Name", "type": "string"},
-                    "age": {"title": "Age", "exclusiveMinimum": 0.0, "type": "number"},
+                    "age": {"type": "number"},
+                    "name": {"type": ["string", "null"], "default": None},
                 },
+                "required": ["age"],
+                "additionalProperties": False,
             },
             "ValidationError": {
                 "title": "ValidationError",
-                "required": ["loc", "msg", "type"],
                 "type": "object",
                 "properties": {
                     "loc": {
@@ -85,6 +53,7 @@ openapi_schema = {
                     "msg": {"title": "Message", "type": "string"},
                     "type": {"title": "Error Type", "type": "string"},
                 },
+                "required": ["loc", "msg", "type"],
             },
             "HTTPValidationError": {
                 "title": "HTTPValidationError",
@@ -97,43 +66,62 @@ openapi_schema = {
                     }
                 },
             },
+            "HTTPBadRequestError": {
+                "title": "HTTPBadRequestError",
+                "type": "object",
+                "properties": {
+                    "details": {
+                        "title": "Detail",
+                        "type": "array",
+                        "items": {"$ref": "#/components/schemas/ValidationError"},
+                    }
+                },
+            },
+        }
+    },
+    "paths": {
+        "/items/": {
+            "post": {
+                "summary": "Save Item No Body",
+                "operationId": "save_item_no_body_items__post",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {"application/json": {"schema": {}}},
+                    },
+                    "422": {
+                        "description": "Request Body Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        },
+                    },
+                },
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "array",
+                                "items": {"$ref": "#/components/schemas/Item"},
+                            }
+                        }
+                    },
+                },
+            }
         }
     },
 }
 
-single_error = {
-    "detail": [
-        {
-            "ctx": {"limit_value": 0.0},
-            "loc": ["body", 0, "age"],
-            "msg": "ensure this value is greater than 0",
-            "type": "value_error.number.not_gt",
-        }
-    ]
-}
+single_error = {"details": [{"loc": [0], "msg": "Age should be greater than 0"}]}
 
 multiple_errors = {
-    "detail": [
-        {
-            "loc": ["body", 0, "age"],
-            "msg": "value is not a valid decimal",
-            "type": "type_error.decimal",
-        },
-        {
-            "loc": ["body", 0, "name"],
-            "msg": "field required",
-            "type": "value_error.missing",
-        },
-        {
-            "loc": ["body", 1, "age"],
-            "msg": "value is not a valid decimal",
-            "type": "type_error.decimal",
-        },
-        {
-            "loc": ["body", 1, "name"],
-            "msg": "field required",
-            "type": "value_error.missing",
-        },
+    "details": [
+        {"loc": [0, "age"], "msg": "expected type number, found string"},
+        {"loc": [1, "age"], "msg": "expected type number, found string"},
     ]
 }
 
@@ -150,7 +138,7 @@ def test_put_correct_body():
     assert response.json() == {"item": [{"name": "Foo", "age": 5}]}
 
 
-def test_jsonable_encoder_requiring_error():
+def test_validation_error():
     response = client.post("/items/", json=[{"name": "Foo", "age": -1.0}])
     assert response.status_code == 422, response.text
     assert response.json() == single_error

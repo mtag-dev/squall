@@ -23,40 +23,31 @@ client = TestClient(app)
 openapi_schema = {
     "openapi": "3.0.2",
     "info": {"title": "Squall", "version": "0.1.0"},
-    "paths": {
-        "/product": {
-            "get": {
-                "summary": "Create Item",
-                "operationId": "create_item_product_get",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {"$ref": "#/components/schemas/Product"}
-                        }
-                    },
-                    "required": True,
-                },
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {"application/json": {"schema": {}}},
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        },
-                    },
-                },
-            }
-        }
-    },
     "components": {
         "schemas": {
+            "Product": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "description": {"type": "string"},
+                    "price": {"type": "number"},
+                },
+                "additionalProperties": False,
+            },
+            "ValidationError": {
+                "title": "ValidationError",
+                "type": "object",
+                "properties": {
+                    "loc": {
+                        "title": "Location",
+                        "type": "array",
+                        "items": {"type": "string"},
+                    },
+                    "msg": {"title": "Message", "type": "string"},
+                    "type": {"title": "Error Type", "type": "string"},
+                },
+                "required": ["loc", "msg", "type"],
+            },
             "HTTPValidationError": {
                 "title": "HTTPValidationError",
                 "type": "object",
@@ -68,30 +59,49 @@ openapi_schema = {
                     }
                 },
             },
-            "Product": {
-                "title": "Product",
-                "required": ["name", "price"],
+            "HTTPBadRequestError": {
+                "title": "HTTPBadRequestError",
                 "type": "object",
                 "properties": {
-                    "name": {"title": "Name", "type": "string"},
-                    "description": {"title": "Description", "type": "string"},
-                    "price": {"title": "Price", "type": "number"},
-                },
-            },
-            "ValidationError": {
-                "title": "ValidationError",
-                "required": ["loc", "msg", "type"],
-                "type": "object",
-                "properties": {
-                    "loc": {
-                        "title": "Location",
+                    "details": {
+                        "title": "Detail",
                         "type": "array",
-                        "items": {"type": "string"},
-                    },
-                    "msg": {"title": "Message", "type": "string"},
-                    "type": {"title": "Error Type", "type": "string"},
+                        "items": {"$ref": "#/components/schemas/ValidationError"},
+                    }
                 },
             },
+        }
+    },
+    "paths": {
+        "/product": {
+            "get": {
+                "summary": "Create Item",
+                "operationId": "create_item_product_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {"application/json": {"schema": {}}},
+                    },
+                    "422": {
+                        "description": "Request Body Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        },
+                    },
+                },
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {"$ref": "#/components/schemas/Product"}
+                        }
+                    },
+                },
+            }
         }
     },
 }
