@@ -20,82 +20,44 @@ openapi_schema = {
     "paths": {
         "/items/": {
             "get": {
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {"application/json": {"schema": {}}},
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        },
-                    },
-                },
                 "summary": "Read Items",
                 "operationId": "read_items_items__get",
                 "parameters": [
                     {
                         "required": False,
-                        "schema": {
-                            "title": "Q",
-                            "type": "array",
-                            "items": {"type": "integer"},
-                        },
+                        "schema": {"type": "array", "items": {"type": "integer"}},
                         "name": "q",
                         "in": "query",
                     }
                 ],
-            }
-        }
-    },
-    "components": {
-        "schemas": {
-            "ValidationError": {
-                "title": "ValidationError",
-                "required": ["loc", "msg", "type"],
-                "type": "object",
-                "properties": {
-                    "loc": {
-                        "title": "Location",
-                        "type": "array",
-                        "items": {"type": "string"},
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {"application/json": {"schema": {}}},
                     },
-                    "msg": {"title": "Message", "type": "string"},
-                    "type": {"title": "Error Type", "type": "string"},
+                    "400": {
+                        "description": "Parameters Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPBadRequestError"
+                                }
+                            }
+                        },
+                    },
                 },
-            },
-            "HTTPValidationError": {
-                "title": "HTTPValidationError",
-                "type": "object",
-                "properties": {
-                    "detail": {
-                        "title": "Detail",
-                        "type": "array",
-                        "items": {"$ref": "#/components/schemas/ValidationError"},
-                    }
-                },
-            },
+            }
         }
     },
 }
 
 multiple_errors = {
-    "detail": [
+    "details": [
         {
-            "loc": ["query", "q", 0],
-            "msg": "value is not a valid integer",
-            "type": "type_error.integer",
-        },
-        {
-            "loc": ["query", "q", 1],
-            "msg": "value is not a valid integer",
-            "type": "type_error.integer",
-        },
+            "loc": ["query_params", "q"],
+            "msg": "Cast of `int` failed",
+            "val": ["five", "six"],
+        }
     ]
 }
 
@@ -114,5 +76,5 @@ def test_multi_query():
 
 def test_multi_query_incorrect():
     response = client.get("/items/?q=five&q=six")
-    assert response.status_code == 422, response.text
+    assert response.status_code == 400, response.text
     assert response.json() == multiple_errors

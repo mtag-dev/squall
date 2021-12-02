@@ -1,11 +1,12 @@
+from dataclasses import dataclass
 from typing import List
 
-from pydantic import BaseModel
 from squall import Squall
 from squall.testclient import TestClient
 
 
-class Model(BaseModel):
+@dataclass
+class Model:
     name: str
 
 
@@ -35,6 +36,27 @@ def valid4():
 openapi_schema = {
     "openapi": "3.0.2",
     "info": {"title": "Squall", "version": "0.1.0"},
+    "components": {
+        "schemas": {
+            "Model": {
+                "type": "object",
+                "properties": {"name": {"type": "string"}},
+                "required": ["name"],
+                "additionalProperties": False,
+            },
+            "HTTPBadRequestError": {
+                "title": "HTTPBadRequestError",
+                "type": "object",
+                "properties": {
+                    "details": {
+                        "title": "Detail",
+                        "type": "array",
+                        "items": {"$ref": "#/components/schemas/ValidationError"},
+                    }
+                },
+            },
+        }
+    },
     "paths": {
         "/valid1": {
             "get": {
@@ -46,15 +68,7 @@ openapi_schema = {
                         "content": {"application/json": {"schema": {}}},
                     },
                     "500": {
-                        "description": "Internal Server Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "title": "Response 500 Valid1 Valid1 Get",
-                                    "type": "integer",
-                                }
-                            }
-                        },
+                        "content": {"application/json": {"schema": {"type": "integer"}}}
                     },
                 },
             }
@@ -69,16 +83,14 @@ openapi_schema = {
                         "content": {"application/json": {"schema": {}}},
                     },
                     "500": {
-                        "description": "Internal Server Error",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "title": "Response 500 Valid2 Valid2 Get",
                                     "type": "array",
                                     "items": {"type": "integer"},
                                 }
                             }
-                        },
+                        }
                     },
                 },
             }
@@ -93,12 +105,11 @@ openapi_schema = {
                         "content": {"application/json": {"schema": {}}},
                     },
                     "500": {
-                        "description": "Internal Server Error",
                         "content": {
                             "application/json": {
                                 "schema": {"$ref": "#/components/schemas/Model"}
                             }
-                        },
+                        }
                     },
                 },
             }
@@ -113,30 +124,18 @@ openapi_schema = {
                         "content": {"application/json": {"schema": {}}},
                     },
                     "500": {
-                        "description": "Internal Server Error",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "title": "Response 500 Valid4 Valid4 Get",
                                     "type": "array",
                                     "items": {"$ref": "#/components/schemas/Model"},
                                 }
                             }
-                        },
+                        }
                     },
                 },
             }
         },
-    },
-    "components": {
-        "schemas": {
-            "Model": {
-                "title": "Model",
-                "required": ["name"],
-                "type": "object",
-                "properties": {"name": {"title": "Name", "type": "string"}},
-            }
-        }
     },
 }
 

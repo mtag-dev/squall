@@ -2,7 +2,6 @@ import pytest
 from squall import Router, Squall
 from squall.routing import APIRoute
 from squall.testclient import TestClient
-from starlette.routing import Route
 
 app = Squall()
 
@@ -108,7 +107,7 @@ def test_get_path(path, expected_status, expected_response):
 def test_route_classes():
     routes = {}
     for r in app.router.routes:
-        assert isinstance(r, Route)
+        assert isinstance(r, APIRoute)
         routes[r.path] = r
     assert getattr(routes["/a/"], "x_type") == "A"
     assert getattr(routes["/a/b/"], "x_type") == "B"

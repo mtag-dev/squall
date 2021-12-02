@@ -18,62 +18,33 @@ openapi_schema = {
     "paths": {
         "/items/{item_id}": {
             "put": {
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {"application/json": {"schema": {}}},
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        },
-                    },
-                },
                 "summary": "Save Item No Body",
                 "operationId": "save_item_no_body_items__item_id__put",
                 "parameters": [
                     {
                         "required": True,
-                        "schema": {"title": "Item Id", "type": "string"},
+                        "schema": {"type": "string"},
                         "name": "item_id",
                         "in": "path",
                     }
                 ],
-            }
-        }
-    },
-    "components": {
-        "schemas": {
-            "ValidationError": {
-                "title": "ValidationError",
-                "required": ["loc", "msg", "type"],
-                "type": "object",
-                "properties": {
-                    "loc": {
-                        "title": "Location",
-                        "type": "array",
-                        "items": {"type": "string"},
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {"application/json": {"schema": {}}},
                     },
-                    "msg": {"title": "Message", "type": "string"},
-                    "type": {"title": "Error Type", "type": "string"},
+                    "400": {
+                        "description": "Parameters Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPBadRequestError"
+                                }
+                            }
+                        },
+                    },
                 },
-            },
-            "HTTPValidationError": {
-                "title": "HTTPValidationError",
-                "type": "object",
-                "properties": {
-                    "detail": {
-                        "title": "Detail",
-                        "type": "array",
-                        "items": {"$ref": "#/components/schemas/ValidationError"},
-                    }
-                },
-            },
+            }
         }
     },
 }

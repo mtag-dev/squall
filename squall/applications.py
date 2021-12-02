@@ -108,6 +108,9 @@ class Squall:
         self.exception_handlers.setdefault(
             RequestHeadValidationError, request_head_validation_exception_handler
         )
+        # self.exception_handlers.setdefault(
+        #     ResponsePayloadValidationError, response_payload_validation_exception_handler
+        # )
 
         self.user_middleware: List[Middleware] = (
             [] if middleware is None else list(middleware)

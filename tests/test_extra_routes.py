@@ -56,238 +56,18 @@ client = TestClient(app)
 openapi_schema = {
     "openapi": "3.0.2",
     "info": {"title": "Squall", "version": "0.1.0"},
-    "paths": {
-        "/items/{item_id}": {
-            "get": {
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {"application/json": {"schema": {}}},
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        },
-                    },
-                },
-                "summary": "Get Items",
-                "operationId": "get_items_items__item_id__get",
-                "parameters": [
-                    {
-                        "required": True,
-                        "schema": {"title": "Item Id", "type": "string"},
-                        "name": "item_id",
-                        "in": "path",
-                    }
-                ],
-            },
-            "delete": {
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {"application/json": {"schema": {}}},
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        },
-                    },
-                },
-                "summary": "Delete Item",
-                "operationId": "delete_item_items__item_id__delete",
-                "parameters": [
-                    {
-                        "required": True,
-                        "schema": {"title": "Item Id", "type": "string"},
-                        "name": "item_id",
-                        "in": "path",
-                    }
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {"$ref": "#/components/schemas/Item"}
-                        }
-                    },
-                    "required": True,
-                },
-            },
-            "options": {
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {"application/json": {"schema": {}}},
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        },
-                    },
-                },
-                "summary": "Options Item",
-                "operationId": "options_item_items__item_id__options",
-                "parameters": [
-                    {
-                        "required": True,
-                        "schema": {"title": "Item Id", "type": "string"},
-                        "name": "item_id",
-                        "in": "path",
-                    }
-                ],
-            },
-            "head": {
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {"application/json": {"schema": {}}},
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        },
-                    },
-                },
-                "summary": "Head Item",
-                "operationId": "head_item_items__item_id__head",
-                "parameters": [
-                    {
-                        "required": True,
-                        "schema": {"title": "Item Id", "type": "string"},
-                        "name": "item_id",
-                        "in": "path",
-                    }
-                ],
-            },
-            "patch": {
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {"application/json": {"schema": {}}},
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        },
-                    },
-                },
-                "summary": "Patch Item",
-                "operationId": "patch_item_items__item_id__patch",
-                "parameters": [
-                    {
-                        "required": True,
-                        "schema": {"title": "Item Id", "type": "string"},
-                        "name": "item_id",
-                        "in": "path",
-                    }
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {"$ref": "#/components/schemas/Item"}
-                        }
-                    },
-                    "required": True,
-                },
-            },
-            "trace": {
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {"application/json": {"schema": {}}},
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        },
-                    },
-                },
-                "summary": "Trace Item",
-                "operationId": "trace_item_items__item_id__trace",
-                "parameters": [
-                    {
-                        "required": True,
-                        "schema": {"title": "Item Id", "type": "string"},
-                        "name": "item_id",
-                        "in": "path",
-                    }
-                ],
-            },
-        },
-        "/items-not-decorated/{item_id}": {
-            "get": {
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {"application/json": {"schema": {}}},
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        },
-                    },
-                },
-                "summary": "Get Not Decorated",
-                "operationId": "get_not_decorated_items_not_decorated__item_id__get",
-                "parameters": [
-                    {
-                        "required": True,
-                        "schema": {"title": "Item Id", "type": "string"},
-                        "name": "item_id",
-                        "in": "path",
-                    }
-                ],
-            }
-        },
-    },
     "components": {
         "schemas": {
             "Item": {
-                "title": "Item",
-                "required": ["name"],
                 "type": "object",
                 "properties": {
-                    "name": {"title": "Name", "type": "string"},
-                    "price": {"title": "Price", "type": "number"},
+                    "name": {"type": "string"},
+                    "price": {"type": ["number", "null"], "default": None},
                 },
+                "additionalProperties": False,
             },
             "ValidationError": {
                 "title": "ValidationError",
-                "required": ["loc", "msg", "type"],
                 "type": "object",
                 "properties": {
                     "loc": {
@@ -298,6 +78,7 @@ openapi_schema = {
                     "msg": {"title": "Message", "type": "string"},
                     "type": {"title": "Error Type", "type": "string"},
                 },
+                "required": ["loc", "msg", "type"],
             },
             "HTTPValidationError": {
                 "title": "HTTPValidationError",
@@ -310,7 +91,256 @@ openapi_schema = {
                     }
                 },
             },
+            "HTTPBadRequestError": {
+                "title": "HTTPBadRequestError",
+                "type": "object",
+                "properties": {
+                    "details": {
+                        "title": "Detail",
+                        "type": "array",
+                        "items": {"$ref": "#/components/schemas/ValidationError"},
+                    }
+                },
+            },
         }
+    },
+    "paths": {
+        "/items/{item_id}": {
+            "get": {
+                "summary": "Get Items",
+                "operationId": "get_items_items__item_id__get",
+                "parameters": [
+                    {
+                        "required": True,
+                        "schema": {"type": "string"},
+                        "name": "item_id",
+                        "in": "path",
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {"application/json": {"schema": {}}},
+                    },
+                    "400": {
+                        "description": "Parameters Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPBadRequestError"
+                                }
+                            }
+                        },
+                    },
+                },
+            },
+            "delete": {
+                "summary": "Delete Item",
+                "operationId": "delete_item_items__item_id__delete",
+                "parameters": [
+                    {
+                        "required": True,
+                        "schema": {"type": "string"},
+                        "name": "item_id",
+                        "in": "path",
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {"application/json": {"schema": {}}},
+                    },
+                    "400": {
+                        "description": "Parameters Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPBadRequestError"
+                                }
+                            }
+                        },
+                    },
+                    "422": {
+                        "description": "Request Body Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        },
+                    },
+                },
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {"$ref": "#/components/schemas/Item"}
+                        }
+                    },
+                },
+            },
+            "head": {
+                "summary": "Head Item",
+                "operationId": "head_item_items__item_id__head",
+                "parameters": [
+                    {
+                        "required": True,
+                        "schema": {"type": "string"},
+                        "name": "item_id",
+                        "in": "path",
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {"application/json": {"schema": {}}},
+                    },
+                    "400": {
+                        "description": "Parameters Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPBadRequestError"
+                                }
+                            }
+                        },
+                    },
+                },
+            },
+            "options": {
+                "summary": "Options Item",
+                "operationId": "options_item_items__item_id__options",
+                "parameters": [
+                    {
+                        "required": True,
+                        "schema": {"type": "string"},
+                        "name": "item_id",
+                        "in": "path",
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {"application/json": {"schema": {}}},
+                    },
+                    "400": {
+                        "description": "Parameters Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPBadRequestError"
+                                }
+                            }
+                        },
+                    },
+                },
+            },
+            "patch": {
+                "summary": "Patch Item",
+                "operationId": "patch_item_items__item_id__patch",
+                "parameters": [
+                    {
+                        "required": True,
+                        "schema": {"type": "string"},
+                        "name": "item_id",
+                        "in": "path",
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {"application/json": {"schema": {}}},
+                    },
+                    "400": {
+                        "description": "Parameters Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPBadRequestError"
+                                }
+                            }
+                        },
+                    },
+                    "422": {
+                        "description": "Request Body Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        },
+                    },
+                },
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {"$ref": "#/components/schemas/Item"}
+                        }
+                    },
+                },
+            },
+            "trace": {
+                "summary": "Trace Item",
+                "operationId": "trace_item_items__item_id__trace",
+                "parameters": [
+                    {
+                        "required": True,
+                        "schema": {"type": "string"},
+                        "name": "item_id",
+                        "in": "path",
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {"application/json": {"schema": {}}},
+                    },
+                    "400": {
+                        "description": "Parameters Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPBadRequestError"
+                                }
+                            }
+                        },
+                    },
+                },
+            },
+        },
+        "/items-not-decorated/{item_id}": {
+            "get": {
+                "summary": "Get Not Decorated",
+                "operationId": "get_not_decorated_items_not_decorated__item_id__get",
+                "parameters": [
+                    {
+                        "required": True,
+                        "schema": {"type": "string"},
+                        "name": "item_id",
+                        "in": "path",
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {"application/json": {"schema": {}}},
+                    },
+                    "400": {
+                        "description": "Parameters Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPBadRequestError"
+                                }
+                            }
+                        },
+                    },
+                },
+            }
+        },
     },
 }
 

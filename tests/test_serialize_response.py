@@ -1,7 +1,9 @@
 from typing import List, Optional
 
+import pytest
 from pydantic import Field, dataclasses
 from squall import Squall
+from squall.exceptions import ResponsePayloadValidationError
 from squall.testclient import TestClient
 
 app = Squall()
@@ -19,7 +21,7 @@ def get_valid():
     return {"name": "valid", "price": 1.0}
 
 
-@app.get("/items/coerce", response_model=Item)
+@app.get("/items/wrong_type", response_model=Item)
 def get_coerce():
     return {"name": "coerce", "price": "1.0"}
 
@@ -43,9 +45,8 @@ def test_valid():
 
 
 def test_coerce():
-    response = client.get("/items/coerce")
-    response.raise_for_status()
-    assert response.json() == {"name": "coerce", "price": 1.0, "owner_ids": None}
+    with pytest.raises(ResponsePayloadValidationError):
+        client.get("/items/wrong_type")
 
 
 def test_validlist():

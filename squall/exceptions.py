@@ -1,7 +1,7 @@
 from typing import Any, Dict, Optional, Sequence, Tuple, Type
 
-from pydantic import BaseModel, ValidationError, create_model
-from pydantic.error_wrappers import ErrorList
+from apischema.validation.errors import ValidationError
+from pydantic import BaseModel, create_model
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 
@@ -21,15 +21,19 @@ WebSocketErrorModel: Type[BaseModel] = create_model("WebSocket")
 
 
 class SquallError(RuntimeError):
-    """
-    A generic, Squall-specific error.
-    """
+    """A generic, Squall-specific error."""
 
 
 class RequestPayloadValidationError(ValidationError):
-    def __init__(self, errors: Sequence[ErrorList], *, body: Any = None) -> None:
-        self.body = body
-        super().__init__(errors, RequestErrorModel)
+    """APISchema validation error for requests"""
+
+
+class ResponsePayloadValidationError(ValidationError):
+    """APISchema validation error for requests"""
+
+
+class WebSocketRequestValidationError(ValidationError):
+    """WebSocket validation error for requests"""
 
 
 class RequestHeadValidationError(Exception):
@@ -43,8 +47,3 @@ class RequestHeadValidationError(Exception):
             if value != Ellipsis:
                 error["val"] = value
             self.errors.append(error)
-
-
-class WebSocketRequestValidationError(ValidationError):
-    def __init__(self, errors: Sequence[ErrorList]) -> None:
-        super().__init__(errors, WebSocketErrorModel)

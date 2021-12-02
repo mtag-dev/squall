@@ -242,26 +242,64 @@ client = TestClient(app)
 openapi_schema = {
     "openapi": "3.0.2",
     "info": {"title": "Squall", "version": "0.1.0"},
+    "components": {
+        "schemas": {
+            "Item": {
+                "type": "object",
+                "properties": {"data": {"type": "string"}},
+                "required": ["data"],
+                "additionalProperties": False,
+            },
+            "ValidationError": {
+                "title": "ValidationError",
+                "type": "object",
+                "properties": {
+                    "loc": {
+                        "title": "Location",
+                        "type": "array",
+                        "items": {"type": "string"},
+                    },
+                    "msg": {"title": "Message", "type": "string"},
+                    "type": {"title": "Error Type", "type": "string"},
+                },
+                "required": ["loc", "msg", "type"],
+            },
+            "HTTPValidationError": {
+                "title": "HTTPValidationError",
+                "type": "object",
+                "properties": {
+                    "detail": {
+                        "title": "Detail",
+                        "type": "array",
+                        "items": {"$ref": "#/components/schemas/ValidationError"},
+                    }
+                },
+            },
+            "HTTPBadRequestError": {
+                "title": "HTTPBadRequestError",
+                "type": "object",
+                "properties": {
+                    "details": {
+                        "title": "Detail",
+                        "type": "array",
+                        "items": {"$ref": "#/components/schemas/ValidationError"},
+                    }
+                },
+            },
+        }
+    },
     "paths": {
         "/schema_extra/": {
             "post": {
                 "summary": "Schema Extra",
                 "operationId": "schema_extra_schema_extra__post",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {"$ref": "#/components/schemas/Item"}
-                        }
-                    },
-                    "required": True,
-                },
                 "responses": {
                     "200": {
                         "description": "Successful Response",
                         "content": {"application/json": {"schema": {}}},
                     },
                     "422": {
-                        "description": "Validation Error",
+                        "description": "Request Body Validation Error",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -269,6 +307,14 @@ openapi_schema = {
                                 }
                             }
                         },
+                    },
+                },
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {"$ref": "#/components/schemas/Item"}
+                        }
                     },
                 },
             }
@@ -277,22 +323,13 @@ openapi_schema = {
             "post": {
                 "summary": "Example",
                 "operationId": "example_example__post",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {"$ref": "#/components/schemas/Item"},
-                            "example": {"data": "Data in Body example"},
-                        }
-                    },
-                    "required": True,
-                },
                 "responses": {
                     "200": {
                         "description": "Successful Response",
                         "content": {"application/json": {"schema": {}}},
                     },
                     "422": {
-                        "description": "Validation Error",
+                        "description": "Request Body Validation Error",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -302,16 +339,41 @@ openapi_schema = {
                         },
                     },
                 },
+                "requestBody": {
+                    "required": None,
+                    "content": {
+                        "application/json": {
+                            "example": {"data": "Data in Body example"},
+                            "schema": {"$ref": "#/components/schemas/Item"},
+                        }
+                    },
+                },
             }
         },
         "/examples/": {
             "post": {
                 "summary": "Examples",
                 "operationId": "examples_examples__post",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {"application/json": {"schema": {}}},
+                    },
+                    "422": {
+                        "description": "Request Body Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        },
+                    },
+                },
                 "requestBody": {
+                    "required": None,
                     "content": {
                         "application/json": {
-                            "schema": {"$ref": "#/components/schemas/Item"},
                             "examples": {
                                 "example1": {
                                     "summary": "example1 summary",
@@ -323,24 +385,8 @@ openapi_schema = {
                                     "value": {"data": "Data in Body examples, example2"}
                                 },
                             },
+                            "schema": {"$ref": "#/components/schemas/Item"},
                         }
-                    },
-                    "required": True,
-                },
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {"application/json": {"schema": {}}},
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        },
                     },
                 },
             }
@@ -349,10 +395,26 @@ openapi_schema = {
             "post": {
                 "summary": "Example Examples",
                 "operationId": "example_examples_example_examples__post",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {"application/json": {"schema": {}}},
+                    },
+                    "422": {
+                        "description": "Request Body Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        },
+                    },
+                },
                 "requestBody": {
+                    "required": None,
                     "content": {
                         "application/json": {
-                            "schema": {"$ref": "#/components/schemas/Item"},
                             "examples": {
                                 "example1": {
                                     "value": {"data": "examples example_examples 1"}
@@ -361,24 +423,8 @@ openapi_schema = {
                                     "value": {"data": "examples example_examples 2"}
                                 },
                             },
+                            "schema": {"$ref": "#/components/schemas/Item"},
                         }
-                    },
-                    "required": True,
-                },
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {"application/json": {"schema": {}}},
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        },
                     },
                 },
             }
@@ -390,10 +436,10 @@ openapi_schema = {
                 "parameters": [
                     {
                         "required": True,
-                        "schema": {"title": "Item Id", "type": "string"},
-                        "example": "item_1",
+                        "schema": {"type": "string"},
                         "name": "item_id",
                         "in": "path",
+                        "example": "item_1",
                     }
                 ],
                 "responses": {
@@ -401,12 +447,12 @@ openapi_schema = {
                         "description": "Successful Response",
                         "content": {"application/json": {"schema": {}}},
                     },
-                    "422": {
-                        "description": "Validation Error",
+                    "400": {
+                        "description": "Parameters Validation Error",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                    "$ref": "#/components/schemas/HTTPBadRequestError"
                                 }
                             }
                         },
@@ -421,7 +467,9 @@ openapi_schema = {
                 "parameters": [
                     {
                         "required": True,
-                        "schema": {"title": "Item Id", "type": "string"},
+                        "schema": {"type": "string"},
+                        "name": "item_id",
+                        "in": "path",
                         "examples": {
                             "example1": {
                                 "summary": "item ID summary",
@@ -429,8 +477,6 @@ openapi_schema = {
                             },
                             "example2": {"value": "item_2"},
                         },
-                        "name": "item_id",
-                        "in": "path",
                     }
                 ],
                 "responses": {
@@ -438,12 +484,12 @@ openapi_schema = {
                         "description": "Successful Response",
                         "content": {"application/json": {"schema": {}}},
                     },
-                    "422": {
-                        "description": "Validation Error",
+                    "400": {
+                        "description": "Parameters Validation Error",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                    "$ref": "#/components/schemas/HTTPBadRequestError"
                                 }
                             }
                         },
@@ -458,7 +504,10 @@ openapi_schema = {
                 "parameters": [
                     {
                         "required": True,
-                        "schema": {"title": "Item Id", "type": "string"},
+                        "schema": {"type": "string"},
+                        "name": "item_id",
+                        "in": "path",
+                        "example": "item_overriden",
                         "examples": {
                             "example1": {
                                 "summary": "item ID summary",
@@ -466,8 +515,6 @@ openapi_schema = {
                             },
                             "example2": {"value": "item_2"},
                         },
-                        "name": "item_id",
-                        "in": "path",
                     }
                 ],
                 "responses": {
@@ -475,12 +522,12 @@ openapi_schema = {
                         "description": "Successful Response",
                         "content": {"application/json": {"schema": {}}},
                     },
-                    "422": {
-                        "description": "Validation Error",
+                    "400": {
+                        "description": "Parameters Validation Error",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                    "$ref": "#/components/schemas/HTTPBadRequestError"
                                 }
                             }
                         },
@@ -495,10 +542,10 @@ openapi_schema = {
                 "parameters": [
                     {
                         "required": False,
-                        "schema": {"title": "Data", "type": "string"},
-                        "example": "query1",
+                        "schema": {"type": "string"},
                         "name": "data",
                         "in": "query",
+                        "example": "query1",
                     }
                 ],
                 "responses": {
@@ -506,12 +553,12 @@ openapi_schema = {
                         "description": "Successful Response",
                         "content": {"application/json": {"schema": {}}},
                     },
-                    "422": {
-                        "description": "Validation Error",
+                    "400": {
+                        "description": "Parameters Validation Error",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                    "$ref": "#/components/schemas/HTTPBadRequestError"
                                 }
                             }
                         },
@@ -526,7 +573,9 @@ openapi_schema = {
                 "parameters": [
                     {
                         "required": False,
-                        "schema": {"title": "Data", "type": "string"},
+                        "schema": {"type": "string"},
+                        "name": "data",
+                        "in": "query",
                         "examples": {
                             "example1": {
                                 "summary": "Query example 1",
@@ -534,8 +583,6 @@ openapi_schema = {
                             },
                             "example2": {"value": "query2"},
                         },
-                        "name": "data",
-                        "in": "query",
                     }
                 ],
                 "responses": {
@@ -543,12 +590,12 @@ openapi_schema = {
                         "description": "Successful Response",
                         "content": {"application/json": {"schema": {}}},
                     },
-                    "422": {
-                        "description": "Validation Error",
+                    "400": {
+                        "description": "Parameters Validation Error",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                    "$ref": "#/components/schemas/HTTPBadRequestError"
                                 }
                             }
                         },
@@ -563,7 +610,10 @@ openapi_schema = {
                 "parameters": [
                     {
                         "required": False,
-                        "schema": {"title": "Data", "type": "string"},
+                        "schema": {"type": "string"},
+                        "name": "data",
+                        "in": "query",
+                        "example": "query_overriden",
                         "examples": {
                             "example1": {
                                 "summary": "Qeury example 1",
@@ -571,8 +621,6 @@ openapi_schema = {
                             },
                             "example2": {"value": "query2"},
                         },
-                        "name": "data",
-                        "in": "query",
                     }
                 ],
                 "responses": {
@@ -580,12 +628,12 @@ openapi_schema = {
                         "description": "Successful Response",
                         "content": {"application/json": {"schema": {}}},
                     },
-                    "422": {
-                        "description": "Validation Error",
+                    "400": {
+                        "description": "Parameters Validation Error",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                    "$ref": "#/components/schemas/HTTPBadRequestError"
                                 }
                             }
                         },
@@ -600,10 +648,10 @@ openapi_schema = {
                 "parameters": [
                     {
                         "required": False,
-                        "schema": {"title": "Data", "type": "string"},
-                        "example": "header1",
+                        "schema": {"type": "string"},
                         "name": "data",
                         "in": "header",
+                        "example": "header1",
                     }
                 ],
                 "responses": {
@@ -611,12 +659,12 @@ openapi_schema = {
                         "description": "Successful Response",
                         "content": {"application/json": {"schema": {}}},
                     },
-                    "422": {
-                        "description": "Validation Error",
+                    "400": {
+                        "description": "Parameters Validation Error",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                    "$ref": "#/components/schemas/HTTPBadRequestError"
                                 }
                             }
                         },
@@ -631,7 +679,9 @@ openapi_schema = {
                 "parameters": [
                     {
                         "required": False,
-                        "schema": {"title": "Data", "type": "string"},
+                        "schema": {"type": "string"},
+                        "name": "data",
+                        "in": "header",
                         "examples": {
                             "example1": {
                                 "summary": "header example 1",
@@ -639,8 +689,6 @@ openapi_schema = {
                             },
                             "example2": {"value": "header2"},
                         },
-                        "name": "data",
-                        "in": "header",
                     }
                 ],
                 "responses": {
@@ -648,12 +696,12 @@ openapi_schema = {
                         "description": "Successful Response",
                         "content": {"application/json": {"schema": {}}},
                     },
-                    "422": {
-                        "description": "Validation Error",
+                    "400": {
+                        "description": "Parameters Validation Error",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                    "$ref": "#/components/schemas/HTTPBadRequestError"
                                 }
                             }
                         },
@@ -668,7 +716,10 @@ openapi_schema = {
                 "parameters": [
                     {
                         "required": False,
-                        "schema": {"title": "Data", "type": "string"},
+                        "schema": {"type": "string"},
+                        "name": "data",
+                        "in": "header",
+                        "example": "header_overriden",
                         "examples": {
                             "example1": {
                                 "summary": "Qeury example 1",
@@ -676,8 +727,6 @@ openapi_schema = {
                             },
                             "example2": {"value": "header2"},
                         },
-                        "name": "data",
-                        "in": "header",
                     }
                 ],
                 "responses": {
@@ -685,12 +734,12 @@ openapi_schema = {
                         "description": "Successful Response",
                         "content": {"application/json": {"schema": {}}},
                     },
-                    "422": {
-                        "description": "Validation Error",
+                    "400": {
+                        "description": "Parameters Validation Error",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                    "$ref": "#/components/schemas/HTTPBadRequestError"
                                 }
                             }
                         },
@@ -705,10 +754,10 @@ openapi_schema = {
                 "parameters": [
                     {
                         "required": False,
-                        "schema": {"title": "Data", "type": "string"},
-                        "example": "cookie1",
+                        "schema": {"type": "string"},
                         "name": "data",
                         "in": "cookie",
+                        "example": "cookie1",
                     }
                 ],
                 "responses": {
@@ -716,12 +765,12 @@ openapi_schema = {
                         "description": "Successful Response",
                         "content": {"application/json": {"schema": {}}},
                     },
-                    "422": {
-                        "description": "Validation Error",
+                    "400": {
+                        "description": "Parameters Validation Error",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                    "$ref": "#/components/schemas/HTTPBadRequestError"
                                 }
                             }
                         },
@@ -736,7 +785,9 @@ openapi_schema = {
                 "parameters": [
                     {
                         "required": False,
-                        "schema": {"title": "Data", "type": "string"},
+                        "schema": {"type": "string"},
+                        "name": "data",
+                        "in": "cookie",
                         "examples": {
                             "example1": {
                                 "summary": "cookie example 1",
@@ -744,8 +795,6 @@ openapi_schema = {
                             },
                             "example2": {"value": "cookie2"},
                         },
-                        "name": "data",
-                        "in": "cookie",
                     }
                 ],
                 "responses": {
@@ -753,12 +802,12 @@ openapi_schema = {
                         "description": "Successful Response",
                         "content": {"application/json": {"schema": {}}},
                     },
-                    "422": {
-                        "description": "Validation Error",
+                    "400": {
+                        "description": "Parameters Validation Error",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                    "$ref": "#/components/schemas/HTTPBadRequestError"
                                 }
                             }
                         },
@@ -773,7 +822,10 @@ openapi_schema = {
                 "parameters": [
                     {
                         "required": False,
-                        "schema": {"title": "Data", "type": "string"},
+                        "schema": {"type": "string"},
+                        "name": "data",
+                        "in": "cookie",
+                        "example": "cookie_overriden",
                         "examples": {
                             "example1": {
                                 "summary": "Qeury example 1",
@@ -781,8 +833,6 @@ openapi_schema = {
                             },
                             "example2": {"value": "cookie2"},
                         },
-                        "name": "data",
-                        "in": "cookie",
                     }
                 ],
                 "responses": {
@@ -790,12 +840,12 @@ openapi_schema = {
                         "description": "Successful Response",
                         "content": {"application/json": {"schema": {}}},
                     },
-                    "422": {
-                        "description": "Validation Error",
+                    "400": {
+                        "description": "Parameters Validation Error",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                    "$ref": "#/components/schemas/HTTPBadRequestError"
                                 }
                             }
                         },
@@ -803,42 +853,6 @@ openapi_schema = {
                 },
             }
         },
-    },
-    "components": {
-        "schemas": {
-            "HTTPValidationError": {
-                "title": "HTTPValidationError",
-                "type": "object",
-                "properties": {
-                    "detail": {
-                        "title": "Detail",
-                        "type": "array",
-                        "items": {"$ref": "#/components/schemas/ValidationError"},
-                    }
-                },
-            },
-            "Item": {
-                "title": "Item",
-                "required": ["data"],
-                "type": "object",
-                "properties": {"data": {"title": "Data", "type": "string"}},
-                "example": {"data": "Data in schema_extra"},
-            },
-            "ValidationError": {
-                "title": "ValidationError",
-                "required": ["loc", "msg", "type"],
-                "type": "object",
-                "properties": {
-                    "loc": {
-                        "title": "Location",
-                        "type": "array",
-                        "items": {"type": "string"},
-                    },
-                    "msg": {"title": "Message", "type": "string"},
-                    "type": {"title": "Error Type", "type": "string"},
-                },
-            },
-        }
     },
 }
 
