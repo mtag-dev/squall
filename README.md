@@ -180,6 +180,53 @@ Will give us
 Nested routing is usually used for splitting applications into files and achieving better project structure.
 ### HEAD parameters
 
+There are four kinds of parameters that developers can get from HTTP headers. Squall offers an interface for their conversion and validation.
+
+#### Path
+
+"Path" is a dynamic value specified by developers in the route URL.
+
+```Python
+from squall import Squall, Path
+
+app = Squall()
+
+
+@app.get("/company/{company_id}/employee/{employee_id}")
+async def get_company_employee(company_id: int, employee_id = Path()):
+    return {
+        "company_id": company_id,
+        "employee_id": employee_id,
+    }
+```
+
+Squall determinate affiliation of the variable with path by any of following ways:
+
+- Default parameter value is `Path` instance  
+- Parameter default name equal to route pattern
+
+Specifics:
+- Allows only the following annotations: `str`, `bytes`, `int`, `float`
+- `Union`, `Optional`, not allowed. Because a path can't have an undefined value. Also, parameters must have a strong conversion contract.
+- If an annotation isn't set parameter will arrive as `str`
+
+Shares common configuration contract for head entities. Please, read more [here](#parameters-configuration).
+
+
+#### Query
+
+
+#### Header
+
+
+#### Cookie
+
+
+#### Parameters configuration
+
+
+#### Parameters validation
+
 
 
 ### Body processing
