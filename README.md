@@ -309,6 +309,68 @@ Please, take a look at the [related test suite](https://github.com/mtag-dev/squa
 
 ### Body processing
 
+Schema defined using dataclasses behind the scene validated by awesome [apischema](https://wyfo.github.io/apischema/).
+Please follow their documentation for build validation.
+
+There are things strictly important to remember:
+
+#### Response serialization
+
+If response_model is equal to the handler return annotation Squall expects exactly these types and will not perform mutations to dataclasses, etc.
+Type checking will be done during serialization.
+
+Handy to save some resources working with ORM. For instance [SQL Alchemy dataclass mapping](https://docs.sqlalchemy.org/en/14/orm/mapping_styles.html#example-one-dataclasses-with-imperative-table)
+
+```Python
+from typing import List, Optional
+from dataclasses import dataclass
+from squall import Squall
+
+app = Squall()
+
+
+@dataclass
+class Item:
+    name: str
+    value: Optional[int] = None
+
+
+@app.get("/get", response_model=List[Item])
+async def handle_get() -> List[Item]:
+    return [
+        Item(name="null_value"),
+        Item(name="int_value", value=8)
+    ]
+```
+
+#### Response deserialization-serialization
+
+The following example demonstrates a different scenario. Where response expects to receive from handler Python primitives and Sequences/Maps only.
+With this scenario, all response data will be processed through the filling of the relevant model.
+
+
+```Python
+from typing import List, Optional
+from dataclasses import dataclass
+from squall import Squall
+
+app = Squall()
+
+
+@dataclass
+class Item:
+    name: str
+    value: Optional[int] = None
+
+
+@app.get("/get", response_model=List[Item])
+async def handle_get():
+    return [
+        {"name": "null_value"},
+        {"name": "int_value", "value": 8}
+    ]
+```
+
 
 ## Roadmap
 
