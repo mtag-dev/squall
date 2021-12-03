@@ -27,6 +27,14 @@
 ### Performance
 
 
+### Disagreement
+
+- Background tasks after response - Single operations instead of batching. Zero-level observability. Investigation hell in case of performance drop. Further explanation will arrive in a dedicated article.
+- Security enforcement in end-service - Waste resources of the entire infrastructure. CPU-intensive with low cache hit rate. Further explanation will arrive in a dedicated article.
+- Compression on reverse-proxy - Under load, uncompressed data overkill network stack and slowdowns application server. Further explanation will arrive in a dedicated article.
+- [TMTOWTDI](https://en.wikipedia.org/wiki/There%27s_more_than_one_way_to_do_it) - Squall enforces only one `True` way. This is important to keep code easy to maintain. If the developer knew Squall, (s)he already partially onboarded. Saves decision makers time on the contracts.
+- AGSI - Yeah, it is horrible. It will be a berry on the cake. 
+
 ## Usage
 ### Install
 
@@ -371,12 +379,11 @@ async def handle_get():
     ]
 ```
 
+## Acknowledgments
 
 ## Roadmap
 
 ## Dependencies
-
-## Acknowledgments
 
 ## Versioning
 
