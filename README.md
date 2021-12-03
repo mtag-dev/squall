@@ -380,6 +380,14 @@ async def handle_get():
 
 ## Versioning
 
+Squall follows the next versioning contract:
+
+`AA.BB.CC`
+
+- `AA` - Major changes, backward compatibility breaks
+- `BB` - Minor changes, new features
+- `CC` - Patch, bug fixes
+
 ## License
 
 MIT
