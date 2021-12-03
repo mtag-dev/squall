@@ -127,9 +127,59 @@ There are support for ReDoc and Swagger out of the box. You can reach it locally
 
 ### Routing
 
+Squall provides familiar decorators for any method route registration on both, application itself and on nested routers.
+
+| Method   |      app      |  router * |
+|:----------|:--------------|:------|
+| GET | @app.get | @router.get |
+| PUT | @app.put   | @router.put |
+| POST | @app.post | @router.post |
+| DELETE | @app.delete | @router.delete |
+| OPTIONS | @app.options | @router.options |
+| HEAD | @app.head | @router.head |
+| PATCH | @app.patch | @router.patch |
+| TRACE | @app.trace | @router.trace |
+
+__* `router = squall.Router()`__
+
+Nested routers supports prefixes and further nesting.
+
+```Python
+from squall import Router, Squall
+
+animals_router = Router(prefix="/animals")
 
 
+@animals_router.get("/")
+async def get_animals():
+    return []
+
+
+@animals_router.get("/cat")
+async def get_cat():
+    return []
+
+dogs_router = Router(prefix="/dogs")
+
+
+@dogs_router.get("/list")
+async def get_all_dogs():
+    return []
+
+
+animals_router.include_router(dogs_router)
+
+app = Squall()
+app.include_router(animals_router)
+```
+
+Will give us
+
+![Animals routing](docs/assets/animals-routing.png)
+
+Nested routing is usually used for splitting applications into files and achieving better project structure.
 ### HEAD parameters
+
 
 
 ### Body processing
