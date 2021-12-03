@@ -178,6 +178,7 @@ Will give us
 ![Animals routing](docs/assets/animals-routing.png)
 
 Nested routing is usually used for splitting applications into files and achieving better project structure.
+
 ### HEAD parameters
 
 There are four kinds of parameters that developers can get from HTTP headers. Squall offers an interface for their conversion and validation.
@@ -215,18 +216,95 @@ Shares common configuration contract for head entities. Please, read more [here]
 
 #### Query
 
+"Query" is a way get query string parameters value(s).
+
+```Python
+from typing import List
+from squall import Squall, Query
+
+app = Squall()
+
+
+@app.get("/")
+async def get_company_employee(company_id: int = Query(), employee_ids: List[int] = Query()):
+    return {
+        "company_id": company_id,
+        "employee_ids": employee_ids,
+    }
+```
+
+Specifics:
+- Allowed annotations: `str`, `bytes`, `int`, `float`, `Optional`, `List`
+- If it is a getting of multiple values for the same key, at the moment, [value validation](#parameters-validation) cannot be applied.
 
 #### Header
+
+"Header" is a way get header value(s). Share the same behaviour as Query
+
+```Python
+from typing import List
+from squall import Squall, Header
+
+app = Squall()
+
+
+@app.get("/")
+async def get_company_employee(company_id: int = Header(), employee_ids: List[int] = Header()):
+    return {
+        "company_id": company_id,
+        "employee_ids": employee_ids,
+    }
+```
+
+Specifics:
+- Allowed annotations: `str`, `bytes`, `int`, `float`, `Optional`, `List`
+- If it is a getting of multiple values for the same key, at the moment, [value validation](#parameters-validation) cannot be applied.
 
 
 #### Cookie
 
+"Cookie" is a way get cookie value.
+
+```Python
+from typing import List
+from squall import Squall, Cookie
+
+app = Squall()
+
+
+@app.get("/")
+async def get_company_employee(user_id: int = Cookie()):
+    return {
+        "user_id": user_id,
+    }
+```
+
+Specifics:
+- Allowed annotations: `str`, `bytes`, `int`, `float`, `Optional`
+
 
 #### Parameters configuration
+
+All head fields share common configuration pattern which include the following list of parameters:
+
+- `default`, default value to assign
+- `alias`, replaces source key where to get the value from
+- `title`, title for schema specification
+- `description`, description for schema specification
+- `valid`, instance of validator, `squall.Num` or `squall.Str`
+- `example`, example for schema specification
+- `examples`, multiple examples for schema specification
+- `deprecated`, mark parameter as deprecated, will appear in specification
 
 
 #### Parameters validation
 
+At the moment, Squall provides following validators that developer can apply to HEAD parameters values:
+
+`squall.Num` - `int`, `float` validator. Following conditions are supported: `gt`, `ge`, `lt`, `le`
+`squall.Str` - `str`, `bytes` validator. Following conditions are supported: `min_len`, `max_len`
+
+Please, take a look at the [related test suite](https://github.com/mtag-dev/squall/blob/master/tests/test_validation/test_head_validation.py)
 
 
 ### Body processing
