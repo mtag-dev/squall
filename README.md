@@ -26,6 +26,30 @@
 
 ### Performance
 
+<table>
+    <tr>
+        <td>
+            <p>1Kb no-schema</p>
+            <img src="docs/assets/bench-raw-1kb.png" />
+        </td>
+        <td>
+            <p>1Kb schema</p>
+            <img src="docs/assets/bench-dataclass-1kb.png" />
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <p>30Kb no-schema</p>
+            <img src="docs/assets/bench-raw-30kb.png" />
+        </td>
+        <td>
+            <p>30Kb schema</p>
+            <img src="docs/assets/bench-dataclass-30kb.png" />
+        </td>
+    </tr>
+</table>
+
+More results [here](https://github.com/mtag-dev/py-rest-stress-testing)
 
 ### Disagreement
 
