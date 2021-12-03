@@ -30,9 +30,59 @@
 ## Usage
 ### Install
 
+```shell
+pip3 install python-squall
+```
+
+You also need some ASGI server. Let's install Uvicorn, the most popular one.
+
+```shell
+pip3 install uvicorn
+```
 
 ### Quick start
 
+Create `example.py` with the following content
+
+```Python
+from typing import List, Optional
+from dataclasses import dataclass
+from squall import Squall
+
+app = Squall()
+
+@dataclass
+class Item:
+    name: str
+    value: Optional[int] = None
+
+
+@app.get("/get", response_model=List[Item])
+async def my_get_endpoint() -> List[Item]:
+    return [
+        Item(name="null_value"),
+        Item(name="int_value", value=8)
+    ]
+
+
+@app.post("/post", response_model=Item)
+async def my_get_endpoint(data: Item) -> Item:
+    return data
+```
+
+And run it
+
+```shell
+uvicorn example:app
+```
+
+Now, we are able to surf our GET endpoint on: http://127.0.0.1:8080/get
+
+And let's play with `curl` on POST endpoint
+
+```shell
+
+```
 
 ### Routing
 
