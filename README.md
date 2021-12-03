@@ -35,7 +35,7 @@ There are some things that Squall disagree with:
 - AuthN security enforcement in end-service
 - Compression on reverse-proxy
 - [TMTOWTDI](https://en.wikipedia.org/wiki/There%27s_more_than_one_way_to_do_it)
-- AGSI
+- [ASGI](https://asgi.readthedocs.io/en/latest/specs/index.html)
 
 All further explanations will arrive in dedicated articles.
 
