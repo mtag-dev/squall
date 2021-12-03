@@ -117,9 +117,12 @@ Type checking and validation is done by [apischema](https://wyfo.github.io/apisc
 
 OpenAPI for your app generates automatically based on route parameters and schema you have defined.
 
-![Example Get](docs/assets/openapi-example-get.png)
+There are support for ReDoc and Swagger out of the box. You can reach it locally once your application started:
 
-![Example Get](docs/assets/openapi-example-post.png)
+- Swagger: http://127.0.0.1:8000/doc
+- ReDoc: http://127.0.0.1:8000/redoc
+
+![Example Get](docs/assets/openapi-example.png)
 
 
 ### Routing
