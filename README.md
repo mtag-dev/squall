@@ -51,6 +51,7 @@ from squall import Squall
 
 app = Squall()
 
+
 @dataclass
 class Item:
     name: str
@@ -58,7 +59,7 @@ class Item:
 
 
 @app.get("/get", response_model=List[Item])
-async def my_get_endpoint() -> List[Item]:
+async def handle_get() -> List[Item]:
     return [
         Item(name="null_value"),
         Item(name="int_value", value=8)
@@ -66,7 +67,7 @@ async def my_get_endpoint() -> List[Item]:
 
 
 @app.post("/post", response_model=Item)
-async def my_get_endpoint(data: Item) -> Item:
+async def handle_post(data: Item) -> Item:
     return data
 ```
 
@@ -76,15 +77,53 @@ And run it
 uvicorn example:app
 ```
 
-Now, we are able to surf our GET endpoint on: http://127.0.0.1:8080/get
+Now, we are able to surf our GET endpoint on: http://127.0.0.1:8000/get
 
 And let's play with `curl` on POST endpoint
 
 ```shell
-
+# curl -X 'POST' 'http://127.0.0.1:8000/post' -H 'Content-Type: application/json' -d '{"name": "string", "value": 234}'
+{
+  "name": "string",
+  "value": 234
+}
 ```
 
+Type checking and validation is done by [apischema](https://wyfo.github.io/apischema/) for both, Request and Response.
+
+
+```shell
+# curl -X 'POST' 'http://127.0.0.1:8000/post' -H 'Content-Type: application/json' -d '{"name": "string", "value": "not_an_int"}'
+{
+  "details": [
+    {
+      "loc": [
+        "value"
+      ],
+      "msg": "expected type integer, found string"
+    },
+    {
+      "loc": [
+        "value"
+      ],
+      "msg": "expected type null, found string"
+    }
+  ]
+}
+```
+
+
+### OpenAPI generation
+
+OpenAPI for your app generates automatically based on route parameters and schema you have defined.
+
+![Example Get](docs/assets/openapi-example-get.png)
+
+![Example Get](docs/assets/openapi-example-post.png)
+
+
 ### Routing
+
 
 
 ### HEAD parameters
