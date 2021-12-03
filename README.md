@@ -15,3 +15,42 @@
 [![PyPi](https://img.shields.io/pypi/v/python-squall?color=%2334D058&label=pypi%20package)](https://pypi.org/project/python-squall/)
 [![PyVersions](https://img.shields.io/pypi/pyversions/python-squall.svg?color=%2334D058)](https://pypi.org/project/python-squall/)
 
+--- 
+#### Navigation
+
+
+
+## About
+### Motivation
+
+
+### Performance
+
+
+## Usage
+### Install
+
+
+### Quick start
+
+
+### Routing
+
+
+### HEAD parameters
+
+
+### Body processing
+
+
+## Roadmap
+
+## Dependencies
+
+## Acknowledgments
+
+## Versioning
+
+## License
+
+MIT
