@@ -1,7 +1,7 @@
+from dataclasses import dataclass, field
 from typing import List, Optional
 
 import pytest
-from pydantic import Field, dataclasses
 from squall import Squall
 from squall.exceptions import ResponsePayloadValidationError
 from squall.testclient import TestClient
@@ -9,9 +9,9 @@ from squall.testclient import TestClient
 app = Squall()
 
 
-@dataclasses.dataclass
+@dataclass
 class Item:
-    name: str = Field(...)
+    name: str = field()
     price: Optional[float] = None
     owner_ids: Optional[List[int]] = None
 

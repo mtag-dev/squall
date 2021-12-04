@@ -1,15 +1,12 @@
-from pydantic import dataclasses
+from dataclasses import dataclass
+
 from squall import Body, Cookie, Header, Path, Query, Squall
 from squall.testclient import TestClient
 
 app = Squall()
 
 
-class Config:
-    schema_extra = {"example": {"data": "Data in schema_extra"}}
-
-
-@dataclasses.dataclass(config=Config)
+@dataclass
 class Item:
     data: str
 
@@ -861,9 +858,9 @@ def test_openapi_schema():
     """
     Test that example overrides work:
 
-    * pydantic model schema_extra is included
-    * Body(example={}) overrides schema_extra in pydantic model
-    * Body(examples{}) overrides Body(example={}) and schema_extra in pydantic model
+    * model schema_extra is included
+    * Body(example={}) overrides schema_extra in model
+    * Body(examples{}) overrides Body(example={}) and schema_extra in model
     """
     response = client.get("/openapi.json")
     assert response.status_code == 200, response.text

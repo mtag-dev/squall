@@ -1,7 +1,6 @@
-from typing import Any, Dict, Optional, Sequence, Tuple, Type
+from typing import Any, Dict, Optional, Sequence, Tuple
 
 from apischema.validation.errors import ValidationError
-from pydantic import BaseModel, create_model
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 
@@ -14,10 +13,6 @@ class HTTPException(StarletteHTTPException):
     ) -> None:
         super().__init__(status_code=status_code, detail=detail)
         self.headers = headers
-
-
-RequestErrorModel: Type[BaseModel] = create_model("Request")
-WebSocketErrorModel: Type[BaseModel] = create_model("WebSocket")
 
 
 class SquallError(RuntimeError):
