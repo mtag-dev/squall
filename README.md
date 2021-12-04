@@ -22,6 +22,7 @@
   - [Motivation](#motivation)
   - [Performance](#performance)
   - [Disagreement](#disagreement)
+  - [ASAP](#asap)
 - [Usage](#usage)
   - [Install](#install)
   - [Quick start](#quick-start)
@@ -78,6 +79,11 @@ There are some things that Squall disagree with:
 - [ASGI](https://asgi.readthedocs.io/en/latest/specs/index.html)
 
 All further explanations will arrive in dedicated articles.
+
+### ASAP
+
+Squall following own MTAG/Squall ASAP pattern. The idea of the pattern is pretty simple to understand.
+If you have all necessaries to do something you can do in the next steps, you should do it now.
 
 ## Usage
 ### Install
