@@ -1,7 +1,6 @@
 from typing import Dict, List, Optional, Tuple
 
 import pytest
-from pydantic import BaseModel
 from squall import Query, Squall
 
 
@@ -9,7 +8,7 @@ def test_invalid_sequence():
     with pytest.raises(AssertionError):
         app = Squall()
 
-        class Item(BaseModel):
+        class Item:
             title: str
 
         @app.get("/items/")
@@ -21,7 +20,7 @@ def test_invalid_tuple():
     with pytest.raises(AssertionError):
         app = Squall()
 
-        class Item(BaseModel):
+        class Item:
             title: str
 
         @app.get("/items/")
@@ -33,7 +32,7 @@ def test_invalid_dict():
     with pytest.raises(AssertionError):
         app = Squall()
 
-        class Item(BaseModel):
+        class Item:
             title: str
 
         @app.get("/items/")
@@ -45,7 +44,7 @@ def test_invalid_simple_dict():
     with pytest.raises(AssertionError):
         app = Squall()
 
-        class Item(BaseModel):
+        class Item:
             title: str
 
         @app.get("/items/")

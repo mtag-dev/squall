@@ -3,7 +3,6 @@ import typing
 from typing import Any, Dict, List, Optional, Tuple
 
 import orjson
-from pydantic import BaseModel
 from squall.types import Receive, Scope, Send
 from starlette.responses import FileResponse as FileResponse  # noqa
 from starlette.responses import RedirectResponse as RedirectResponse  # noqa
@@ -16,9 +15,7 @@ json_pretty_option = orjson.OPT_NON_STR_KEYS | orjson.OPT_INDENT_2
 
 
 def default(obj: Any) -> Any:
-    if isinstance(obj, BaseModel):
-        return dict(obj)
-    elif isinstance(obj, decimal.Decimal):
+    if isinstance(obj, decimal.Decimal):
         return float(obj)
     elif isinstance(obj, set):
         return tuple(obj)

@@ -1,15 +1,16 @@
-from pydantic import Field, dataclasses
+from dataclasses import dataclass, field
+
 from squall import Squall
 from squall.testclient import TestClient
 
 app = Squall()
 
 
-@dataclasses.dataclass
+@dataclass
 class Product:
-    name: str = Field(...)
+    name: str = field()
+    price: float = field()
     description: str = None  # type: ignore
-    price: float = Field(...)
 
 
 @app.get("/product")
@@ -29,9 +30,10 @@ openapi_schema = {
                 "type": "object",
                 "properties": {
                     "name": {"type": "string"},
-                    "description": {"type": "string"},
                     "price": {"type": "number"},
+                    "description": {"type": "string"},
                 },
+                "required": ["name", "price"],
                 "additionalProperties": False,
             },
             "ValidationError": {
