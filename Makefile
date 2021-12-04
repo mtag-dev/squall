@@ -3,8 +3,6 @@ install-dev:		## Install development dependencies
 	flit install --symlink
 
 test:			## Run unit tests
-	python ./scripts/docs.py verify-readme
-	export PYTHONPATH=./docs_src
 	pytest --cov=squall --cov=tests --cov=docs_src --cov-report=term-missing:skip-covered --cov-report=xml tests
 
 lint:			## Run lint checks
