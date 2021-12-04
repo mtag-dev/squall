@@ -37,11 +37,11 @@
   - [Body processing](#body-processing)
     - [Response serialization](#response-serialization)
     - [Response deserialization serialization](#response-deserialization-serialization)
-  - [Acknowledgments](#acknowledgments)
-  - [Roadmap](#roadmap)
-  - [Dependencies](#dependencies)
-  - [Versioning](#versioning)
-  - [License](#license)
+- [Acknowledgments](#acknowledgments)
+- [Roadmap](#roadmap)
+- [Dependencies](#dependencies)
+- [Versioning](#versioning)
+- [License](#license)
 
 
 ## About
