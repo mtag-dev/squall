@@ -82,8 +82,10 @@ All further explanations will arrive in dedicated articles.
 
 ### ASAP
 
-Squall following own MTAG/Squall ASAP pattern. The idea of the pattern is pretty simple to understand.
+Squall following own MTAG/Squall ASAP pattern. The idea of the ASAP pattern is pretty simple to understand.
 If you have all necessaries to do something you can do in the next steps, you should do it now.
+
+Be careful. This pattern is mind-changing.
 
 ## Usage
 ### Install
