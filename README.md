@@ -438,9 +438,14 @@ async def handle_get():
 
 `0.4.x` - [Dependency Injector](https://python-dependency-injector.ets-labs.org/) integration
 
-`0.5.x` - MTAG integration
+`0.5.x` - [YARL](https://pypi.org/project/yarl/) and [aio-MultiDict](https://multidict.readthedocs.io/en/stable/) integration
 
-`0.6.x` - Starts new SGI initiative
+`0.6.x` - Fine-tuning for `__slots__`, LEGB, attribute access.
+
+`0.7.x` - MTAG integration
+
+`0.8.x` - Starts new SGI initiative
+
 
 
 ## Dependencies
