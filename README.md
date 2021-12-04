@@ -430,6 +430,26 @@ async def handle_get():
 
 ## Dependencies
 
+### [apischema](https://pypi.org/project/orjson/)
+
+License: MIT
+
+JSON (de)serialization, GraphQL and JSON schema generation using Python typing.
+
+apischema makes your life easier when dealing with API data.
+
+### [orjson](https://pypi.org/project/orjson/)
+
+License: MIT or Apache 2.0
+
+orjson is a fast, correct JSON library for Python. It benchmarks as the fastest Python library for JSON and is more correct than the standard json library or other third-party libraries. It serializes dataclass, datetime, numpy, and UUID instances natively.
+
+### [Starlette](https://www.starlette.io/)
+
+License: BSD 3
+
+Starlette is a lightweight ASGI framework/toolkit, which is ideal for building high performance async services.
+
 ## Versioning
 
 Squall follows the next versioning contract:
