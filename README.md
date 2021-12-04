@@ -56,22 +56,20 @@ Eventually, Squall is a part of the e2e solution for modern high-performance sta
 
 ### Performance
 
-#### No schema
-
-**1Kb**
+**1Kb no schema**
 ![1kb no schema](docs/assets/bench-raw-1kb.png)
 
-**30Kb**
+**30Kb no schema**
 ![30kb no schema](docs/assets/bench-raw-30kb.png)
 
-**1Kb**
+**1Kb schema**
 ![1kb schema](docs/assets/bench-dataclass-1kb.png)
 
-**30Kb**
+**30Kb schema**
 ![30kb schema](docs/assets/bench-dataclass-30kb.png)
 
 
-More results [here](https://github.com/mtag-dev/py-rest-stress-testing)
+More results and benchmark methodology [here](https://github.com/mtag-dev/py-rest-stress-testing)
 
 ### ASAP and bathing
 
