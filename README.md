@@ -434,9 +434,9 @@ async def handle_get():
 
 `0.2.x` - Intel® [ISA-L](https://www.intel.com/content/www/us/en/developer/tools/isa-l/overview.html) based compression
 
-`0.3.x` - Observability based on OpenTelemetry with switchable Squall internals tracing.
+`0.3.x` - Observability based on [OpenTelemetry](https://opentelemetry.io/) with switchable Squall internals tracing.
 
-`0.4.x` - [Dependency Injector] integration
+`0.4.x` - [Dependency Injector](https://python-dependency-injector.ets-labs.org/) integration
 
 `0.5.x` - MTAG integration
 
