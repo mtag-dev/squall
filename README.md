@@ -21,7 +21,6 @@
 - [About](#about)
   - [Motivation](#motivation)
   - [Performance](#performance)
-  - [Disagreement](#disagreement)
   - [ASAP](#asap)
 - [Usage](#usage)
   - [Install](#install)
@@ -48,11 +47,12 @@
 ## About
 ### Motivation
 
-Initially, it was a library for ASGI frameworks for publishing RBAC routing information to the MTAG. 
-After some research, we have decided that this is the most complex way and made a decision to create a framework
+Initially, it was a library for ASGI frameworks for publishing RBAC routing information to the MTAG API-Gateway. 
+After some research, we have decided that this is the most expensive way and made a decision to create a framework
  which will deliver the best experience in the development of applications behind the API-Gateway.
 
 Eventually, Squall is a part of the e2e solution for modern high-performance stacks.
+
 
 ### Performance
 
@@ -72,18 +72,6 @@ Eventually, Squall is a part of the e2e solution for modern high-performance sta
 
 
 More results [here](https://github.com/mtag-dev/py-rest-stress-testing)
-
-### Disagreement
-
-There are some things that Squall disagree with: 
-
-- Background tasks after response
-- AuthN security enforcement in end-service
-- Compression on reverse-proxy
-- [TMTOWTDI](https://en.wikipedia.org/wiki/There%27s_more_than_one_way_to_do_it)
-- [ASGI](https://asgi.readthedocs.io/en/latest/specs/index.html)
-
-All further explanations will arrive in dedicated articles.
 
 ### ASAP
 
