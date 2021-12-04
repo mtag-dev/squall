@@ -426,7 +426,7 @@ async def handle_get():
 
 ## Acknowledgments
 
-Many thanks to @tiangolo and the entire [FastAPI community](https://fastapi.tiangolo.com/fastapi-people/). Squall development started from hard-forking this superior developers-friendly framework.
+Many thanks to [@tiangolo](https://github.com/tiangolo) and the entire [FastAPI community](https://fastapi.tiangolo.com/fastapi-people/). Squall development started from hard-forking this superior developers-friendly framework.
 
 ## Roadmap
 
