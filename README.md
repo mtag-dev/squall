@@ -18,6 +18,30 @@
 --- 
 #### Navigation
 
+- [About](#about)
+  - [Motivation](#motivation)
+  - [Performance](#performance)
+  - [Disagreement](#disagreement)
+- [Usage](#usage)
+  - [Install](#install)
+  - [Quick start](#quick-start)
+  - [OpenAPI](#openapi-generation)
+  - [Routing](#routing)
+  - [HEAD parameters](#head-parameters)
+    - [Path](#path)
+    - [Query](#query)
+    - [Header](#header)
+    - [Cookie](#cookie)
+    - [Parameters configuration](#parameters-configuration)
+    - [Parameters validation](#parameters-validation)
+  - [Body processing](#body-processing)
+    - [Response serialization](#response-serialization)
+    - [Response deserialization serialization](#response-deserialization-serialization)
+  - [Acknowledgments](#acknowledgments)
+  - [Roadmap](#roadmap)
+  - [Dependencies](#dependencies)
+  - [Versioning](#versioning)
+  - [License](#license)
 
 
 ## About
@@ -329,8 +353,8 @@ All head fields share common configuration pattern which include the following l
 
 At the moment, Squall provides following validators that developer can apply to HEAD parameters values:
 
-`squall.Num` - `int`, `float` validator. Following conditions are supported: `gt`, `ge`, `lt`, `le`
-`squall.Str` - `str`, `bytes` validator. Following conditions are supported: `min_len`, `max_len`
+- `squall.Num` - `int`, `float` validator. Following conditions are supported: `gt`, `ge`, `lt`, `le`
+- `squall.Str` - `str`, `bytes` validator. Following conditions are supported: `min_len`, `max_len`
 
 Please, take a look at the [related test suite](https://github.com/mtag-dev/squall/blob/master/tests/test_validation/test_head_validation.py)
 
