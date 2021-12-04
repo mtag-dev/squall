@@ -21,7 +21,7 @@
 - [About](#about)
   - [Motivation](#motivation)
   - [Performance](#performance)
-  - [ASAP](#asap)
+  - [ASAP and batching](#asap-and-bathing)
 - [Usage](#usage)
   - [Install](#install)
   - [Quick start](#quick-start)
@@ -73,12 +73,14 @@ Eventually, Squall is a part of the e2e solution for modern high-performance sta
 
 More results [here](https://github.com/mtag-dev/py-rest-stress-testing)
 
-### ASAP
+### ASAP and bathing
 
 Squall following own MTAG/Squall ASAP pattern. The idea of the ASAP pattern is pretty simple to understand.
 If you have all necessaries to do something you can do in the next steps, you should do it now.
 
 Be careful. This pattern is mind-changing.
+
+The batch operation is always better than a lot of small ones.
 
 ## Usage
 ### Install
@@ -427,6 +429,19 @@ async def handle_get():
 ## Acknowledgments
 
 ## Roadmap
+
+`0.1.x` - Initial project publication
+
+`0.2.x` - Intel® [ISA-L](https://www.intel.com/content/www/us/en/developer/tools/isa-l/overview.html) based compression
+
+`0.3.x` - Observability based on OpenTelemetry with switchable Squall internals tracing.
+
+`0.4.x` - [Dependency Injector] integration
+
+`0.5.x` - MTAG integration
+
+`0.6.x` - Starts new SGI initiative
+
 
 ## Dependencies
 
