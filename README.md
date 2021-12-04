@@ -21,7 +21,7 @@
 - [About](#about)
   - [Motivation](#motivation)
   - [Performance](#performance)
-  - [ASAP and batching](#asap-and-bathing)
+  - [ASAP and batching](#asap-and-batching)
 - [Usage](#usage)
   - [Install](#install)
   - [Quick start](#quick-start)
@@ -71,7 +71,7 @@ Eventually, Squall is a part of the e2e solution for modern high-performance sta
 
 More results and benchmark methodology [here](https://github.com/mtag-dev/py-rest-stress-testing)
 
-### ASAP and bathing
+### ASAP and batching
 
 Squall following own MTAG/Squall ASAP pattern. The idea of the ASAP pattern is pretty simple to understand.
 If you have all necessaries to do something you can do in the next steps, you should do it now.
