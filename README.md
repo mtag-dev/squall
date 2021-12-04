@@ -48,6 +48,11 @@
 ## About
 ### Motivation
 
+Initially, it was a library for ASGI frameworks for publishing RBAC routing information to the MTAG. 
+After some research, we have decided that this is the most complex way and made a decision to create a framework
+ which will deliver the best experience in the development of applications behind the API-Gateway.
+
+Eventually, Squall is a part of the e2e solution for modern high-performance stacks.
 
 ### Performance
 
