@@ -9,14 +9,14 @@ lint:			## Run lint checks
 	mypy squall
 	flake8 squall tests
 	black squall tests --check
-	isort squall tests docs_src scripts --check-only
+	isort squall tests scripts --check-only
 
 test-all: lint test	## Run unit tests and lint check
 
 format:			## Format code according to lint checks
-	autoflake --remove-all-unused-imports --recursive --remove-unused-variables --in-place docs_src squall tests scripts --exclude=__init__.py
-	black squall tests docs_src scripts
-	isort squall tests docs_src scripts
+	autoflake --remove-all-unused-imports --recursive --remove-unused-variables --in-place squall tests scripts --exclude=__init__.py
+	black squall tests scripts
+	isort squall tests scripts
 
 generate-readme:	## Generate README
 	python ./scripts/docs.py generate-readme

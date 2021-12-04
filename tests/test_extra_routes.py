@@ -1,6 +1,6 @@
+from dataclasses import dataclass, field
 from typing import Optional
 
-from pydantic import Field, dataclasses
 from squall import Squall
 from squall.responses import JSONResponse
 from squall.testclient import TestClient
@@ -8,9 +8,9 @@ from squall.testclient import TestClient
 app = Squall()
 
 
-@dataclasses.dataclass
+@dataclass
 class Item:
-    name: str = Field(...)
+    name: str = field()
     price: Optional[float] = None
 
 
@@ -64,6 +64,7 @@ openapi_schema = {
                     "name": {"type": "string"},
                     "price": {"type": ["number", "null"], "default": None},
                 },
+                "required": ["name"],
                 "additionalProperties": False,
             },
             "ValidationError": {

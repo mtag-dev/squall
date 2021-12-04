@@ -1,34 +1,28 @@
+from dataclasses import dataclass, field
 from typing import List
 
-from pydantic import Field, dataclasses
 from squall import Squall
 from squall.testclient import TestClient
 
 app = Squall()
 
 
-@dataclasses.dataclass
+@dataclass
 class RecursiveItem:
-    sub_items: List["RecursiveItem"] = Field(default_factory=list)
-    name: str = Field(...)
+    name: str = field()
+    sub_items: List["RecursiveItem"] = field(default_factory=list)
 
 
-RecursiveItem.__pydantic_model__.update_forward_refs()
-
-
-@dataclasses.dataclass
+@dataclass
 class RecursiveSubitemInSubmodel:
-    sub_items2: List["RecursiveItemViaSubmodel"] = Field(default_factory=list)
-    name: str = Field(...)
+    name: str = field()
+    sub_items2: List["RecursiveItemViaSubmodel"] = field(default_factory=list)
 
 
-@dataclasses.dataclass
+@dataclass
 class RecursiveItemViaSubmodel:
-    sub_items1: List[RecursiveSubitemInSubmodel] = Field(default_factory=list)
-    name: str = Field(...)
-
-
-RecursiveSubitemInSubmodel.__pydantic_model__.update_forward_refs()
+    name: str = field()
+    sub_items1: List[RecursiveSubitemInSubmodel] = field(default_factory=list)
 
 
 @app.get("/items/recursive", response_model=RecursiveItem)

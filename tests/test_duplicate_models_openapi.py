@@ -1,24 +1,25 @@
-from pydantic import Field, dataclasses
+from dataclasses import dataclass, field
+
 from squall import Squall
 from squall.testclient import TestClient
 
 app = Squall()
 
 
-@dataclasses.dataclass
+@dataclass
 class Model:
     pass
 
 
-@dataclasses.dataclass
+@dataclass
 class Model2:
-    a: Model = Field(...)
+    a: Model = field()
 
 
-@dataclasses.dataclass
+@dataclass
 class Model3:
-    c: Model = Field(...)
-    d: Model2 = Field(...)
+    c: Model = field()
+    d: Model2 = field()
 
 
 @app.get("/", response_model=Model3)
@@ -37,12 +38,14 @@ openapi_schema = {
                     "c": {"$ref": "#/components/schemas/Model"},
                     "d": {"$ref": "#/components/schemas/Model2"},
                 },
+                "required": ["c", "d"],
                 "additionalProperties": False,
             },
             "Model": {"type": "object", "additionalProperties": False},
             "Model2": {
                 "type": "object",
                 "properties": {"a": {"$ref": "#/components/schemas/Model"}},
+                "required": ["a"],
                 "additionalProperties": False,
             },
             "HTTPBadRequestError": {
