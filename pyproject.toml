@@ -4,13 +4,15 @@ build-backend = "flit.buildapi"
 
 [project]
 name = "python-squall"
-version = "0.0.1a"
+version = "0.1.0"
 description = "Squall ASGI REST framework"
 authors = [
     {name = "Stanislav Dubrovskyi", email = "s.dubrovskyi@cleverdec.com"},
 ]
 maintainers = [
+    {name = "Stanislav Dubrovskyi", email = "s.dubrovskyi@cleverdec.com"},
     {name = "Vitalii Kovalchuk", email = "naviot96@gmail.com"},
+    {name = "Svitlana Kost", email = "s.kost@cleverdec.com"},
 ]
 
 classifiers = [
@@ -47,7 +49,7 @@ readme = "README.md"
 requires-python = ">=3.9.0"
 
 [project.urls]
-Documentation = "https://squall.mtag.dev/"
+Documentation = "https://github.com/mtag-dev/squall"
 Source = "https://github.com/mtag-dev/squall"
 
 [project.optional-dependencies]

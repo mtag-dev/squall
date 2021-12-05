@@ -1,6 +1,6 @@
 <p align="center">
     <a href="https://github.com/mtag-dev/squall/">
-        <img src="docs/assets/squall-logo.png" alt="Squall" width="300"/>
+        <img src="https://github.com/mtag-dev/squall/raw/master/docs/assets/squall-logo.png" alt="Squall" width="300"/>
     </a>
 </p>
 <p align="center">
@@ -57,16 +57,16 @@ Eventually, Squall is a part of the e2e solution for modern high-performance sta
 ### Performance
 
 **1Kb no schema**
-![1kb no schema](docs/assets/bench-raw-1kb.png)
+![1kb no schema](https://github.com/mtag-dev/squall/raw/master/docs/assets/bench-raw-1kb.png)
 
 **30Kb no schema**
-![30kb no schema](docs/assets/bench-raw-30kb.png)
+![30kb no schema](https://github.com/mtag-dev/squall/raw/master/docs/assets/bench-raw-30kb.png)
 
 **1Kb schema**
-![1kb schema](docs/assets/bench-dataclass-1kb.png)
+![1kb schema](https://github.com/mtag-dev/squall/raw/master/docs/assets/bench-dataclass-1kb.png)
 
 **30Kb schema**
-![30kb schema](docs/assets/bench-dataclass-30kb.png)
+![30kb schema](https://github.com/mtag-dev/squall/raw/master/docs/assets/bench-dataclass-30kb.png)
 
 
 More results and benchmark methodology [here](https://github.com/mtag-dev/py-rest-stress-testing)
@@ -175,7 +175,7 @@ There are support for ReDoc and Swagger out of the box. You can reach it locally
 - Swagger: http://127.0.0.1:8000/doc
 - ReDoc: http://127.0.0.1:8000/redoc
 
-![Example Get](docs/assets/openapi-example.png)
+![Example Get](https://github.com/mtag-dev/squall/raw/master/docs/assets/openapi-example.png)
 
 
 ### Routing
@@ -228,7 +228,7 @@ app.include_router(animals_router)
 
 Will give us
 
-![Animals routing](docs/assets/animals-routing.png)
+![Animals routing](https://github.com/mtag-dev/squall/raw/master/docs/assets/animals-routing.png)
 
 Nested routing is usually used for splitting applications into files and achieving better project structure.
 
@@ -292,7 +292,7 @@ Specifics:
 
 #### Header
 
-"Header" is a way get header value(s). Share the same behaviour as Query
+"Header" is a way to get header value(s). Shares common behavior with Query
 
 ```Python
 from typing import List
