@@ -43,7 +43,6 @@ class ParamOpenAPI(Enum):
 
 @dataclass
 class CommonParam:
-    # in_: ParamTypes
     default: Any = Ellipsis
     alias: Optional[str] = None
     title: Optional[str] = None

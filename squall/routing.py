@@ -280,49 +280,6 @@ def get_http_handler(
         await send(response.send_start)
         await send(response.send_body)
 
-        # await response(scope, receive, send)
-
-        # try:
-        #     body: Any = None
-        #     if True: # body_field:
-        #         if False: # is_body_form:
-        #             body = await request.form()
-        #         else:
-        #             body_bytes = await request.body()
-        #             if body_bytes:
-        #                 json_body: Any = Undefined
-        #                 content_type_value = request.headers.get("content-type")
-        #                 if not content_type_value:
-        #                     json_body = await request.json()
-        #                 else:
-        #                     message = email.message.Message()
-        #                     message["content-type"] = content_type_value
-        #                     if message.get_content_maintype() == "application":
-        #                         subtype = message.get_content_subtype()
-        #                         if subtype == "json" or subtype.endswith("+json"):
-        #                             json_body = await request.json()
-        #                 if json_body != Undefined:
-        #                     body = json_body
-        #                 else:
-        #                     body = body_bytes
-        # except json.JSONDecodeError as e:
-        #     raise RequestPayloadValidationError([ErrorWrapper(e, ("body", e.pos))], body=e.doc)
-        # except Exception as e:
-        #     raise HTTPException(
-        #         status_code=400, detail="There was an error parsing the body"
-        #     ) from e
-
-        # # solved_result = await solve_dependencies(
-        # #     request=request,
-        # #     dependant=dependant,
-        # #     body=body,
-        # #     dependency_overrides_provider=dependency_overrides_provider,
-        # # )
-        # values, errors, background_tasks, sub_response, _ = solved_result
-        # if errors:
-        #     raise RequestPayloadValidationError(errors, body=body)
-        # else:
-
     return app
 
 
