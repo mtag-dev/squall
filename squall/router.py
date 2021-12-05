@@ -31,25 +31,20 @@ class Router:
         self,
         prefix: str = "",
         tags: Optional[List[str]] = None,
-        # dependencies: Optional[Sequence[params.Depends]] = None,
         default_response_class: Type[Response] = Default(JSONResponse),
         responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
         routes: Optional[List[Union[APIRoute, WebSocketRoute]]] = None,
         route_class: Type[APIRoute] = APIRoute,
         deprecated: Optional[bool] = None,
         include_in_schema: bool = True,
-        # dependency_overrides_provider: Optional[Any] = None,
     ) -> None:
         self._prefix = prefix
         self._tags = tags or []
-        # self._dependencies = list(dependencies or []) or []
         self._default_response_class = default_response_class
         self.route_class = route_class
         self._deprecated = deprecated
         self._include_in_schema = include_in_schema
         self._responses = responses or {}
-        # self.dependency_overrides_provider = dependency_overrides_provider
-
         self._routes: List[Union[APIRoute, WebSocketRoute]] = routes or []
 
     def add_api_route(
@@ -60,7 +55,6 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -83,16 +77,13 @@ class Router:
         current_tags = self._tags.copy()
         if tags:
             current_tags.extend(tags)
-        # current_dependencies = self._dependencies.copy()
-        # if dependencies:
-        #     current_dependencies.extend(dependencies)
+
         route = route_class(
             self._prefix + path,
             endpoint=endpoint,
             response_model=response_model,
             status_code=status_code,
             tags=current_tags,
-            # dependencies=current_dependencies,
             summary=summary,
             description=description,
             response_description=response_description,
@@ -104,7 +95,6 @@ class Router:
             response_class=current_response_class,
             name=name,
             openapi_extra=openapi_extra,
-            # dependency_overrides_provider=self.dependency_overrides_provider,
         )
         self.route_register(route)
 
@@ -116,7 +106,6 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -139,16 +128,13 @@ class Router:
         current_tags = self._tags.copy()
         if tags:
             current_tags.extend(tags)
-        # current_dependencies = self._dependencies.copy()
-        # if dependencies:
-        #     current_dependencies.extend(dependencies)
+
         route = route_class(
             self._prefix + path,
             endpoint=endpoint,
             response_model=response_model,
             status_code=status_code,
             tags=current_tags,
-            # dependencies=current_dependencies,
             summary=summary,
             description=description,
             response_description=response_description,
@@ -160,7 +146,6 @@ class Router:
             response_class=current_response_class,
             name=name,
             openapi_extra=openapi_extra,
-            # dependency_overrides_provider=self.dependency_overrides_provider,
         )
         self.route_register(route)
 
@@ -174,7 +159,6 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -204,7 +188,6 @@ class Router:
                 response_model=response_model,
                 status_code=status_code,
                 tags=tags,
-                # dependencies=dependencies,
                 summary=summary,
                 description=description,
                 response_description=response_description,
@@ -285,7 +268,6 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -302,7 +284,6 @@ class Router:
             response_model=response_model,
             status_code=status_code,
             tags=tags,
-            # dependencies=dependencies,
             summary=summary,
             description=description,
             response_description=response_description,
@@ -323,7 +304,6 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -340,7 +320,6 @@ class Router:
             response_model=response_model,
             status_code=status_code,
             tags=tags,
-            # dependencies=dependencies,
             summary=summary,
             description=description,
             response_description=response_description,
@@ -361,7 +340,6 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -378,7 +356,6 @@ class Router:
             response_model=response_model,
             status_code=status_code,
             tags=tags,
-            # dependencies=dependencies,
             summary=summary,
             description=description,
             response_description=response_description,
@@ -399,7 +376,6 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -416,7 +392,6 @@ class Router:
             response_model=response_model,
             status_code=status_code,
             tags=tags,
-            # dependencies=dependencies,
             summary=summary,
             description=description,
             response_description=response_description,
@@ -437,7 +412,6 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -454,7 +428,6 @@ class Router:
             response_model=response_model,
             status_code=status_code,
             tags=tags,
-            # dependencies=dependencies,
             summary=summary,
             description=description,
             response_description=response_description,
@@ -475,7 +448,6 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -492,7 +464,6 @@ class Router:
             response_model=response_model,
             status_code=status_code,
             tags=tags,
-            # dependencies=dependencies,
             summary=summary,
             description=description,
             response_description=response_description,
@@ -513,7 +484,6 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -530,7 +500,6 @@ class Router:
             response_model=response_model,
             status_code=status_code,
             tags=tags,
-            # dependencies=dependencies,
             summary=summary,
             description=description,
             response_description=response_description,
@@ -551,7 +520,6 @@ class Router:
         response_model: Optional[Type[Any]] = None,
         status_code: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        # dependencies: Optional[Sequence[params.Depends]] = None,
         summary: Optional[str] = None,
         description: Optional[str] = None,
         response_description: str = "Successful Response",
@@ -569,7 +537,6 @@ class Router:
             response_model=response_model,
             status_code=status_code,
             tags=tags,
-            # dependencies=dependencies,
             summary=summary,
             description=description,
             response_description=response_description,
@@ -589,7 +556,6 @@ class RootRouter(Router):
         self,
         prefix: str = "",
         tags: Optional[List[str]] = None,
-        # dependencies: Optional[Sequence[params.Depends]] = None,
         default_response_class: Type[Response] = Default(JSONResponse),
         responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
         routes: Optional[List[Union[APIRoute, WebSocketRoute]]] = None,
@@ -598,26 +564,22 @@ class RootRouter(Router):
         route_class: Type[APIRoute] = APIRoute,
         deprecated: Optional[bool] = None,
         include_in_schema: bool = True,
-        dependency_overrides_provider: Optional[Any] = None,
     ) -> None:
         # Need both, Router and Router
         super(RootRouter, self).__init__(
             prefix=prefix,
             tags=tags,
-            # dependencies=dependencies,
             default_response_class=default_response_class,
             routes=routes,
             route_class=route_class,
             deprecated=deprecated,
             include_in_schema=include_in_schema,
             responses=responses,
-            # dependency_overrides_provider=dependency_overrides_provider,
         )
         self.redirect_slashes = redirect_slashes
         self.default = default or self.not_found
         self._fast_path_route_http: Dict[str, Any] = {}
         self._fast_path_route_ws: Dict[str, Any] = {}
-        # self.lifespan_context: Callable[[Any], AsyncContextManager] = RouterLifespan(self)
 
     def __call__(self, scope: Scope, receive: Receive, send: Send) -> Awaitable[Any]:
         """
@@ -665,7 +627,6 @@ class RootRouter(Router):
                     redirect_url = URL(scope=redirect_scope)
                     response = RedirectResponse(url=str(redirect_url))
                     return response(scope, receive, send)
-                    # return
 
         return self.default(scope, receive, send)
 

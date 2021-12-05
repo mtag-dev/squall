@@ -104,7 +104,7 @@ def append(list_name: str, value: typing.Any) -> ast.Expr:
     expr = call(
         entity_name=list_name, attributes=["append"], args=[value], is_standalone=True
     )
-    assert isinstance(expr, ast.Expr)  # MyPy hack
+    assert isinstance(expr, ast.Expr)
     return expr
 
 

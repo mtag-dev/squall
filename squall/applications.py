@@ -75,11 +75,9 @@ class Squall:
         self.router: router.RootRouter = router.RootRouter(
             routes=routes,
             default_response_class=default_response_class,
-            # dependencies=dependencies,
             deprecated=deprecated,
             include_in_schema=include_in_schema,
             responses=responses,
-            # dependency_overrides_provider=self,
         )
         # Router methods linking for better user experience like having
         # @app.get(...) instead of @app.get(...)
@@ -108,9 +106,6 @@ class Squall:
         self.exception_handlers.setdefault(
             RequestHeadValidationError, request_head_validation_exception_handler
         )
-        # self.exception_handlers.setdefault(
-        #     ResponsePayloadValidationError, response_payload_validation_exception_handler
-        # )
 
         self.user_middleware: List[Middleware] = (
             [] if middleware is None else list(middleware)
@@ -141,8 +136,6 @@ class Squall:
         self.swagger_ui_oauth2_redirect_url = swagger_ui_oauth2_redirect_url
         self.swagger_ui_init_oauth = swagger_ui_init_oauth
         self.extra = extra
-        # self.dependency_overrides: Dict[Callable[..., Any], Callable[..., Any]] = {}
-
         self.openapi_version = "3.0.2"
 
         if self.openapi_url:
@@ -361,7 +354,6 @@ class Squall:
 
     def _setup(self) -> None:
         """Setups OpenAPI functionality"""
-        # return
         if self.openapi_url:
             urls = (server_data.get("url") for server_data in self.servers)
             server_urls = {url for url in urls if url}
@@ -372,9 +364,7 @@ class Squall:
                     if root_path and self.root_path_in_servers:
                         self.servers.insert(0, {"url": root_path})
                         server_urls.add(root_path)
-                return JSONResponse(
-                    self.openapi()  # .dict(exclude_unset=True, by_alias=True)  # type: ignore
-                )
+                return JSONResponse(self.openapi())
 
             self.router.add_api_route(
                 self.openapi_url, openapi, include_in_schema=False
