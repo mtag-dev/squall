@@ -1,6 +1,6 @@
 """Squall framework"""
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 from .applications import Squall as Squall
 from .datastructures import UploadFile as UploadFile
