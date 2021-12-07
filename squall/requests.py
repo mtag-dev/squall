@@ -314,7 +314,7 @@ class Request(HTTPConnection):
 
     async def is_disconnected(self) -> bool:
         if not self._is_disconnected:
-            message: Message = {}
+            message: Message
 
             # If message isn't immediately available, move on
             with anyio.CancelScope() as cs:

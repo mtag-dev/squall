@@ -308,8 +308,7 @@ class Squall:
                 # Use our default 500 error handler.
                 response = self._default_error_response
 
-            await send(response.send_start)
-            await send(response.send_body)
+            await response(scope, receive, send)
 
             if not handler:
                 raise exc

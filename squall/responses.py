@@ -1,13 +1,14 @@
 import decimal
 import typing
 from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import quote
 
 import orjson
 from squall.types import Receive, Scope, Send
-from starlette.responses import FileResponse as FileResponse  # noqa
-from starlette.responses import RedirectResponse as RedirectResponse  # noqa
+from starlette.datastructures import URL
+from starlette.responses import FileResponse as StarletteFileResponse  # noqa
 from starlette.responses import Response as StarletteResponse  # noqa
-from starlette.responses import StreamingResponse as StreamingResponse  # noqa
+from starlette.responses import StreamingResponse as StarletteStreamingResponse  # noqa
 
 json_dumps = orjson.dumps
 json_option = orjson.OPT_NON_STR_KEYS
@@ -103,3 +104,26 @@ class HTMLResponse(Response):
 
 class PlainTextResponse(Response):
     media_type = "text/plain"
+
+
+class RedirectResponse(Response):
+    def __init__(
+        self,
+        url: typing.Union[str, URL],
+        status_code: int = 307,
+        headers: Optional[Dict[str, str]] = None,
+    ) -> None:
+        super().__init__(
+            content=b"",
+            status_code=status_code,
+            headers=headers,
+        )
+        self.headers["location"] = quote(str(url), safe=":/%#?=@[]!$&'()*+,;")
+
+
+class FileResponse(StarletteFileResponse, Response):
+    ...
+
+
+class StreamingResponse(StarletteStreamingResponse, Response):
+    ...
