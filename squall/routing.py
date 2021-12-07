@@ -253,8 +253,7 @@ def get_http_handler(
             raw_response = await run_in_threadpool(endpoint, **kwargs)
 
         if isinstance(raw_response, Response):
-            await send(raw_response.send_start)
-            await send(raw_response.send_body)
+            await raw_response(scope, receive, send)
             return
 
         response_args: Dict[str, Any] = {}
@@ -277,8 +276,7 @@ def get_http_handler(
         if status_code is not None:
             response_args["status_code"] = status_code
         response = actual_response_class(result, **response_args)
-        await send(response.send_start)
-        await send(response.send_body)
+        await response(scope, receive, send)
 
     return app
 
