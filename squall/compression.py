@@ -32,14 +32,14 @@ class ZlibBackend(CompressionBackend):
 
 
 class CompressionLevel:
-    BEST_SPEED = ISAL_BEST_SPEED
-    AVERAGE_COMPRESSION = ISAL_DEFAULT_COMPRESSION
-    BEST_COMPRESSION = ISAL_BEST_COMPRESSION
+    FAST = ISAL_BEST_SPEED
+    OPTIMAL = ISAL_DEFAULT_COMPRESSION
+    BEST = ISAL_BEST_COMPRESSION
 
 
 @dataclass
 class Compression:
-    level: int = CompressionLevel.BEST_SPEED
+    level: int = CompressionLevel.FAST
     minimum_size: int = 1000
 
     backends: List[CompressionBackend] = field(

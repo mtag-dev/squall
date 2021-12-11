@@ -37,6 +37,7 @@
   - [Body processing](#body-processing)
     - [Response serialization](#response-serialization)
     - [Response deserialization serialization](#response-deserialization-serialization)
+- [Compression](#compression)
 - [Acknowledgments](#acknowledgments)
 - [Roadmap](#roadmap)
 - [Dependencies](#dependencies)
@@ -423,6 +424,25 @@ async def handle_get():
         {"name": "int_value", "value": 8}
     ]
 ```
+
+## Compression
+
+Squall doesn't use asgi middlewares for compression instead this functionality build in response classes. 
+At the moment only PlainTextResponse, HTMLResponse, JSONResponse supported
+
+In order to enable compression you have to path compression config to Squall app
+
+```Python
+from squall import Squall
+from squall.compression import Compression
+
+app = Squall(compression=Compression())
+
+```
+For more details check [compression settings](https://github.com/mtag-dev/squall/blob/master/squall/compression.py#L20-L47)
+
+[Accept-Encoding](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Encoding#directives) header also required. Squall supports gzip, deflate options for it.
+
 
 ## Acknowledgments
 
