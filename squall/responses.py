@@ -4,8 +4,9 @@ from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import quote
 
 import orjson
+from squall.compression import Compression
 from squall.types import Receive, Scope, Send
-from starlette.datastructures import URL
+from starlette.datastructures import URL, Headers, MutableHeaders
 from starlette.responses import FileResponse as StarletteFileResponse  # noqa
 from starlette.responses import Response as StarletteResponse  # noqa
 from starlette.responses import StreamingResponse as StarletteStreamingResponse  # noqa
@@ -82,8 +83,27 @@ class Response(StarletteResponse):
         self.send_body = {"type": "http.response.body", "body": body}
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        compression: Compression = scope["app"].compression
+        send_body = self.send_body
+
+        if (
+            scope["type"] == "http"
+            and compression
+            and len(send_body["body"]) < compression.minimum_size
+        ):
+            accept_encoding = Headers(scope=scope).get("Accept-Encoding", "")
+            for backend in compression.backends:
+                if backend.encoding_name in accept_encoding:
+                    body = backend.compress(send_body["body"], compression.level)
+                    headers = MutableHeaders(raw=self.send_start["headers"])
+                    headers["Content-Encoding"] = backend.encoding_name
+                    headers["Content-Length"] = str(len(body))
+                    headers.add_vary_header("Accept-Encoding")
+                    send_body["body"] = body
+                    break
+
         await send(self.send_start)
-        await send(self.send_body)
+        await send(send_body)
 
 
 class JSONResponse(Response):
