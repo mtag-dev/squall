@@ -5,8 +5,9 @@ from urllib.parse import quote
 
 import orjson
 from squall.compression import Compression
+from squall.requests import Request
 from squall.types import Receive, Scope, Send
-from starlette.datastructures import URL, Headers, MutableHeaders
+from starlette.datastructures import URL, MutableHeaders
 from starlette.responses import FileResponse as StarletteFileResponse  # noqa
 from starlette.responses import Response as StarletteResponse  # noqa
 from starlette.responses import StreamingResponse as StarletteStreamingResponse  # noqa
@@ -60,6 +61,7 @@ def init_headers(
 class Response(StarletteResponse):
     media_type = None
     charset: str = "utf-8"
+    request: Request
 
     def __init__(
         self,
@@ -75,7 +77,7 @@ class Response(StarletteResponse):
         self.raw_headers = raw_headers = init_headers(
             body, self.charset, self.media_type, headers
         )
-        self.send_start = {
+        self.send_start: Dict[str, Any] = {
             "type": "http.response.start",
             "status": status_code,
             "headers": raw_headers,
@@ -83,15 +85,15 @@ class Response(StarletteResponse):
         self.send_body = {"type": "http.response.body", "body": body}
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        compression: Compression = scope["app"].compression
-        send_body = self.send_body
+        compression: Optional[Compression] = scope["app"].compression
+        send_body: Dict[str, Any] = self.send_body
 
         if (
             scope["type"] == "http"
             and compression
-            and len(send_body["body"]) < compression.minimum_size
+            and len(send_body["body"]) > compression.minimum_size
         ):
-            accept_encoding = Headers(scope=scope).get("Accept-Encoding", "")
+            accept_encoding = self.request.headers.get("Accept-Encoding", "")
             for backend in compression.backends:
                 if backend.encoding_name in accept_encoding:
                     body = backend.compress(send_body["body"], compression.level)

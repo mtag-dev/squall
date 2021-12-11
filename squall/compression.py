@@ -1,8 +1,7 @@
 from dataclasses import dataclass, field
-from io import BytesIO
-from typing import List
+from typing import Any, List
 
-from isal.igzip import IGzipFile
+from isal.igzip import compress as gzip_compress
 from isal.isal_zlib import (
     ISAL_BEST_COMPRESSION,
     ISAL_BEST_SPEED,
@@ -14,25 +13,21 @@ from isal.isal_zlib import compress as zlib_compress
 class CompressionBackend:
     encoding_name: str
 
-    def compress(self, data: bytes, compress_level: int) -> bytes:
+    def compress(self, data: bytes, compress_level: int) -> Any:
         ...
 
 
 class GzipBackend(CompressionBackend):
     encoding_name = "gzip"
 
-    def compress(self, data: bytes, compress_level: int) -> bytes:
-        buffer = BytesIO()
-        gzip_file = IGzipFile(mode="wb", fileobj=buffer, compresslevel=compress_level)
-        gzip_file.write(data)
-        gzip_file.close()
-        return buffer.getvalue()
+    def compress(self, data: bytes, compress_level: int) -> Any:
+        return gzip_compress(data, compress_level)  # type: ignore
 
 
 class ZlibBackend(CompressionBackend):
     encoding_name = "deflate"
 
-    def compress(self, data: bytes, compress_level: int) -> bytes:
+    def compress(self, data: bytes, compress_level: int) -> Any:
         return zlib_compress(data, compress_level)
 
 
@@ -45,7 +40,8 @@ class CompressionLevel:
 @dataclass
 class Compression:
     level: int = CompressionLevel.BEST_SPEED
+    minimum_size: int = 1000
+
     backends: List[CompressionBackend] = field(
         default_factory=lambda: [GzipBackend(), ZlibBackend()]
     )
-    minimum_size: int = 1000
