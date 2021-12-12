@@ -253,6 +253,7 @@ def get_http_handler(
             raw_response = await run_in_threadpool(endpoint, **kwargs)
 
         if isinstance(raw_response, Response):
+            raw_response.request = request
             await raw_response(scope, receive, send)
             return
 
@@ -276,6 +277,8 @@ def get_http_handler(
         if status_code is not None:
             response_args["status_code"] = status_code
         response = actual_response_class(result, **response_args)
+        # Temporary solution in order to avoid header initialization
+        response.request = request
         await response(scope, receive, send)
 
     return app

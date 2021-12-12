@@ -3,6 +3,7 @@ from asyncio import iscoroutinefunction
 from typing import Any, Callable, Dict, List, Optional, Sequence, Type, Union
 
 from squall import router
+from squall.compression import Compression
 from squall.concurrency import run_in_threadpool
 from squall.datastructures import Default
 from squall.errors import get_default_debug_response
@@ -67,6 +68,7 @@ class Squall:
         responses: Optional[Dict[Union[int, str], Dict[str, Any]]] = None,
         deprecated: Optional[bool] = None,
         include_in_schema: bool = True,
+        compression: Optional[Compression] = None,
         **extra: Any,
     ) -> None:
         self.debug: bool = debug
@@ -145,6 +147,7 @@ class Squall:
         self.on_startup = [] if on_startup is None else list(on_startup)
         self.on_shutdown = [] if on_shutdown is None else list(on_shutdown)
         self.lifespan_ctx = LifespanContext(self.on_startup, self.on_shutdown)
+        self.compression = compression
 
         self._setup()
 

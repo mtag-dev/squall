@@ -4,8 +4,10 @@ from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import quote
 
 import orjson
+from squall.compression import Compression
+from squall.requests import Request
 from squall.types import Receive, Scope, Send
-from starlette.datastructures import URL
+from starlette.datastructures import URL, MutableHeaders
 from starlette.responses import FileResponse as StarletteFileResponse  # noqa
 from starlette.responses import Response as StarletteResponse  # noqa
 from starlette.responses import StreamingResponse as StarletteStreamingResponse  # noqa
@@ -59,6 +61,7 @@ def init_headers(
 class Response(StarletteResponse):
     media_type = None
     charset: str = "utf-8"
+    request: Request
 
     def __init__(
         self,
@@ -71,19 +74,34 @@ class Response(StarletteResponse):
         if media_type is not None:
             self.media_type = media_type
         self.body = body = self.render(content)
-        self.raw_headers = raw_headers = init_headers(
-            body, self.charset, self.media_type, headers
-        )
-        self.send_start = {
-            "type": "http.response.start",
-            "status": status_code,
-            "headers": raw_headers,
-        }
-        self.send_body = {"type": "http.response.body", "body": body}
+        self.raw_headers = init_headers(body, self.charset, self.media_type, headers)
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        await send(self.send_start)
-        await send(self.send_body)
+        compression: Optional[Compression] = scope["app"].compression
+        body = self.body
+        if (
+            scope["type"] == "http"
+            and compression
+            and len(body) > compression.minimal_size
+        ):
+            accept_encoding = self.request.headers.get("Accept-Encoding", "")
+            for backend in compression.backends:
+                if backend.encoding_name in accept_encoding:
+                    body = backend.compress(body, compression.level)
+                    headers = MutableHeaders(raw=self.raw_headers)
+                    headers["Content-Encoding"] = backend.encoding_name
+                    headers["Content-Length"] = str(len(body))
+                    headers.add_vary_header("Accept-Encoding")
+                    break
+
+        await send(
+            {
+                "type": "http.response.start",
+                "status": self.status_code,
+                "headers": self.raw_headers,
+            }
+        )
+        await send({"type": "http.response.body", "body": body})
 
 
 class JSONResponse(Response):

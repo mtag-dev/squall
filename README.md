@@ -27,6 +27,7 @@
   - [Quick start](#quick-start)
   - [OpenAPI](#openapi-generation)
   - [Routing](#routing)
+  - [Compression](#compression)
   - [HEAD parameters](#head-parameters)
     - [Path](#path)
     - [Query](#query)
@@ -231,6 +232,28 @@ Will give us
 ![Animals routing](https://github.com/mtag-dev/squall/raw/master/docs/assets/animals-routing.png)
 
 Nested routing is usually used for splitting applications into files and achieving better project structure.
+
+### Compression
+
+Squall provides built-in blazing-fast compression based on Intel® Intelligent Storage Acceleration Library (Intel® ISA-L) using awesome Python's [isal](https://pypi.org/project/isal/) library as binding.
+
+Compared to Python's builtins ISA-L can deliver up to 20 times faster compression. Such in-app performance does game-changing opportunities for the entire system set up,
+
+In order to enable compression you have to path compression config to Squall app
+
+```Python
+from squall import Squall
+from squall.compression import Compression
+
+app = Squall(compression=Compression())
+
+```
+For more details check [compression settings](https://github.com/mtag-dev/squall/blob/master/squall/compression.py#L20-L47)
+
+[Accept-Encoding](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Encoding#directives) header also required. Squall supports gzip, deflate options for it.
+
+
+
 
 ### HEAD parameters
 
@@ -449,6 +472,12 @@ Many thanks to [@tiangolo](https://github.com/tiangolo) and the entire [FastAPI 
 
 
 ## Dependencies
+
+### [isal](https://pypi.org/project/isal/)
+
+License: MIT
+
+Faster zlib and gzip compatible compression and decompression by providing python bindings for the ISA-L library.
 
 ### [apischema](https://pypi.org/project/orjson/)
 
