@@ -6,15 +6,15 @@ from squall.testclient import TestClient
 
 
 @pytest.mark.parametrize(
-    "backends",
+    "backends,content_encoding",
     [
-        [GzipBackend(), ZlibBackend()],
-        [ZlibBackend()],
-        [GzipBackend()],
+        [[GzipBackend(), ZlibBackend()], "gzip"],
+        [[ZlibBackend()], "deflate"],
+        [[GzipBackend()], "gzip"],
     ],
 )
-def test_compression_backends(backends):
-    app = Squall(compression=Compression(backends=backends, minimum_size=1))
+def test_compression_backends(backends, content_encoding):
+    app = Squall(compression=Compression(backends=backends, minimal_size=1))
 
     @app.get("/")
     def get_root():
@@ -23,6 +23,7 @@ def test_compression_backends(backends):
     client = TestClient(app)
     response = client.get("/")
     assert response.json() == {"msg": "Hello World"}
+    assert response.headers["Content-Encoding"] == content_encoding
 
 
 @pytest.mark.parametrize(
@@ -34,7 +35,7 @@ def test_compression_backends(backends):
     ],
 )
 def test_compression_response_classes(response_class, response, expected_response):
-    app = Squall(compression=Compression(minimum_size=1))
+    app = Squall(compression=Compression(minimal_size=1))
 
     @app.get("/", response_class=response_class)
     def get_root():

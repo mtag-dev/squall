@@ -40,7 +40,7 @@ class CompressionLevel:
 @dataclass
 class Compression:
     level: int = CompressionLevel.FAST
-    minimum_size: int = 1000
+    minimal_size: int = 1000
 
     backends: List[CompressionBackend] = field(
         default_factory=lambda: [GzipBackend(), ZlibBackend()]

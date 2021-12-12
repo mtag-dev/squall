@@ -74,38 +74,34 @@ class Response(StarletteResponse):
         if media_type is not None:
             self.media_type = media_type
         self.body = body = self.render(content)
-        self.raw_headers = raw_headers = init_headers(
-            body, self.charset, self.media_type, headers
-        )
-        self.send_start: Dict[str, Any] = {
-            "type": "http.response.start",
-            "status": status_code,
-            "headers": raw_headers,
-        }
-        self.send_body = {"type": "http.response.body", "body": body}
+        self.raw_headers = init_headers(body, self.charset, self.media_type, headers)
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         compression: Optional[Compression] = scope["app"].compression
-        send_body: Dict[str, Any] = self.send_body
-
+        body = self.body
         if (
             scope["type"] == "http"
             and compression
-            and len(send_body["body"]) > compression.minimum_size
+            and len(body) > compression.minimal_size
         ):
             accept_encoding = self.request.headers.get("Accept-Encoding", "")
             for backend in compression.backends:
                 if backend.encoding_name in accept_encoding:
-                    body = backend.compress(send_body["body"], compression.level)
-                    headers = MutableHeaders(raw=self.send_start["headers"])
+                    body = backend.compress(body, compression.level)
+                    headers = MutableHeaders(raw=self.raw_headers)
                     headers["Content-Encoding"] = backend.encoding_name
                     headers["Content-Length"] = str(len(body))
                     headers.add_vary_header("Accept-Encoding")
-                    send_body["body"] = body
                     break
 
-        await send(self.send_start)
-        await send(send_body)
+        await send(
+            {
+                "type": "http.response.start",
+                "status": self.status_code,
+                "headers": self.raw_headers,
+            }
+        )
+        await send({"type": "http.response.body", "body": body})
 
 
 class JSONResponse(Response):

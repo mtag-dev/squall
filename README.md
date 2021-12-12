@@ -27,6 +27,7 @@
   - [Quick start](#quick-start)
   - [OpenAPI](#openapi-generation)
   - [Routing](#routing)
+  - [Compression](#compression)
   - [HEAD parameters](#head-parameters)
     - [Path](#path)
     - [Query](#query)
@@ -37,7 +38,7 @@
   - [Body processing](#body-processing)
     - [Response serialization](#response-serialization)
     - [Response deserialization serialization](#response-deserialization-serialization)
-- [Compression](#compression)
+
 - [Acknowledgments](#acknowledgments)
 - [Roadmap](#roadmap)
 - [Dependencies](#dependencies)
@@ -233,6 +234,28 @@ Will give us
 
 Nested routing is usually used for splitting applications into files and achieving better project structure.
 
+### Compression
+
+Squall provides built-in blazing-fast compression based on Intel® Intelligent Storage Acceleration Library (Intel® ISA-L) using awesome Python's [isal](https://pypi.org/project/isal/) library as binding.
+
+Compared to Python's builtins ISA-L can deliver up to 20 times faster compression. Such in-app performance does game-changing opportunities for the entire system set up,
+
+In order to enable compression you have to path compression config to Squall app
+
+```Python
+from squall import Squall
+from squall.compression import Compression
+
+app = Squall(compression=Compression())
+
+```
+For more details check [compression settings](https://github.com/mtag-dev/squall/blob/master/squall/compression.py#L20-L47)
+
+[Accept-Encoding](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Encoding#directives) header also required. Squall supports gzip, deflate options for it.
+
+
+
+
 ### HEAD parameters
 
 There are four kinds of parameters that developers can get from HTTP headers. Squall offers an interface for their conversion and validation.
@@ -424,25 +447,6 @@ async def handle_get():
         {"name": "int_value", "value": 8}
     ]
 ```
-
-## Compression
-
-Squall doesn't use asgi middlewares for compression instead this functionality build in response classes. 
-At the moment only PlainTextResponse, HTMLResponse, JSONResponse supported
-
-In order to enable compression you have to path compression config to Squall app
-
-```Python
-from squall import Squall
-from squall.compression import Compression
-
-app = Squall(compression=Compression())
-
-```
-For more details check [compression settings](https://github.com/mtag-dev/squall/blob/master/squall/compression.py#L20-L47)
-
-[Accept-Encoding](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Encoding#directives) header also required. Squall supports gzip, deflate options for it.
-
 
 ## Acknowledgments
 
