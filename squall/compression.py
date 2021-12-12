@@ -2,11 +2,6 @@ from dataclasses import dataclass, field
 from typing import Any, List
 
 from isal.igzip import compress as gzip_compress
-from isal.isal_zlib import (
-    ISAL_BEST_COMPRESSION,
-    ISAL_BEST_SPEED,
-    ISAL_DEFAULT_COMPRESSION,
-)
 from isal.isal_zlib import compress as zlib_compress
 
 
@@ -32,9 +27,10 @@ class ZlibBackend(CompressionBackend):
 
 
 class CompressionLevel:
-    FAST = ISAL_BEST_SPEED
-    OPTIMAL = ISAL_DEFAULT_COMPRESSION
-    BEST = ISAL_BEST_COMPRESSION
+    FAST = 0
+    MODERATE = 1
+    NORMAL = 2
+    BEST = 3
 
 
 @dataclass
