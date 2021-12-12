@@ -473,6 +473,12 @@ Many thanks to [@tiangolo](https://github.com/tiangolo) and the entire [FastAPI 
 
 ## Dependencies
 
+### [isal](https://pypi.org/project/isal/)
+
+License: MIT
+
+Faster zlib and gzip compatible compression and decompression by providing python bindings for the ISA-L library.
+
 ### [apischema](https://pypi.org/project/orjson/)
 
 License: MIT
