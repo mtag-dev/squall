@@ -1,4 +1,3 @@
-import re
 from typing import (
     Any,
     Awaitable,
@@ -8,18 +7,17 @@ from typing import (
     Optional,
     Sequence,
     Set,
-    Tuple,
     Type,
     Union,
 )
 
+import squall_router
 from squall.datastructures import Default
 from squall.exceptions import HTTPException
-from squall.responses import JSONResponse, PlainTextResponse, RedirectResponse, Response
+from squall.responses import JSONResponse, PlainTextResponse, Response
 from squall.routing import APIRoute, WebSocketRoute
 from squall.types import ASGIApp, DecoratedCallable, Receive, Scope, Send
 from squall.utils import get_value_or_default
-from starlette.datastructures import URL
 from starlette.websockets import WebSocketClose
 
 PLACEHOLDER_DYNAMIC = "*"
@@ -580,6 +578,9 @@ class RootRouter(Router):
         self.default = default or self.not_found
         self._fast_path_route_http: Dict[str, Any] = {}
         self._fast_path_route_ws: Dict[str, Any] = {}
+        self._router = squall_router.Router()
+        self._last_handler_id = 0
+        self._handlers: Dict[int, ASGIApp] = {}
 
     def __call__(self, scope: Scope, receive: Receive, send: Send) -> Awaitable[Any]:
         """
@@ -589,44 +590,19 @@ class RootRouter(Router):
             scope["router"] = self
 
         routes: Sequence[Union[APIRoute, WebSocketRoute]]
+
         if scope["type"] == "http":
-            routes, _locations = self.get_http_routes(scope["method"], scope["path"])
+            method = scope["method"]
         elif scope["type"] == "websocket":
-            routes, _ = self.get_ws_routes(scope["path"]), []
+            method = "WS"
         else:
             assert False, f"RootRouter doesn't allow scope type: {scope['type']}"
 
-        for route in routes:
-            # Determine if any route matches the incoming scope,
-            # and hand over to the matching route if found.
-            match, child_scope = route.matches(scope)
-            if match:
-                scope.update(child_scope)
-                return route.app(scope, receive, send)
-
-        # for location in reversed(_locations):
-        #     match, child_scope = location.matches(scope)
-        #     if match:
-        #         scope.update(child_scope)
-        #         await location.handle(scope, receive, send)
-        #         return
-
-        if scope["type"] == "http" and self.redirect_slashes and scope["path"] != "/":
-            redirect_scope = dict(scope)
-            if scope["path"].endswith("/"):
-                redirect_scope["path"] = redirect_scope["path"].rstrip("/")
-            else:
-                redirect_scope["path"] = redirect_scope["path"] + "/"
-
-            routes, _ = self.get_http_routes(
-                redirect_scope["method"], redirect_scope["path"]
-            )
-            for route in routes:
-                match, child_scope = route.matches(redirect_scope)
-                if match:
-                    redirect_url = URL(scope=redirect_scope)
-                    response = RedirectResponse(url=str(redirect_url))
-                    return response(scope, receive, send)
+        if resolved := self._router.resolve(method, scope["path"]):
+            handler_id, params = resolved
+            if handler := self._handlers.get(handler_id):
+                scope["path_params"] = dict(params)
+                return handler(scope, receive, send)
 
         return self.default(scope, receive, send)
 
@@ -646,74 +622,11 @@ class RootRouter(Router):
             response = PlainTextResponse("Not Found", status_code=404)
         await response(scope, receive, send)
 
-    @staticmethod
-    def _get_fast_path_octets(path: str) -> List[str]:
-        no_regex = re.sub(r"(\([^)]*\))", PLACEHOLDER_DYNAMIC, path)
-        no_format = re.sub(r"{([^}]*)}", PLACEHOLDER_DYNAMIC, no_regex)
-        result = []
-        for i in no_format.strip("/").split("/"):
-            value = PLACEHOLDER_DYNAMIC if PLACEHOLDER_DYNAMIC in i else i
-            result.append(value)
-        return result
-
-    def _add_fast_path_route(
-        self, route: Union[APIRoute, WebSocketRoute], websocket: bool = False
-    ) -> None:
-        layer = self._fast_path_route_ws if websocket else self._fast_path_route_http
-
-        for octet in self._get_fast_path_octets(route.path):
-            if octet not in layer:
-                layer[octet] = {}
-                if octet != PLACEHOLDER_DYNAMIC:
-                    layer[octet][PLACEHOLDER_DYNAMIC] = {}
-            layer = layer[octet]
-
-        if "#routes#" not in layer:
-            layer["#routes#"] = [] if websocket else {}
-
-        if websocket:
-            layer["#routes#"].append(route)
-            return
-
-        # List here for handling cases when single
-        # octets path can have different patterns
-        # /some/{number_item:int}
-        # /some/{string_item:str}
-        methods = getattr(route, "methods", [])
-        for method in methods:
-            if method not in layer["#routes#"]:
-                layer["#routes#"][method] = []
-            layer["#routes#"][method].append(route)
-
     def route_register(self, route: Union[APIRoute, WebSocketRoute]) -> None:
-        if isinstance(route, APIRoute):
-            self._add_fast_path_route(route, websocket=False)
-        elif isinstance(route, WebSocketRoute):
-            self._add_fast_path_route(route, websocket=True)
+        methods = getattr(route, "methods", ["WS"])
+        for method in methods:
+            self._router.add_route(method, route.path, self._last_handler_id)
+            self._handlers[self._last_handler_id] = route.app
+            self._last_handler_id += 1
+
         self._routes.append(route)
-
-    def get_http_routes(
-        self, method: str, path: str
-    ) -> Tuple[List[APIRoute], List[APIRoute]]:
-        last = self._fast_path_route_http
-        locations = []
-        get = dict.get
-        try:
-            for key in path.strip("/").split("/"):
-                last = get(last, key) or last[PLACEHOLDER_DYNAMIC]
-                if PLACEHOLDER_LOCATION in last:
-                    locations.append(last[PLACEHOLDER_LOCATION])
-        except KeyError:
-            return [], locations
-        routes: List[APIRoute] = get(get(last, "#routes#", {}), method, [])
-        return routes, locations
-
-    def get_ws_routes(self, path: str) -> List[WebSocketRoute]:
-        last = self._fast_path_route_ws
-        get = dict.get
-        try:
-            for key in path.strip("/").split("/"):
-                last = get(last, key) or last[PLACEHOLDER_DYNAMIC]
-        except KeyError:
-            return []
-        return last.get("#routes#", [])
