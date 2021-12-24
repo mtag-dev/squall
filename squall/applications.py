@@ -2,7 +2,7 @@ import typing
 from asyncio import iscoroutinefunction
 from typing import Any, Callable, Dict, List, Optional, Sequence, Type, Union
 
-from squall import router
+from squall import convertors, router
 from squall.compression import Compression
 from squall.concurrency import run_in_threadpool
 from squall.datastructures import Default
@@ -412,3 +412,7 @@ class Squall:
             self.router.add_api_route(
                 self.redoc_url, redoc_html, include_in_schema=False
             )
+
+    @staticmethod
+    def add_convertor(convertor: Type[convertors.Convertor]) -> None:
+        convertors.database.add_convertor(convertor)

@@ -60,11 +60,6 @@ class BaseRoute:
         self.endpoint = endpoint
         self.methods = methods
 
-    def matches(self, scope: Scope) -> Tuple[bool, Scope]:
-        if match := self.path_regex.match(scope["path"]):
-            return True, {"endpoint": self.endpoint, "path_params": match.groupdict()}
-        return False, {}
-
     def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, BaseRoute)

@@ -100,8 +100,8 @@ def get_handler_head_params(func: Callable[..., Any]) -> List[HeadParam]:
             continue
         elif v.default is v.empty:
             is_model = is_valid_body_model(v.annotation)
-            is_affilated = get_annotation_affiliation(v.annotation, v.default)
-            if not (is_model or is_affilated):
+            is_affiliated = get_annotation_affiliation(v.annotation, v.default)
+            if not (is_model or is_affiliated):
                 source = "path_params"
         elif type(v.default) in (int, float, Decimal, str, bytes, type(None)):
             source = "path_params"
