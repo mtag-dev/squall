@@ -1,5 +1,5 @@
 from squall import HTTPException, Num, Path, Squall
-from squall.exceptions import RequestPayloadValidationError
+from squall.exceptions import RequestHeadValidationError
 from squall.responses import PrettyJSONResponse
 from squall.testclient import TestClient
 
@@ -9,13 +9,13 @@ def http_exception_handler(request, exception):
 
 
 def request_validation_exception_handler(request, exception):
-    return PrettyJSONResponse({"exception": "request-validation"})
+    return PrettyJSONResponse({"exception": "request-validation"}, status_code=400)
 
 
 app = Squall(
     exception_handlers={
         HTTPException: http_exception_handler,
-        RequestPayloadValidationError: request_validation_exception_handler,
+        RequestHeadValidationError: request_validation_exception_handler,
     }
 )
 
@@ -29,7 +29,6 @@ def route_with_http_exception():
 
 @app.get("/request-validation/{param}")
 def route_with_request_validation_exception(param: int = Path(valid=Num(ge=5))):
-    raise ValueError(param)
     pass  # pragma: no cover
 
 
@@ -42,8 +41,4 @@ def test_override_http_exception():
 def test_override_request_validation_exception():
     response = client.get("/request-validation/3")
     assert response.status_code == 400
-    assert response.json() == {
-        "details": [
-            {"loc": ["path_params", "param"], "msg": "Validation error", "val": 3}
-        ]
-    }
+    assert response.json() == {"exception": "request-validation"}

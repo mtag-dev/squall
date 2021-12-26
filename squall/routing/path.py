@@ -10,18 +10,37 @@ PARAM_REGEX = re.compile("{([a-zA-Z_][a-zA-Z0-9_]*)(:[a-zA-Z_][a-zA-Z0-9_]*)?}")
 
 
 class Path:
+    __slots__ = ["path", "handler"]
+
     def __init__(self, path: str, handler: Callable[..., Any]) -> None:
         self.path = path
         self.handler = handler
 
     def append_left(self, prefix: str) -> None:
+        """Prepend provided prefix to the path
+
+        :param prefix: Prefix path to add
+
+        >>> p = Path("/my/route", lambda: None)
+        >>> assert p.path == "/my/route"
+        >>> p.append_left("/api/v1")
+        >>> assert p.path == "/api/v1/my/route"
+        """
         if not prefix.endswith("/"):
             prefix += "/"
         self.path = urljoin(prefix, self.path.strip("/"))
-        print(self.path)
 
     @property
     def path_params(self) -> List[Tuple[str, Optional[str]]]:
+        """Returns dynamic path parameters and their path-declared convertor aliases
+
+        >>> p = Path("/user/{user_id:int}/notes/{note:uuid}/type/{type}", lambda: None)
+        >>> assert p.path_params == [
+        >>>     ("user_id", "int"),
+        >>>     ("note", "uuid"),
+        >>>     ("type", None)
+        >>> ]
+        """
         result, names = [], []
         for param in PARAM_REGEX.finditer(self.path):
             name, suffix = param.groups("")
@@ -39,6 +58,11 @@ class Path:
 
     @property
     def schema_path(self) -> str:
+        """Returns simplified path without convertor aliases
+
+        >>> p = Path("/user/{user_id:int}/notes/{note:uuid}/type/{type}", lambda: None)
+        >>> assert p.schema_path == "/user/{user_id}/notes/{note}/type/{type}"
+        """
         result = self.path
         for match in PARAM_REGEX.finditer(self.path):
             param_name, convertor_type = match.groups("")
@@ -50,6 +74,15 @@ class Path:
 
     @property
     def router_path(self) -> str:
+        """Returns path with detailed convertors aliases information.
+        Also uses handler annotations for lookup.
+        Used for exact pattern registration in squall-router library
+
+        >>> async def my_handler(user_id: int, note): pass
+        >>>
+        >>> p = Path("/user/{user_id}/notes/{note:uuid}", my_handler)
+        >>> assert p.router_path == "/user/{user_id:int}/notes/{note:uuid}"
+        """
         result = self.schema_path
         from_handler = self.get_path_params_from_handler()
         for param_name, convertor_name in self.path_params:
@@ -61,6 +94,18 @@ class Path:
         return result
 
     def get_path_params_from_handler(self) -> Dict[str, Optional[str]]:
+        """Returns handler parameters affiliated with path.
+
+        >>> from uuid import UUID
+        >>>
+        >>> async def my_handler(user_id: int, note: UUID): pass
+        >>>
+        >>> p = Path("/user/{user_id}/notes/{note}", my_handler)
+        >>> assert p.get_path_params_from_handler() == {
+        >>>     "user_id": "int",
+        >>>     "note": "uuid"
+        >>> }
+        """
         results = {}
         path_params = dict(self.path_params)
         for k, v in inspect.signature(self.handler).parameters.items():
@@ -70,8 +115,6 @@ class Path:
                     name = alias
             elif v.default is v.empty:
                 name = k
-            else:
-                continue
 
             if name not in path_params:
                 continue
@@ -84,21 +127,13 @@ class Path:
                         validate = convertor.alias
                     elif convertor.alias != path_params[name]:
                         raise ValueError(
-                            "Parameter {name} have different annotation and convertor types: "
+                            f"Parameter {name} have different annotation and convertor types: "
                             f"{convertor.alias} != {path_params[name]}"
                         )
+                else:
+                    raise ValueError(
+                        f"Parameter `{name}` have unknown convertor type: {v.annotation}"
+                    )
 
             results[name] = validate
         return results
-
-
-# if __name__ == "__main__":
-#     from uuid import UUID
-#
-#     def handler(aaa, bbb: UUID):
-#         pass
-#
-#     p = Path("/aaa/{aaa:uuid}/bbb/{bbb}/ccc/{ccc:int}", handler)
-#     p.append_left("/api/v1")
-#     print(p.router_path)
-#     print(p.schema_path)

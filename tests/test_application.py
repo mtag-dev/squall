@@ -171,7 +171,7 @@ openapi_schema = {
                 "operationId": "get_path_param_id_path_param__item_id__get",
                 "parameters": [
                     {
-                        "required": False,
+                        "required": True,
                         "schema": {"type": "string"},
                         "name": "item_id",
                         "in": "path",

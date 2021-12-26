@@ -45,7 +45,7 @@ def get_float_id(item_id: float):
 
 
 @app.get("/path/param/{item_id}")
-def get_path_param_id(item_id: Optional[str] = Path(None)):
+def get_path_param_id(item_id: str):
     return item_id
 
 
