@@ -59,7 +59,9 @@ class WebSocketRoute(BaseRoute):
         self.head_params: List[HeadParam] = []
 
     def get_route_handler(self) -> ASGIApp:
-        self.head_params = get_handler_head_params(self.endpoint)
+        self.head_params = get_handler_head_params(
+            self.endpoint, self.path.get_path_params_from_handler()
+        )
         head_validator = build_head_validator(self.head_params)
 
         if inspect.isfunction(self.endpoint) or inspect.ismethod(self.endpoint):
@@ -216,7 +218,9 @@ class APIRoute(Route):
         )
 
     def get_route_handler(self) -> ASGIApp:
-        self.head_params = get_handler_head_params(self.endpoint)
+        self.head_params = get_handler_head_params(
+            self.endpoint, self.path.get_path_params_from_handler()
+        )
         head_validator = build_head_validator(self.head_params)
 
         return get_http_handler(

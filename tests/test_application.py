@@ -803,29 +803,11 @@ openapi_schema = {
             "get": {
                 "summary": "Get Query",
                 "operationId": "get_query_query_get",
-                "parameters": [
-                    {
-                        "required": True,
-                        "schema": {"type": "string"},
-                        "name": "query",
-                        "in": "path",
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "Successful Response",
                         "content": {"application/json": {"schema": {}}},
-                    },
-                    "400": {
-                        "description": "Parameters Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPBadRequestError"
-                                }
-                            }
-                        },
-                    },
+                    }
                 },
             }
         },
@@ -833,29 +815,11 @@ openapi_schema = {
             "get": {
                 "summary": "Get Query Optional",
                 "operationId": "get_query_optional_query_optional_get",
-                "parameters": [
-                    {
-                        "required": False,
-                        "schema": {"type": "string"},
-                        "name": "query",
-                        "in": "path",
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "Successful Response",
                         "content": {"application/json": {"schema": {}}},
-                    },
-                    "400": {
-                        "description": "Parameters Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPBadRequestError"
-                                }
-                            }
-                        },
-                    },
+                    }
                 },
             }
         },
@@ -863,29 +827,11 @@ openapi_schema = {
             "get": {
                 "summary": "Get Query Type",
                 "operationId": "get_query_type_query_int_get",
-                "parameters": [
-                    {
-                        "required": True,
-                        "schema": {"type": "integer"},
-                        "name": "query",
-                        "in": "path",
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "Successful Response",
                         "content": {"application/json": {"schema": {}}},
-                    },
-                    "400": {
-                        "description": "Parameters Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPBadRequestError"
-                                }
-                            }
-                        },
-                    },
+                    }
                 },
             }
         },
@@ -893,29 +839,11 @@ openapi_schema = {
             "get": {
                 "summary": "Get Query Type Optional",
                 "operationId": "get_query_type_optional_query_int_optional_get",
-                "parameters": [
-                    {
-                        "required": False,
-                        "schema": {"type": "integer"},
-                        "name": "query",
-                        "in": "path",
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "Successful Response",
                         "content": {"application/json": {"schema": {}}},
-                    },
-                    "400": {
-                        "description": "Parameters Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPBadRequestError"
-                                }
-                            }
-                        },
-                    },
+                    }
                 },
             }
         },
@@ -923,29 +851,11 @@ openapi_schema = {
             "get": {
                 "summary": "Get Query Type Int Default",
                 "operationId": "get_query_type_int_default_query_int_default_get",
-                "parameters": [
-                    {
-                        "required": False,
-                        "schema": {"type": "integer"},
-                        "name": "query",
-                        "in": "path",
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "Successful Response",
                         "content": {"application/json": {"schema": {}}},
-                    },
-                    "400": {
-                        "description": "Parameters Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPBadRequestError"
-                                }
-                            }
-                        },
-                    },
+                    }
                 },
             }
         },

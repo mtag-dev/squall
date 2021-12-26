@@ -643,7 +643,7 @@ class RootRouter(Router):
     ) -> None:
         def _static(scope: Scope, receive: Receive, send: Send) -> Awaitable[None]:
             if scope["path"].startswith(path):
-                scope["path"] = scope["path"][len(path):]
+                scope["path"] = scope["path"][len(path) :]
             return handler(scope, receive, send)
 
         _handler = _static if isinstance(handler, StaticFiles) else handler

@@ -93,7 +93,9 @@ class HeadParam:
         return is_array, convertor
 
 
-def get_handler_head_params(func: Callable[..., Any]) -> List[HeadParam]:
+def get_handler_head_params(
+    func: Callable[..., Any], path_params: Dict[str, Optional[str]]
+) -> List[HeadParam]:
     signature = inspect.signature(func)
     results = []
     for k, v in signature.parameters.items():
@@ -102,13 +104,9 @@ def get_handler_head_params(func: Callable[..., Any]) -> List[HeadParam]:
             source = v.default.in_.value
         elif v.annotation == WebSocket:
             continue
-        elif v.default is v.empty:
-            is_model = is_valid_body_model(v.annotation)
-            is_affiliated = get_annotation_affiliation(v.annotation, v.default)
-            if not (is_model or is_affiliated):
-                source = "path_params"
-        elif type(v.default) in (int, float, Decimal, str, bytes, type(None)):
-            source = "path_params"
+        elif v.default is v.empty and k in path_params:
+            source = Path.in_.value
+            # source = "path_params"
 
         if source is not None:
             results.append(HeadParam(name=k, value=v, source=source))
