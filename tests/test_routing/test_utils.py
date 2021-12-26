@@ -1,7 +1,7 @@
 from typing import Optional
 
 from squall.params import Cookie, Header, Num, Path, Query, Str
-from squall.routing_.utils import get_handler_head_params
+from squall.routing.utils import get_handler_head_params
 
 
 def test_get_handler_args_no_args():

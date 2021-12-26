@@ -1,10 +1,10 @@
-import squall.router
+import squall.routing.router
 
 
 def test_add_api_route_defaults(mocker):
     route = mocker.MagicMock()
     endpoint = mocker.Mock()
-    router = squall.router.Router(route_class=route)
+    router = squall.routing.router.Router(route_class=route)
     router.add_api_route("/mocked", methods=["GET"], endpoint=endpoint)
     route.assert_called_once_with(
         "/mocked",
@@ -20,7 +20,7 @@ def test_add_api_route_defaults(mocker):
         methods=["GET"],
         operation_id=None,
         include_in_schema=True,
-        response_class=squall.router.JSONResponse,
+        response_class=squall.routing.router.JSONResponse,
         name=None,
         openapi_extra=None,
     )
@@ -41,7 +41,7 @@ def test_add_api_route_custom(mocker):
     operation_id = "operation_id"
 
     endpoint = mocker.Mock()
-    router = squall.router.Router(route_class=route)
+    router = squall.routing.router.Router(route_class=route)
     router.add_api_route(
         "/mocked",
         methods=["GET"],
@@ -81,32 +81,32 @@ def test_add_api_route_custom(mocker):
 
 
 def test_sub_routing():
-    user_router = squall.router.Router(prefix="/user")
+    user_router = squall.routing.router.Router(prefix="/user")
     user_router.add_api_route(
-        "/some/prefix(?P<some>[^/]+)/item/(?P<item>[^/]+)/(?P<more>[^/]+)-suffix",
+        "/some/{some}/item/{item}",
         methods=["GET", "POST"],
         endpoint=lambda *a: {},
     )
-    v1_router = squall.router.Router(prefix="/v1")
+    v1_router = squall.routing.router.Router(prefix="/v1")
     v1_router.include_router(user_router)
-    router = squall.router.Router(prefix="/api")
+    router = squall.routing.router.Router(prefix="/api")
     router.include_router(v1_router)
 
-    assert router._routes[0].path == "".join(
+    assert router._routes[0].path.path == "".join(
         [
             "/api",
             "/v1",
             "/user",
-            "/some/prefix(?P<some>[^/]+)/item/(?P<item>[^/]+)/(?P<more>[^/]+)-suffix",
+            "/some/{some}/item/{item}",
         ]
     )
 
     # Check that second coll didn't add extra path prefix
-    assert router._routes[0].path == "".join(
+    assert router._routes[0].path.path == "".join(
         [
             "/api",
             "/v1",
             "/user",
-            "/some/prefix(?P<some>[^/]+)/item/(?P<item>[^/]+)/(?P<more>[^/]+)-suffix",
+            "/some/{some}/item/{item}",
         ]
     )

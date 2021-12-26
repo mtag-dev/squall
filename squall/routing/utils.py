@@ -14,6 +14,7 @@ from typing import (
     get_origin,
 )
 
+from squall import convertors
 from squall.bindings import RequestField
 from squall.params import (
     Body,
@@ -65,7 +66,10 @@ class HeadParam:
         return validate, statements
 
     def get_convertor(self) -> Tuple[bool, str]:
-        is_array, convertor = False, "str"
+        is_array, convertor = False, None
+        if getattr(self._annotation, "__name__", None) == "_empty":
+            return False, "str"
+
         args, alias = get_args(self._annotation), get_origin(self._annotation)
         if alias is Union:
             if type(None) in args:
@@ -73,19 +77,19 @@ class HeadParam:
                     is_array, _convertor = True, get_args(args[0])[0]
                 else:
                     is_array, _convertor = False, args[0]
-                convertor = getattr(_convertor, "__name__", None)
         elif alias == list:
             try:
-                is_array, convertor = True, args[0].__name__
+                is_array, _convertor = True, args[0]
             except Exception:
                 """List[Any] should be implemented"""
-        elif (
-            hasattr(self._annotation, "__name__")
-            and self._annotation.__name__ != "_empty"
-        ):
-            convertor = self._annotation.__name__
         else:
-            assert not alias, f"Convertor for {self.name} unknown"
+            _convertor = self._annotation
+
+        if conv := convertors.database.get_by_type(_convertor):
+            convertor = conv.alias
+
+        assert convertor, f"Convertor for {self.name} unknown"
+
         return is_array, convertor
 
 

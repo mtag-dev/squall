@@ -12,10 +12,11 @@ from typing import (
 )
 
 import squall_router
+from squall import convertors
 from squall.datastructures import Default
 from squall.exceptions import HTTPException
 from squall.responses import JSONResponse, PlainTextResponse, Response
-from squall.routing import APIRoute, WebSocketRoute
+from squall.routing.routes import APIRoute, WebSocketRoute
 from squall.types import ASGIApp, DecoratedCallable, Receive, Scope, Send
 from squall.utils import get_value_or_default
 from starlette.websockets import WebSocketClose
@@ -252,7 +253,8 @@ class Router:
             >>> app.include_router(router)
         """
         for route in router.routes:
-            route.add_path_prefix(self._prefix)
+            route.path.append_left(self._prefix)
+            # route.add_path_prefix(self._prefix)
             self.route_register(route)
 
     @property
@@ -579,6 +581,8 @@ class RootRouter(Router):
         self._fast_path_route_http: Dict[str, Any] = {}
         self._fast_path_route_ws: Dict[str, Any] = {}
         self._router = squall_router.Router()
+        for convertor in convertors.database.convertors.values():
+            self._router.add_validator(convertor.alias, convertor.regex)
         self._last_handler_id = 0
         self._handlers: Dict[int, ASGIApp] = {}
 
@@ -625,8 +629,10 @@ class RootRouter(Router):
     def route_register(self, route: Union[APIRoute, WebSocketRoute]) -> None:
         methods = getattr(route, "methods", ["WS"])
         for method in methods:
-            self._router.add_route(method, route.path, self._last_handler_id)
-            self._handlers[self._last_handler_id] = route.app
+            self._router.add_route(
+                method, route.path.router_path, self._last_handler_id
+            )
+            self._handlers[self._last_handler_id] = route.get_route_handler()
             self._last_handler_id += 1
 
         self._routes.append(route)

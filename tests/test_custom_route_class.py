@@ -1,6 +1,6 @@
 import pytest
 from squall import Router, Squall
-from squall.routing import APIRoute
+from squall.routing.routes import APIRoute
 from squall.testclient import TestClient
 
 app = Squall()
@@ -49,7 +49,7 @@ openapi_schema = {
     "openapi": "3.0.2",
     "info": {"title": "Squall", "version": "0.1.0"},
     "paths": {
-        "/a/": {
+        "/a": {
             "get": {
                 "responses": {
                     "200": {
@@ -58,10 +58,10 @@ openapi_schema = {
                     }
                 },
                 "summary": "Get A",
-                "operationId": "get_a_a__get",
+                "operationId": "get_a_a_get",
             }
         },
-        "/a/b/": {
+        "/a/b": {
             "get": {
                 "responses": {
                     "200": {
@@ -70,10 +70,10 @@ openapi_schema = {
                     }
                 },
                 "summary": "Get B",
-                "operationId": "get_b_a_b__get",
+                "operationId": "get_b_a_b_get",
             }
         },
-        "/a/b/c/": {
+        "/a/b/c": {
             "get": {
                 "responses": {
                     "200": {
@@ -82,7 +82,7 @@ openapi_schema = {
                     }
                 },
                 "summary": "Get C",
-                "operationId": "get_c_a_b_c__get",
+                "operationId": "get_c_a_b_c_get",
             }
         },
     },
@@ -108,7 +108,7 @@ def test_route_classes():
     routes = {}
     for r in app.router.routes:
         assert isinstance(r, APIRoute)
-        routes[r.path] = r
-    assert getattr(routes["/a/"], "x_type") == "A"
-    assert getattr(routes["/a/b/"], "x_type") == "B"
-    assert getattr(routes["/a/b/c/"], "x_type") == "C"
+        routes[r.path.path] = r
+    assert getattr(routes["/a"], "x_type") == "A"
+    assert getattr(routes["/a/b"], "x_type") == "B"
+    assert getattr(routes["/a/b/c"], "x_type") == "C"

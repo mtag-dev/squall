@@ -1,5 +1,5 @@
 from squall import Squall
-from squall.router import Router
+from squall.routing.router import Router
 from squall.testclient import TestClient
 
 app = Squall()

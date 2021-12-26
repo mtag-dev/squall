@@ -8,7 +8,6 @@ from apischema.json_schema import (
     deserialization_schema,
     serialization_schema,
 )
-from squall import routing
 from squall.datastructures import DefaultPlaceholder
 from squall.openapi.constants import (
     METHODS_WITH_BODY,
@@ -17,8 +16,8 @@ from squall.openapi.constants import (
 )
 from squall.params import Body
 from squall.responses import Response
-from squall.routing import APIRoute, WebSocketRoute
-from squall.routing_.utils import HeadParam
+from squall.routing.routes import APIRoute, WebSocketRoute
+from squall.routing.utils import HeadParam
 from squall.utils import generate_operation_id_for_path
 
 AnyRoute = Union[APIRoute, WebSocketRoute]
@@ -80,22 +79,20 @@ type_mapping: Dict[str, str] = {
 }
 
 
-def generate_operation_id(*, route: routing.APIRoute, method: str) -> str:
+def generate_operation_id(*, route: APIRoute, method: str) -> str:
     if route.operation_id:
         return route.operation_id
-    path: str = route.path_format
+    path: str = route.path.schema_path
     return generate_operation_id_for_path(name=route.name, path=path, method=method)
 
 
-def generate_operation_summary(*, route: routing.APIRoute, method: str) -> str:
+def generate_operation_summary(*, route: APIRoute, method: str) -> str:
     if route.summary:
         return route.summary
     return route.name.replace("_", " ").title()
 
 
-def get_openapi_operation_metadata(
-    *, route: routing.APIRoute, method: str
-) -> Dict[str, Any]:
+def get_openapi_operation_metadata(*, route: APIRoute, method: str) -> Dict[str, Any]:
     operation: Dict[str, Any] = {}
     if route.tags:
         operation["tags"] = route.tags
@@ -369,14 +366,14 @@ def get_openapi(
         if isinstance(route, WebSocketRoute):
             continue
 
-        if not route.include_in_schema or not route.path_format:
+        if not route.include_in_schema or not route.path.schema_path:
             continue
 
         openapi_route = OpenAPIRoute(route, version=_version)
-        if route.path_format in paths:
-            paths[route.path_format].update(openapi_route.spec)
+        if route.path.schema_path in paths:
+            paths[route.path.schema_path].update(openapi_route.spec)
         else:
-            paths[route.path_format] = openapi_route.spec
+            paths[route.path.schema_path] = openapi_route.spec
         response_schemas.update(openapi_route.response_schemas)
         request_schemas.update(openapi_route.request_schemas)
 

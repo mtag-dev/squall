@@ -20,8 +20,18 @@ class StrConvertor(Convertor):
     type = str
 
     @staticmethod
-    def convert(value: str) -> typing.Any:
+    def convert(value: str) -> str:
         return value
+
+
+class BytesConvertor(Convertor):
+    alias: str = "bytes"
+    regex: str = r"^.*$"
+    type = bytes
+
+    @staticmethod
+    def convert(value: str) -> bytes:
+        return value.encode("utf-8")
 
 
 class IntConvertor(Convertor):
@@ -73,9 +83,22 @@ class ConvertorsDatabase:
     def add_convertor(self, convertor: typing.Type[Convertor]) -> None:
         self.convertors[convertor.alias] = convertor()
 
+    def get_by_alias(self, alias: str) -> typing.Optional[Convertor]:
+        for record in self.convertors.values():
+            if alias == record.alias:
+                return record
+        return None
+
+    def get_by_type(self, type_of: typing.Any) -> typing.Optional[Convertor]:
+        for record in self.convertors.values():
+            if type_of == record.type:
+                return record
+        return None
+
 
 CONVERTORS = [
     StrConvertor,
+    BytesConvertor,
     IntConvertor,
     FloatConvertor,
     DecimalConvertor,

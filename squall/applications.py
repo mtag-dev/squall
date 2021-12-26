@@ -2,7 +2,7 @@ import typing
 from asyncio import iscoroutinefunction
 from typing import Any, Callable, Dict, List, Optional, Sequence, Type, Union
 
-from squall import convertors, router
+from squall import convertors
 from squall.compression import Compression
 from squall.concurrency import run_in_threadpool
 from squall.datastructures import Default
@@ -27,7 +27,8 @@ from squall.openapi.docs import (
 from squall.openapi.utils import get_openapi
 from squall.requests import Request
 from squall.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
-from squall.routing import APIRoute, WebSocketRoute
+from squall.routing import router
+from squall.routing.routes import APIRoute, WebSocketRoute
 from squall.types import AnyFunc, ASGIApp, Receive, Scope, Send
 from starlette.datastructures import State
 from starlette.middleware import Middleware

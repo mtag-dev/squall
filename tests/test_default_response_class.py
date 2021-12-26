@@ -3,7 +3,7 @@ from typing import Any
 import orjson
 from squall import Squall
 from squall.responses import HTMLResponse, JSONResponse, PlainTextResponse
-from squall.router import Router
+from squall.routing.router import Router
 from squall.testclient import TestClient
 
 
