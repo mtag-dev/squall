@@ -17,6 +17,7 @@ from squall.datastructures import Default
 from squall.exceptions import HTTPException
 from squall.responses import JSONResponse, PlainTextResponse, Response
 from squall.routing.routes import APIRoute, WebSocketRoute
+from squall.staticfiles import StaticFiles
 from squall.types import ASGIApp, DecoratedCallable, Receive, Scope, Send
 from squall.utils import get_value_or_default
 from starlette.websockets import WebSocketClose
@@ -636,3 +637,16 @@ class RootRouter(Router):
             self._last_handler_id += 1
 
         self._routes.append(route)
+
+    def add_location(
+        self, path: str, handler: ASGIApp, name: str, method: str = "GET"
+    ) -> None:
+        def _static(scope: Scope, receive: Receive, send: Send) -> Awaitable[None]:
+            if scope["path"].startswith(path):
+                scope["path"] = scope["path"][len(path):]
+            return handler(scope, receive, send)
+
+        _handler = _static if isinstance(handler, StaticFiles) else handler
+        self._handlers[self._last_handler_id] = _handler
+        self._router.add_location(method, path, self._last_handler_id)
+        self._last_handler_id += 1
