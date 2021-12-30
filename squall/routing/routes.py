@@ -180,9 +180,7 @@ class APIRoute(Route):
         self.response_serializer: Optional[Callable[..., Any]] = None
 
         endpoint_returns = inspect.signature(endpoint).return_annotation
-        res_deserialize = True
-        if response_model == endpoint_returns:
-            res_deserialize = False
+        res_deserialize = response_model != endpoint_returns
         # elif endpoint_returns != inspect._empty and response_model is None:
         #     response_model = endpoint_returns
         #     res_deserialize = False
