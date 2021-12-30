@@ -23,6 +23,7 @@ def test_add_api_route_defaults(mocker):
         response_class=squall.routing.router.JSONResponse,
         name=None,
         openapi_extra=None,
+        trace_internals=False,
     )
 
 
@@ -77,6 +78,7 @@ def test_add_api_route_custom(mocker):
         response_class=response_class,
         name="mocked",
         openapi_extra={"extra": "data"},
+        trace_internals=False,
     )
 
 

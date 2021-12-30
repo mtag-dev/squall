@@ -37,6 +37,7 @@ class Router:
         route_class: Type[APIRoute] = APIRoute,
         deprecated: Optional[bool] = None,
         include_in_schema: bool = True,
+        trace_internals: bool = False,
     ) -> None:
         self._prefix = prefix
         self._tags = tags or []
@@ -46,6 +47,7 @@ class Router:
         self._include_in_schema = include_in_schema
         self._responses = responses or {}
         self._routes: List[Union[APIRoute, WebSocketRoute]] = routes or []
+        self.trace_internals = trace_internals
 
     def add_api_route(
         self,
@@ -95,6 +97,7 @@ class Router:
             response_class=current_response_class,
             name=name,
             openapi_extra=openapi_extra,
+            trace_internals=self.trace_internals,
         )
         self.route_register(route)
 
@@ -565,6 +568,7 @@ class RootRouter(Router):
         route_class: Type[APIRoute] = APIRoute,
         deprecated: Optional[bool] = None,
         include_in_schema: bool = True,
+        trace_internals: bool = False,
     ) -> None:
         # Need both, Router and Router
         super(RootRouter, self).__init__(
@@ -576,6 +580,7 @@ class RootRouter(Router):
             deprecated=deprecated,
             include_in_schema=include_in_schema,
             responses=responses,
+            trace_internals=trace_internals,
         )
         self.redirect_slashes = redirect_slashes
         self.default = default or self.not_found

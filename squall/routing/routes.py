@@ -101,19 +101,23 @@ class Route(BaseRoute):
         methods: Optional[List[str]] = None,
         name: Optional[str] = None,
         include_in_schema: bool = True,
+        trace_internals: bool = False,
     ) -> None:
         assert path.startswith("/"), "Routed paths must start with '/'"
         self.path = Path(path, endpoint)
         self.endpoint = endpoint
         self.name = get_callable_name(endpoint) if name is None else name
         self.include_in_schema = include_in_schema
+        self.trace_internals = trace_internals
 
         endpoint_handler = endpoint
         while isinstance(endpoint_handler, functools.partial):
             endpoint_handler = endpoint_handler.func
         if inspect.isfunction(endpoint_handler) or inspect.ismethod(endpoint_handler):
             # Endpoint is function or method. Treat it as `func(request) -> response`.
-            self.app = get_http_handler(endpoint=endpoint)
+            self.app = get_http_handler(
+                endpoint=endpoint, trace_internals=trace_internals
+            )
             if methods is None:
                 methods = ["GET"]
         else:
@@ -150,6 +154,7 @@ class APIRoute(Route):
             JSONResponse
         ),
         openapi_extra: Optional[Dict[str, Any]] = None,
+        trace_internals: bool = False,
     ) -> None:
         # normalise enums e.g. http.HTTPStatus
         if isinstance(status_code, enum.IntEnum):
@@ -210,6 +215,7 @@ class APIRoute(Route):
 
         self.openapi_extra = openapi_extra
         self.head_params: List[HeadParam] = []
+        self.trace_internals = trace_internals
 
     @property
     def unique_id(self) -> str:
@@ -233,4 +239,5 @@ class APIRoute(Route):
             response_serializer=self.response_serializer,
             head_validator=head_validator,
             body_fields=self.body_fields,
+            trace_internals=self.trace_internals,
         )

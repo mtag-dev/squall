@@ -29,10 +29,17 @@ from squall.requests import Request
 from squall.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
 from squall.routing import router
 from squall.routing.routes import APIRoute, WebSocketRoute
+from squall.tracing.constants import SpanName
+from squall.tracing.helpers import CurrentSpan, trace_requests
 from squall.types import AnyFunc, ASGIApp, Receive, Scope, Send
 from starlette.datastructures import State
 from starlette.middleware import Middleware
 from starlette.middleware.base import BaseHTTPMiddleware
+
+try:
+    import opentelemetry  # type: ignore
+except ImportError:
+    opentelemetry = None
 
 
 class Squall:
@@ -70,6 +77,7 @@ class Squall:
         deprecated: Optional[bool] = None,
         include_in_schema: bool = True,
         compression: Optional[Compression] = None,
+        trace_internals: bool = False,
         **extra: Any,
     ) -> None:
         self.debug: bool = debug
@@ -81,6 +89,7 @@ class Squall:
             deprecated=deprecated,
             include_in_schema=include_in_schema,
             responses=responses,
+            trace_internals=trace_internals,
         )
         # Router methods linking for better user experience like having
         # @app.get(...) instead of @app.get(...)
@@ -145,11 +154,19 @@ class Squall:
         if self.openapi_url:
             assert self.title, "A title must be provided for OpenAPI, e.g.: 'My API'"
             assert self.version, "A version must be provided for OpenAPI, e.g.: '2.1.0'"
+
+        if trace_internals and opentelemetry is None:
+            raise AssertionError(
+                "trace_internals requires OpenTelemtry installed. "
+                "Please read more here: https://github.com/mtag-dev/squall/#opentelemetry-usage"
+            )
+
         self.openapi_schema: Optional[Dict[str, Any]] = None
         self.on_startup = [] if on_startup is None else list(on_startup)
         self.on_shutdown = [] if on_shutdown is None else list(on_shutdown)
         self.lifespan_ctx = LifespanContext(self.on_startup, self.on_shutdown)
         self.compression = compression
+        self.trace_internals = trace_internals
 
         self._setup()
 
@@ -279,6 +296,7 @@ class Squall:
 
         return decorator
 
+    @trace_requests
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """ASGI calls entrypoint."""
         if self.root_path:
@@ -290,7 +308,8 @@ class Squall:
             return
 
         try:
-            await self.middleware_stack(scope, receive, send)
+            with CurrentSpan(SpanName.middleware_processing, self.trace_internals):
+                await self.middleware_stack(scope, receive, send)
         except Exception as exc:
             handler = None
 
