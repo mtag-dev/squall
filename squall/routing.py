@@ -29,6 +29,8 @@ from squall.exceptions import (
     ResponsePayloadValidationError,
     WebSocketRequestValidationError,
 )
+from squall.opentelemetry.constants import SpanName
+from squall.opentelemetry.helpers import CurrentSpan
 from squall.requests import Request
 from squall.responses import JSONResponse, Response
 from squall.routing_.utils import (
@@ -180,6 +182,7 @@ def get_http_handler(
     request_deserializer: Optional[Callable[..., Any]] = None,
     response_deserializer: Optional[Callable[..., Any]] = None,
     response_serializer: Optional[Callable[..., Any]] = None,
+    tracing_enabled: bool = False,
 ) -> ASGIApp:
     is_coroutine = asyncio.iscoroutinefunction(endpoint)
     # is_body_form = body_field and isinstance(body_field.field_info, params.Form)
@@ -194,92 +197,101 @@ def get_http_handler(
         request_model = request_field.model
 
     async def app(scope: Scope, receive: Receive, send: Send) -> None:
-        request = Request(scope, receive=receive, send=send)
+        with CurrentSpan(SpanName.pulling_request_data, tracing_enabled):
+            request = Request(scope, receive=receive, send=send)
 
-        # Head validation
-        if head_validator is not None:
-            kwargs, errors = head_validator(request)
-            if errors:
-                raise RequestHeadValidationError(errors)
-        else:
-            kwargs = {}
+            # Head validation
+            if head_validator is not None:
+                kwargs, errors = head_validator(request)
+                if errors:
+                    raise RequestHeadValidationError(errors)
+            else:
+                kwargs = {}
 
-        # Body fields and request object
-        form = None
-        try:
-            if request_model is not None and request_deserializer is not None:
-                body = await request.json()
-                kwargs[request_model_param] = request_deserializer(body)
+            # Body fields and request object
+            form = None
+            try:
+                if request_model is not None and request_deserializer is not None:
+                    body = await request.json()
+                    kwargs[request_model_param] = request_deserializer(body)
 
-            if body_fields:
-                form_missed = []
-                for field in body_fields:
-                    kind = field["kind"]
-                    if kind == "request":
-                        kwargs[field["name"]] = request
-                    elif kind == "body":
-                        ct = request.headers.get("content-type")
-                        if ct is not None and ct[-4:] == "json":
-                            kwargs[field["name"]] = await request.json()
-                        else:
-                            kwargs[field["name"]] = await request.body()
-                    elif kind == "form":
-                        if form is None:
-                            form = await request.form()
-                        value = form.get(field["name"])
-                        if value is None:
-                            form_missed.append(
-                                {
-                                    "loc": ["form", field["name"]],
-                                    "msg": "field required",
-                                }
-                            )
-                        else:
-                            kwargs[field["name"]] = form.get(field["name"])
-                if form_missed:
-                    raise ValidationError.from_errors(form_missed)  # type: ignore
-        except JSONDecodeError as e:
-            raise RequestPayloadValidationError([str(e)])
-        except ValidationError as e:
-            raise RequestPayloadValidationError(e.messages, e.children)
-        except Exception as e:
-            raise HTTPException(
-                status_code=400, detail="There was an error parsing the body"
-            ) from e
+                if body_fields:
+                    form_missed = []
+                    for field in body_fields:
+                        kind = field["kind"]
+                        if kind == "request":
+                            kwargs[field["name"]] = request
+                        elif kind == "body":
+                            ct = request.headers.get("content-type")
+                            if ct is not None and ct[-4:] == "json":
+                                kwargs[field["name"]] = await request.json()
+                            else:
+                                kwargs[field["name"]] = await request.body()
+                        elif kind == "form":
+                            if form is None:
+                                form = await request.form()
+                            value = form.get(field["name"])
+                            if value is None:
+                                form_missed.append(
+                                    {
+                                        "loc": ["form", field["name"]],
+                                        "msg": "field required",
+                                    }
+                                )
+                            else:
+                                kwargs[field["name"]] = form.get(field["name"])
+                    if form_missed:
+                        raise ValidationError.from_errors(form_missed)  # type: ignore
+            except JSONDecodeError as e:
+                raise RequestPayloadValidationError([str(e)])
+            except ValidationError as e:
+                raise RequestPayloadValidationError(e.messages, e.children)
+            except Exception as e:
+                raise HTTPException(
+                    status_code=400, detail="There was an error parsing the body"
+                ) from e
 
-        if is_coroutine:
-            raw_response = await endpoint(**kwargs)
-        else:
-            raw_response = await run_in_threadpool(endpoint, **kwargs)
+        with CurrentSpan(SpanName.handle, tracing_enabled):
+            if is_coroutine:
+                raw_response = await endpoint(**kwargs)
+            else:
+                raw_response = await run_in_threadpool(endpoint, **kwargs)
 
         if isinstance(raw_response, Response):
             raw_response.request = request
-            await raw_response(scope, receive, send)
+            with CurrentSpan(SpanName.returning_response, tracing_enabled):
+                await raw_response(scope, receive, send)
             return
 
-        response_args: Dict[str, Any] = {}
+        with CurrentSpan(SpanName.response_preparation, tracing_enabled):
+            response_args: Dict[str, Any] = {}
 
-        # If status_code was set, use it, otherwise use the default from the
-        # response class, in the case of redirect it's 307
+            # If status_code was set, use it, otherwise use the default from the
+            # response class, in the case of redirect it's 307
 
-        try:
-            if response_deserializer is not None and response_serializer is not None:
-                result = response_serializer(response_deserializer(raw_response))
-            elif response_serializer is not None:
-                result = response_serializer(raw_response)
-            else:
-                result = raw_response
-        except ValidationError as e:
-            raise ResponsePayloadValidationError(e.messages, e.children)
-        except TypeError as e:
-            raise ResponsePayloadValidationError([str(e)])
+            try:
+                if (
+                    response_deserializer is not None
+                    and response_serializer is not None
+                ):
+                    result = response_serializer(response_deserializer(raw_response))
+                elif response_serializer is not None:
+                    result = response_serializer(raw_response)
+                else:
+                    result = raw_response
+            except ValidationError as e:
+                raise ResponsePayloadValidationError(e.messages, e.children)
+            except TypeError as e:
+                raise ResponsePayloadValidationError([str(e)])
 
-        if status_code is not None:
-            response_args["status_code"] = status_code
-        response = actual_response_class(result, **response_args)
-        # Temporary solution in order to avoid header initialization
-        response.request = request
-        await response(scope, receive, send)
+            if status_code is not None:
+                response_args["status_code"] = status_code
+            response = actual_response_class(result, **response_args)
+            # Temporary solution in order to avoid header initialization
+            response.request = request
+
+        with CurrentSpan(SpanName.returning_response, tracing_enabled):
+            await response(scope, receive, send)
 
     return app
 
@@ -336,19 +348,23 @@ class Route(BaseRoute):
         methods: Optional[List[str]] = None,
         name: Optional[str] = None,
         include_in_schema: bool = True,
+        tracing_enabled: bool = False,
     ) -> None:
         assert path.startswith("/"), "Routed paths must start with '/'"
         self.path = path
         self.endpoint = endpoint
         self.name = get_callable_name(endpoint) if name is None else name
         self.include_in_schema = include_in_schema
+        self.tracing_enabled = tracing_enabled
 
         endpoint_handler = endpoint
         while isinstance(endpoint_handler, functools.partial):
             endpoint_handler = endpoint_handler.func
         if inspect.isfunction(endpoint_handler) or inspect.ismethod(endpoint_handler):
             # Endpoint is function or method. Treat it as `func(request) -> response`.
-            self.app = get_http_handler(endpoint=endpoint)
+            self.app = get_http_handler(
+                endpoint=endpoint, tracing_enabled=tracing_enabled
+            )
             if methods is None:
                 methods = ["GET"]
         else:
@@ -387,6 +403,7 @@ class APIRoute(Route):
             JSONResponse
         ),
         openapi_extra: Optional[Dict[str, Any]] = None,
+        tracing_enabled: bool = False,
     ) -> None:
         # normalise enums e.g. http.HTTPStatus
         if isinstance(status_code, enum.IntEnum):
@@ -449,6 +466,7 @@ class APIRoute(Route):
         self.operation_id = operation_id
         self.include_in_schema = include_in_schema
         self.response_class = response_class
+        self.tracing_enabled = tracing_enabled
 
         assert callable(endpoint), "An endpoint must be a callable"
 
@@ -466,4 +484,5 @@ class APIRoute(Route):
             response_serializer=self.response_serializer,
             head_validator=self.head_validator,
             body_fields=self.body_fields,
+            tracing_enabled=self.tracing_enabled,
         )
