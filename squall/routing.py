@@ -29,8 +29,6 @@ from squall.exceptions import (
     ResponsePayloadValidationError,
     WebSocketRequestValidationError,
 )
-from squall.opentelemetry.constants import SpanName
-from squall.opentelemetry.helpers import CurrentSpan
 from squall.requests import Request
 from squall.responses import JSONResponse, Response
 from squall.routing_.utils import (
@@ -39,6 +37,8 @@ from squall.routing_.utils import (
     get_handler_head_params,
     get_handler_request_fields,
 )
+from squall.tracing.constants import SpanName
+from squall.tracing.helpers import CurrentSpan
 from squall.types import ASGIApp
 from squall.utils import generate_operation_id_for_path, get_callable_name
 from squall.validators.head import Validator
@@ -182,7 +182,7 @@ def get_http_handler(
     request_deserializer: Optional[Callable[..., Any]] = None,
     response_deserializer: Optional[Callable[..., Any]] = None,
     response_serializer: Optional[Callable[..., Any]] = None,
-    tracing_enabled: bool = False,
+    trace_internals: bool = False,
 ) -> ASGIApp:
     is_coroutine = asyncio.iscoroutinefunction(endpoint)
     # is_body_form = body_field and isinstance(body_field.field_info, params.Form)
@@ -197,7 +197,7 @@ def get_http_handler(
         request_model = request_field.model
 
     async def app(scope: Scope, receive: Receive, send: Send) -> None:
-        with CurrentSpan(SpanName.pulling_request_data, tracing_enabled):
+        with CurrentSpan(SpanName.pulling_request_data, trace_internals):
             request = Request(scope, receive=receive, send=send)
 
             # Head validation
@@ -251,7 +251,7 @@ def get_http_handler(
                     status_code=400, detail="There was an error parsing the body"
                 ) from e
 
-        with CurrentSpan(SpanName.handle, tracing_enabled):
+        with CurrentSpan(SpanName.handle, trace_internals):
             if is_coroutine:
                 raw_response = await endpoint(**kwargs)
             else:
@@ -259,11 +259,11 @@ def get_http_handler(
 
         if isinstance(raw_response, Response):
             raw_response.request = request
-            with CurrentSpan(SpanName.returning_response, tracing_enabled):
+            with CurrentSpan(SpanName.returning_response, trace_internals):
                 await raw_response(scope, receive, send)
             return
 
-        with CurrentSpan(SpanName.response_preparation, tracing_enabled):
+        with CurrentSpan(SpanName.response_preparation, trace_internals):
             response_args: Dict[str, Any] = {}
 
             # If status_code was set, use it, otherwise use the default from the
@@ -290,7 +290,7 @@ def get_http_handler(
             # Temporary solution in order to avoid header initialization
             response.request = request
 
-        with CurrentSpan(SpanName.returning_response, tracing_enabled):
+        with CurrentSpan(SpanName.returning_response, trace_internals):
             await response(scope, receive, send)
 
     return app
@@ -348,14 +348,14 @@ class Route(BaseRoute):
         methods: Optional[List[str]] = None,
         name: Optional[str] = None,
         include_in_schema: bool = True,
-        tracing_enabled: bool = False,
+        trace_internals: bool = False,
     ) -> None:
         assert path.startswith("/"), "Routed paths must start with '/'"
         self.path = path
         self.endpoint = endpoint
         self.name = get_callable_name(endpoint) if name is None else name
         self.include_in_schema = include_in_schema
-        self.tracing_enabled = tracing_enabled
+        self.trace_internals = trace_internals
 
         endpoint_handler = endpoint
         while isinstance(endpoint_handler, functools.partial):
@@ -363,7 +363,7 @@ class Route(BaseRoute):
         if inspect.isfunction(endpoint_handler) or inspect.ismethod(endpoint_handler):
             # Endpoint is function or method. Treat it as `func(request) -> response`.
             self.app = get_http_handler(
-                endpoint=endpoint, tracing_enabled=tracing_enabled
+                endpoint=endpoint, trace_internals=trace_internals
             )
             if methods is None:
                 methods = ["GET"]
@@ -403,7 +403,7 @@ class APIRoute(Route):
             JSONResponse
         ),
         openapi_extra: Optional[Dict[str, Any]] = None,
-        tracing_enabled: bool = False,
+        trace_internals: bool = False,
     ) -> None:
         # normalise enums e.g. http.HTTPStatus
         if isinstance(status_code, enum.IntEnum):
@@ -466,7 +466,7 @@ class APIRoute(Route):
         self.operation_id = operation_id
         self.include_in_schema = include_in_schema
         self.response_class = response_class
-        self.tracing_enabled = tracing_enabled
+        self.trace_internals = trace_internals
 
         assert callable(endpoint), "An endpoint must be a callable"
 
@@ -484,5 +484,5 @@ class APIRoute(Route):
             response_serializer=self.response_serializer,
             head_validator=self.head_validator,
             body_fields=self.body_fields,
-            tracing_enabled=self.tracing_enabled,
+            trace_internals=self.trace_internals,
         )

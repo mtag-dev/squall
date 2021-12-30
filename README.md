@@ -449,15 +449,15 @@ async def handle_get():
 ```
 
 
-### Opentelemetry usage
+### OpenTelemetry usage
 
 To trace internal actions next packages must be installed:
 
 ```buildoutcfg
-opentelemetry-api
-opentelemetry-sdk
+pip install opentelemetry-api opentelemetry-sdk
 ```
-Having installed libs initial application and opentelemetry configuration should be performed as shown bellow:
+
+Having installed libs initial application and OpenTelemetry configuration should be performed as shown bellow:
 
 ```python
 from opentelemetry import trace
@@ -471,12 +471,13 @@ from squall import Squall
 trace.set_tracer_provider(TracerProvider())
 trace.get_tracer_provider().add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
 
-app = Squall(tracing_enabled=True)
+app = Squall(trace_internals=True)
 
 @app.get("/get")
 async def handle_get() -> dict:
     return {"Hello": "World"}
 ```
+
 For detailed config have a look at [Opentelemetry docs](https://opentelemetry-python.readthedocs.io/en/latest/exporter/otlp/otlp.html)
 
 
