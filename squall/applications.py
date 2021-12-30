@@ -35,6 +35,11 @@ from starlette.datastructures import State
 from starlette.middleware import Middleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
+try:
+    import opentelemetry  # type: ignore
+except ImportError:
+    opentelemetry = None
+
 
 class Squall:
     _default_error_response = PlainTextResponse(
@@ -148,14 +153,11 @@ class Squall:
             assert self.title, "A title must be provided for OpenAPI, e.g.: 'My API'"
             assert self.version, "A version must be provided for OpenAPI, e.g.: '2.1.0'"
 
-        if trace_internals:
-            try:
-                pass
-            except ImportError:
-                raise AssertionError(
-                    "trace_internals requires OpenTelemtry installed. "
-                    "Please read more here: https://github.com/mtag-dev/squall/#opentelemetry-usage"
-                )
+        if trace_internals and opentelemetry is None:
+            raise AssertionError(
+                "trace_internals requires OpenTelemtry installed. "
+                "Please read more here: https://github.com/mtag-dev/squall/#opentelemetry-usage"
+            )
 
         self.openapi_schema: Optional[Dict[str, Any]] = None
         self.on_startup = [] if on_startup is None else list(on_startup)
