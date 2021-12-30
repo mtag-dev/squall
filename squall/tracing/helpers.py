@@ -1,7 +1,7 @@
 import functools
-from typing import Any, Callable, Dict, Optional, Awaitable
+from typing import Any, Callable, Dict, Optional
 
-from squall.types import Receive, Scope, Send, ASGIApp
+from squall.types import Receive, Scope, Send
 
 tracer = None
 
@@ -21,15 +21,25 @@ class CurrentSpan:
         self.span_name = span_name
         self.enabled = enabled
         if enabled and not tracer:
-            from opentelemetry import trace  # type: ignore
-            tracer = trace.get_tracer(__name__)
+            try:
+                from opentelemetry import trace  # type: ignore
+
+                tracer = trace.get_tracer(__name__)
+            except ImportError:
+                raise AssertionError(
+                    "trace_internals requires OpenTelemtry installed. "
+                    "Please read more here: https://github.com/mtag-dev/squall/#opentelemetry-usage"
+                )
 
         self.attributes = attributes
 
     def __enter__(self) -> None:
-        if not self.enabled:
+        if not self.enabled or tracer is None:
             return
-        self.trace = tracer.start_as_current_span(self.span_name, attributes=self.attributes)
+
+        self.trace = tracer.start_as_current_span(
+            self.span_name, attributes=self.attributes
+        )
         self.trace.__enter__()
 
     def __exit__(
@@ -45,10 +55,10 @@ class CurrentSpan:
 
 def trace_requests(call_method: Callable) -> Callable:  # type:ignore
     @functools.wraps(call_method)
-    async def call(self: 'Squall', scope: Scope, send: Send, receive: Receive) -> None:  # type:ignore
+    async def call(self: Any, scope: Scope, send: Send, receive: Receive) -> None:
         with CurrentSpan(
             scope.get("path", "/"),
-            self.tracing_enabled,
+            self.trace_internals,
             attributes={
                 "http.method": scope.get("method", ""),
                 "http.target": scope.get("path", ""),

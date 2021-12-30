@@ -25,11 +25,11 @@ from squall.openapi.docs import (
     get_swagger_ui_oauth2_redirect_html,
 )
 from squall.openapi.utils import get_openapi
-from squall.opentelemetry.constants import SpanName
-from squall.opentelemetry.helpers import CurrentSpan, trace_requests
 from squall.requests import Request
 from squall.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
 from squall.routing import APIRoute, WebSocketRoute
+from squall.tracing.constants import SpanName
+from squall.tracing.helpers import CurrentSpan, trace_requests
 from squall.types import AnyFunc, ASGIApp, Receive, Scope, Send
 from starlette.datastructures import State
 from starlette.middleware import Middleware
@@ -71,7 +71,7 @@ class Squall:
         deprecated: Optional[bool] = None,
         include_in_schema: bool = True,
         compression: Optional[Compression] = None,
-        tracing_enabled: bool = False,
+        trace_internals: bool = False,
         **extra: Any,
     ) -> None:
         self.debug: bool = debug
@@ -83,7 +83,7 @@ class Squall:
             deprecated=deprecated,
             include_in_schema=include_in_schema,
             responses=responses,
-            tracing_enabled=tracing_enabled,
+            trace_internals=trace_internals,
         )
         # Router methods linking for better user experience like having
         # @app.get(...) instead of @app.get(...)
@@ -148,12 +148,12 @@ class Squall:
             assert self.title, "A title must be provided for OpenAPI, e.g.: 'My API'"
             assert self.version, "A version must be provided for OpenAPI, e.g.: '2.1.0'"
 
-        if tracing_enabled:
+        if trace_internals:
             try:
-                import opentelemetry
+                pass
             except ImportError:
                 raise AssertionError(
-                    "tracing_enabled requires OpenTelemtry installed. "
+                    "trace_internals requires OpenTelemtry installed. "
                     "Please read more here: https://github.com/mtag-dev/squall/#opentelemetry-usage"
                 )
 
@@ -162,7 +162,7 @@ class Squall:
         self.on_shutdown = [] if on_shutdown is None else list(on_shutdown)
         self.lifespan_ctx = LifespanContext(self.on_startup, self.on_shutdown)
         self.compression = compression
-        self.tracing_enabled = tracing_enabled
+        self.trace_internals = trace_internals
 
         self._setup()
 
@@ -304,7 +304,7 @@ class Squall:
             return
 
         try:
-            with CurrentSpan(SpanName.middleware_processing, self.tracing_enabled):
+            with CurrentSpan(SpanName.middleware_processing, self.trace_internals):
                 await self.middleware_stack(scope, receive, send)
         except Exception as exc:
             handler = None
