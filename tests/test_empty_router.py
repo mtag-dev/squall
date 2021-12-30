@@ -24,10 +24,6 @@ def test_use_empty():
         assert response.status_code == 200, response.text
         assert response.json() == ["OK"]
 
-        response = client.get("/prefix/")
-        assert response.status_code == 200, response.text
-        assert response.json() == ["OK"]
-
 
 @pytest.mark.skip(reason="Should we raise an exception in such cases?")
 def test_include_empty():

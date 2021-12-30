@@ -14,6 +14,7 @@ from typing import (
     get_origin,
 )
 
+from squall import convertors
 from squall.bindings import RequestField
 from squall.params import (
     Body,
@@ -65,7 +66,10 @@ class HeadParam:
         return validate, statements
 
     def get_convertor(self) -> Tuple[bool, str]:
-        is_array, convertor = False, "str"
+        is_array, convertor = False, None
+        if getattr(self._annotation, "__name__", None) == "_empty":
+            return False, "str"
+
         args, alias = get_args(self._annotation), get_origin(self._annotation)
         if alias is Union:
             if type(None) in args:
@@ -73,23 +77,25 @@ class HeadParam:
                     is_array, _convertor = True, get_args(args[0])[0]
                 else:
                     is_array, _convertor = False, args[0]
-                convertor = getattr(_convertor, "__name__", None)
         elif alias == list:
             try:
-                is_array, convertor = True, args[0].__name__
+                is_array, _convertor = True, args[0]
             except Exception:
                 """List[Any] should be implemented"""
-        elif (
-            hasattr(self._annotation, "__name__")
-            and self._annotation.__name__ != "_empty"
-        ):
-            convertor = self._annotation.__name__
         else:
-            assert not alias, f"Convertor for {self.name} unknown"
+            _convertor = self._annotation
+
+        if conv := convertors.database.get_by_type(_convertor):
+            convertor = conv.alias
+
+        assert convertor, f"Convertor for {self.name} unknown"
+
         return is_array, convertor
 
 
-def get_handler_head_params(func: Callable[..., Any]) -> List[HeadParam]:
+def get_handler_head_params(
+    func: Callable[..., Any], path_params: Dict[str, Optional[str]]
+) -> List[HeadParam]:
     signature = inspect.signature(func)
     results = []
     for k, v in signature.parameters.items():
@@ -98,13 +104,9 @@ def get_handler_head_params(func: Callable[..., Any]) -> List[HeadParam]:
             source = v.default.in_.value
         elif v.annotation == WebSocket:
             continue
-        elif v.default is v.empty:
-            is_model = is_valid_body_model(v.annotation)
-            is_affilated = get_annotation_affiliation(v.annotation, v.default)
-            if not (is_model or is_affilated):
-                source = "path_params"
-        elif type(v.default) in (int, float, Decimal, str, bytes, type(None)):
-            source = "path_params"
+        elif v.default is v.empty and k in path_params:
+            source = Path.in_.value
+            # source = "path_params"
 
         if source is not None:
             results.append(HeadParam(name=k, value=v, source=source))

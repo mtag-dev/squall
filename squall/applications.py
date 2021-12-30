@@ -2,7 +2,7 @@ import typing
 from asyncio import iscoroutinefunction
 from typing import Any, Callable, Dict, List, Optional, Sequence, Type, Union
 
-from squall import router
+from squall import convertors
 from squall.compression import Compression
 from squall.concurrency import run_in_threadpool
 from squall.datastructures import Default
@@ -27,7 +27,8 @@ from squall.openapi.docs import (
 from squall.openapi.utils import get_openapi
 from squall.requests import Request
 from squall.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
-from squall.routing import APIRoute, WebSocketRoute
+from squall.routing import router
+from squall.routing.routes import APIRoute, WebSocketRoute
 from squall.tracing.constants import SpanName
 from squall.tracing.helpers import CurrentSpan, trace_requests
 from squall.types import AnyFunc, ASGIApp, Receive, Scope, Send
@@ -105,6 +106,7 @@ class Squall:
         self.add_route = self.router.add_route
         self.add_api = self.router.add_api
         self.add_api_route = self.router.add_api_route
+        self.add_location = self.router.add_location
         self.websocket = self.router.websocket
 
         self.exception_handlers: Dict[Union[int, Type[Exception]], AnyFunc] = (
@@ -431,3 +433,7 @@ class Squall:
             self.router.add_api_route(
                 self.redoc_url, redoc_html, include_in_schema=False
             )
+
+    @staticmethod
+    def add_convertor(convertor: Type[convertors.Convertor]) -> None:
+        convertors.database.add_convertor(convertor)

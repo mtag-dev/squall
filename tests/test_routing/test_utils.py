@@ -1,60 +1,52 @@
 from typing import Optional
 
 from squall.params import Cookie, Header, Num, Path, Query, Str
-from squall.routing_.utils import get_handler_head_params
+from squall.routing.utils import get_handler_head_params
 
 
 def test_get_handler_args_no_args():
     def handler():
         pass
 
-    assert get_handler_head_params(handler) == []
+    assert get_handler_head_params(handler, {}) == []
 
 
 def test_get_handler_args_no_annotation():
     def handler(a, b=Query(...), c=Path(...), d=Header(...), e=Cookie(...)):
         pass
 
-    params = get_handler_head_params(handler)
+    params = get_handler_head_params(handler, {})
     assert params[0].convertor == "str"
     assert params[0].default == Ellipsis
     assert params[0].statements == {}
-    assert params[0].name == "a"
-    assert params[0].alias == "a"
-    assert params[0].source == "path_params"
+    assert params[0].name == "b"
+    assert params[0].alias == "b"
+    assert params[0].source == "query_params"
     assert params[0].validate is None
 
     assert params[1].convertor == "str"
     assert params[1].default == Ellipsis
     assert params[1].statements == {}
-    assert params[1].name == "b"
-    assert params[1].alias == "b"
-    assert params[1].source == "query_params"
+    assert params[1].name == "c"
+    assert params[1].alias == "c"
+    assert params[1].source == "path_params"
     assert params[1].validate is None
 
     assert params[2].convertor == "str"
     assert params[2].default == Ellipsis
     assert params[2].statements == {}
-    assert params[2].name == "c"
-    assert params[2].alias == "c"
-    assert params[2].source == "path_params"
+    assert params[2].name == "d"
+    assert params[2].alias == "d"
+    assert params[2].source == "headers"
     assert params[2].validate is None
 
     assert params[3].convertor == "str"
     assert params[3].default == Ellipsis
     assert params[3].statements == {}
-    assert params[3].name == "d"
-    assert params[3].alias == "d"
-    assert params[3].source == "headers"
+    assert params[3].name == "e"
+    assert params[3].alias == "e"
+    assert params[3].source == "cookies"
     assert params[3].validate is None
-
-    assert params[4].convertor == "str"
-    assert params[4].default == Ellipsis
-    assert params[4].statements == {}
-    assert params[4].name == "e"
-    assert params[4].alias == "e"
-    assert params[4].source == "cookies"
-    assert params[4].validate is None
 
 
 def test_get_handler_args_alias():
@@ -66,7 +58,7 @@ def test_get_handler_args_alias():
     ):
         pass
 
-    params = get_handler_head_params(handler)
+    params = get_handler_head_params(handler, {})
     assert params[0].convertor == "str"
     assert params[0].default == Ellipsis
     assert params[0].statements == {}
@@ -101,10 +93,10 @@ def test_get_handler_args_alias():
 
 
 def test_get_handler_args_annotations():
-    def handler(b: int, c: str, d: bytes, e: float):
+    def handler(b: int = Path(), c: str = Path(), d: bytes = Path(), e: float = Path()):
         pass
 
-    params = get_handler_head_params(handler)
+    params = get_handler_head_params(handler, {})
     assert params[0].convertor == "int"
     assert params[0].default == Ellipsis
     assert params[0].statements == {}
@@ -136,17 +128,17 @@ def test_get_handler_args_annotations():
 
 def test_get_handler_args_direct_defaults():
     def handler(
-        a: Optional[str] = None,
-        b: int = 1,
-        c: str = "Hey",
-        d: bytes = b"Hey",
-        e: float = 3.14,
+        a: str,
+        b: int = Query(1),
+        c: str = Query("Hey"),
+        d: bytes = Query(b"Hey"),
+        e: float = Query(3.14),
     ):
         pass
 
-    params = get_handler_head_params(handler)
+    params = get_handler_head_params(handler, {"a": None})
     assert params[0].convertor == "str"
-    assert params[0].default is None
+    assert params[0].default == Ellipsis
     assert params[0].statements == {}
     assert params[0].name == "a"
     assert params[0].source == "path_params"
@@ -156,34 +148,34 @@ def test_get_handler_args_direct_defaults():
     assert params[1].default == 1
     assert params[1].statements == {}
     assert params[1].name == "b"
-    assert params[1].source == "path_params"
+    assert params[1].source == "query_params"
     assert params[1].validate is None
 
     assert params[2].convertor == "str"
     assert params[2].default == "Hey"
     assert params[2].statements == {}
     assert params[2].name == "c"
-    assert params[2].source == "path_params"
+    assert params[2].source == "query_params"
     assert params[2].validate is None
 
     assert params[3].convertor == "bytes"
     assert params[3].default == b"Hey"
     assert params[3].statements == {}
     assert params[3].name == "d"
-    assert params[3].source == "path_params"
+    assert params[3].source == "query_params"
     assert params[3].validate is None
 
     assert params[4].convertor == "float"
     assert params[4].default == 3.14
     assert params[4].statements == {}
     assert params[4].name == "e"
-    assert params[4].source == "path_params"
+    assert params[4].source == "query_params"
     assert params[4].validate is None
 
 
 def test_get_handler_args_assigned_instance_defaults():
     def handler(
-        a: Optional[str] = Path(None),
+        a: str = Path(),
         b: int = Path(1),
         c: str = Query("Hey"),
         d: bytes = Header(b"Hey"),
@@ -191,9 +183,9 @@ def test_get_handler_args_assigned_instance_defaults():
     ):
         pass
 
-    params = get_handler_head_params(handler)
+    params = get_handler_head_params(handler, {})
     assert params[0].convertor == "str"
-    assert params[0].default is None
+    assert params[0].default == Ellipsis
     assert params[0].statements == {}
     assert params[0].name == "a"
     assert params[0].source == "path_params"
@@ -238,7 +230,7 @@ def test_get_handler_args_validation_parameters():
     ):
         pass
 
-    params = get_handler_head_params(handler)
+    params = get_handler_head_params(handler, {})
     assert params[0].convertor == "str"
     assert params[0].default is None
     assert params[0].statements["min_len"] == 2

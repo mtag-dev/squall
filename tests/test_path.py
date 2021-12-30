@@ -47,7 +47,7 @@ def get_float_id(item_id: float):
 
 
 @app.get("/path/param/{item_id}")
-def get_path_param_id(item_id: Optional[str] = Path(None)):
+def get_path_param_id(item_id: str):
     return item_id
 
 
@@ -312,68 +312,84 @@ response_less_than_equal_3 = {
         ("/path/str/foobar", 200, "foobar"),
         ("/path/str/42", 200, "42"),
         ("/path/str/True", 200, "True"),
-        ("/path/int/2.7", 400, response_not_valid_int),
         ("/path/int/42", 200, 42),
-        ("/path/int/2.7", 400, response_not_valid_int),
-        ("/path/float/True", 400, response_not_valid_float),
         ("/path/float/42", 200, 42),
         ("/path/float/42.5", 200, 42.5),
         ("/path/param/foo", 200, "foo"),
         ("/path/param-required/foo", 200, "foo"),
         ("/path/param-minlength/foo", 200, "foo"),
-        ("/path/param-minlength/fo", 400, response_at_least_3),
         ("/path/param-maxlength/foo", 200, "foo"),
-        ("/path/param-maxlength/foobar", 400, response_maximum_3),
         ("/path/param-min_maxlength/foo", 200, "foo"),
-        ("/path/param-min_maxlength/foobar", 400, response_maximum_3),
-        ("/path/param-min_maxlength/f", 400, response_at_least_2),
         ("/path/param-gt/4", 200, 4),
-        ("/path/param-gt/2", 400, response_greater_than_3),
         ("/path/param-gt0/0.05", 200, 0.05),
-        ("/path/param-gt0/0", 400, response_greater_than_0),
         ("/path/param-ge/4", 200, 4),
         ("/path/param-ge/3", 200, 3),
-        ("/path/param-ge/2", 400, response_greater_than_equal_3),
-        ("/path/param-lt/4", 400, response_less_than_3),
         ("/path/param-lt/2", 200, 2),
-        ("/path/param-lt0/-1", 200, -1),
-        ("/path/param-lt0/0", 400, response_less_than_0),
-        ("/path/param-le/4", 400, response_less_than_equal_3),
         ("/path/param-le/3", 200, 3),
         ("/path/param-le/2", 200, 2),
         ("/path/param-lt-gt/2", 200, 2),
-        ("/path/param-lt-gt/4", 400, response_less_than_3),
-        ("/path/param-lt-gt/0", 400, response_greater_than_1),
         ("/path/param-le-ge/2", 200, 2),
         ("/path/param-le-ge/1", 200, 1),
         ("/path/param-le-ge/3", 200, 3),
-        ("/path/param-le-ge/4", 400, response_less_than_equal_3),
         ("/path/param-lt-int/2", 200, 2),
-        ("/path/param-lt-int/4", 400, response_less_than_3),
-        ("/path/param-lt-int/2.7", 400, response_not_valid_int),
         ("/path/param-gt-int/4", 200, 4),
-        ("/path/param-gt-int/2", 400, response_greater_than_3),
-        ("/path/param-gt-int/2.7", 400, response_not_valid_int),
-        ("/path/param-le-int/4", 400, response_less_than_equal_3),
         ("/path/param-le-int/3", 200, 3),
         ("/path/param-le-int/2", 200, 2),
-        ("/path/param-le-int/2.7", 400, response_not_valid_int),
         ("/path/param-ge-int/42", 200, 42),
         ("/path/param-ge-int/3", 200, 3),
-        ("/path/param-ge-int/2", 400, response_greater_than_equal_3),
-        ("/path/param-ge-int/2.7", 400, response_not_valid_int),
         ("/path/param-lt-gt-int/2", 200, 2),
-        ("/path/param-lt-gt-int/4", 400, response_less_than_3),
-        ("/path/param-lt-gt-int/0", 400, response_greater_than_1),
-        ("/path/param-lt-gt-int/2.7", 400, response_not_valid_int),
         ("/path/param-le-ge-int/2", 200, 2),
         ("/path/param-le-ge-int/1", 200, 1),
         ("/path/param-le-ge-int/3", 200, 3),
-        ("/path/param-le-ge-int/4", 400, response_less_than_equal_3),
-        ("/path/param-le-ge-int/2.7", 400, response_not_valid_int),
     ],
 )
 def test_get_path(path, expected_status, expected_response):
+    response = client.get(path)
+    assert response.status_code == expected_status
+    assert response.json() == expected_response
+
+
+@pytest.mark.parametrize(
+    "path,expected_status",
+    [
+        ("/path/int/2.7", 404),
+        ("/path/float/True", 404),
+        ("/path/param-ge-int/2.7", 404),
+        ("/path/param-le-ge-int/2.7", 404),
+    ],
+)
+def test_get_path_not_matched_type(path, expected_status):
+    response = client.get(path)
+    assert response.status_code == expected_status
+    assert response.json() == {"detail": "Not Found"}
+
+
+@pytest.mark.parametrize(
+    "path,expected_status,expected_response",
+    [
+        ("/path/param-minlength/fo", 400, response_at_least_3),
+        ("/path/param-maxlength/foobar", 400, response_maximum_3),
+        ("/path/param-min_maxlength/foobar", 400, response_maximum_3),
+        ("/path/param-min_maxlength/f", 400, response_at_least_2),
+        ("/path/param-gt/2", 400, response_greater_than_3),
+        ("/path/param-gt0/0", 400, response_greater_than_0),
+        ("/path/param-ge/2", 400, response_greater_than_equal_3),
+        ("/path/param-lt/4", 400, response_less_than_3),
+        ("/path/param-lt0/0", 400, response_less_than_0),
+        ("/path/param-le/4", 400, response_less_than_equal_3),
+        ("/path/param-lt-gt/4", 400, response_less_than_3),
+        ("/path/param-lt-gt/0", 400, response_greater_than_1),
+        ("/path/param-le-ge/4", 400, response_less_than_equal_3),
+        ("/path/param-lt-int/4", 400, response_less_than_3),
+        ("/path/param-gt-int/2", 400, response_greater_than_3),
+        ("/path/param-le-int/4", 400, response_less_than_equal_3),
+        ("/path/param-ge-int/2", 400, response_greater_than_equal_3),
+        ("/path/param-lt-gt-int/4", 400, response_less_than_3),
+        ("/path/param-lt-gt-int/0", 400, response_greater_than_1),
+        ("/path/param-le-ge-int/4", 400, response_less_than_equal_3),
+    ],
+)
+def test_get_path_validation_failure(path, expected_status, expected_response):
     response = client.get(path)
     assert response.status_code == expected_status
     assert response.json() == expected_response
