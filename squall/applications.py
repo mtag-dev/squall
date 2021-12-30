@@ -25,6 +25,8 @@ from squall.openapi.docs import (
     get_swagger_ui_oauth2_redirect_html,
 )
 from squall.openapi.utils import get_openapi
+from squall.opentelemetry.constants import SpanName
+from squall.opentelemetry.helpers import CurrentSpan, trace_requests
 from squall.requests import Request
 from squall.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
 from squall.routing import APIRoute, WebSocketRoute
@@ -69,6 +71,7 @@ class Squall:
         deprecated: Optional[bool] = None,
         include_in_schema: bool = True,
         compression: Optional[Compression] = None,
+        tracing_enabled: bool = False,
         **extra: Any,
     ) -> None:
         self.debug: bool = debug
@@ -80,6 +83,7 @@ class Squall:
             deprecated=deprecated,
             include_in_schema=include_in_schema,
             responses=responses,
+            tracing_enabled=tracing_enabled,
         )
         # Router methods linking for better user experience like having
         # @app.get(...) instead of @app.get(...)
@@ -143,11 +147,22 @@ class Squall:
         if self.openapi_url:
             assert self.title, "A title must be provided for OpenAPI, e.g.: 'My API'"
             assert self.version, "A version must be provided for OpenAPI, e.g.: '2.1.0'"
+
+        if tracing_enabled:
+            try:
+                import opentelemetry
+            except ImportError:
+                raise AssertionError(
+                    "tracing_enabled requires OpenTelemtry installed. "
+                    "Please read more here: https://github.com/mtag-dev/squall/#opentelemetry-usage"
+                )
+
         self.openapi_schema: Optional[Dict[str, Any]] = None
         self.on_startup = [] if on_startup is None else list(on_startup)
         self.on_shutdown = [] if on_shutdown is None else list(on_shutdown)
         self.lifespan_ctx = LifespanContext(self.on_startup, self.on_shutdown)
         self.compression = compression
+        self.tracing_enabled = tracing_enabled
 
         self._setup()
 
@@ -277,6 +292,7 @@ class Squall:
 
         return decorator
 
+    @trace_requests
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """ASGI calls entrypoint."""
         if self.root_path:
@@ -288,7 +304,8 @@ class Squall:
             return
 
         try:
-            await self.middleware_stack(scope, receive, send)
+            with CurrentSpan(SpanName.middleware_processing, self.tracing_enabled):
+                await self.middleware_stack(scope, receive, send)
         except Exception as exc:
             handler = None
 
