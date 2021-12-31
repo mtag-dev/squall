@@ -4,7 +4,7 @@ build-backend = "flit.buildapi"
 
 [project]
 name = "python-squall"
-version = "0.2.1"
+version = "0.3.0"
 description = "Squall ASGI REST framework"
 authors = [
     {name = "Stanislav Dubrovskyi", email = "s.dubrovskyi@cleverdec.com"},
