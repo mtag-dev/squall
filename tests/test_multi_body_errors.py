@@ -116,12 +116,12 @@ openapi_schema = {
     },
 }
 
-single_error = {"details": [{"loc": [0], "msg": "Age should be greater than 0"}]}
+single_error = {"detail": "There was an error parsing the body"}
 
 multiple_errors = {
     "details": [
-        {"loc": [0, "age"], "msg": "expected type number, found string"},
-        {"loc": [1, "age"], "msg": "expected type number, found string"},
+        {"err": "expected type number, found string", "loc": [0, "age"]},
+        {"err": "expected type number, found string", "loc": [1, "age"]},
     ]
 }
 
@@ -140,7 +140,7 @@ def test_put_correct_body():
 
 def test_validation_error():
     response = client.post("/items/", json=[{"name": "Foo", "age": -1.0}])
-    assert response.status_code == 422, response.text
+    assert response.status_code == 400, response.text
     assert response.json() == single_error
 
 
