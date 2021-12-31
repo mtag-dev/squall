@@ -112,13 +112,7 @@ file_required = {
     ]
 }
 
-token_required = {
-    "details": [
-        {"loc": ["form", "fileb"], "msg": "field required"},
-        {"loc": ["form", "token"], "msg": "field required"},
-    ]
-}
-
+error_parsing_body = {"detail": "There was an error parsing the body"}
 
 file_and_token_required = {
     "details": [
@@ -131,20 +125,20 @@ file_and_token_required = {
 
 def test_post_form_no_body():
     response = client.post("/files/")
-    assert response.status_code == 422, response.text
-    assert response.json() == file_and_token_required
+    assert response.status_code == 400, response.text
+    assert response.json() == error_parsing_body
 
 
 def test_post_form_no_file():
     response = client.post("/files/", data={"token": "foo"})
-    assert response.status_code == 422, response.text
-    assert response.json() == file_required
+    assert response.status_code == 400, response.text
+    assert response.json() == error_parsing_body
 
 
 def test_post_body_json():
     response = client.post("/files/", json={"file": "Foo", "token": "Bar"})
-    assert response.status_code == 422, response.text
-    assert response.json() == file_and_token_required
+    assert response.status_code == 400, response.text
+    assert response.json() == error_parsing_body
 
 
 def test_post_file_no_token(tmp_path):
@@ -154,8 +148,8 @@ def test_post_file_no_token(tmp_path):
     client = TestClient(app)
     with path.open("rb") as file:
         response = client.post("/files/", files={"file": file})
-    assert response.status_code == 422, response.text
-    assert response.json() == token_required
+    assert response.status_code == 400, response.text
+    assert response.json() == error_parsing_body
 
 
 def test_post_files_and_token(tmp_path):
