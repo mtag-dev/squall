@@ -643,14 +643,11 @@ class RootRouter(Router):
             route.path.strip_trailing_slash()
 
         for method in methods:
-            try:
-                self._router.add_route(
-                    method, route.path.router_path, self._last_handler_id
-                )
-                self._handlers[self._last_handler_id] = route.get_route_handler()
-                self._last_handler_id += 1
-            except ValueError:
-                raise ValueError(method, route.path.router_path, self._last_handler_id)
+            self._router.add_route(
+                method, route.path.router_path, self._last_handler_id
+            )
+            self._handlers[self._last_handler_id] = route.get_route_handler()
+            self._last_handler_id += 1
 
         self._routes.append(route)
 
