@@ -16,6 +16,17 @@ class Path:
         self.path = path
         self.handler = handler
 
+    def strip_trailing_slash(self) -> None:
+        """Strip trailing slash if path differ form '/'
+
+        >>> p = Path("/my/route/", lambda: None)
+        >>> assert p.path == "/my/route/"
+        >>> p.strip_trailing_slash()
+        >>> assert p.path == "/my/route"
+        """
+        if self.path != "/":
+            self.path = self.path.rstrip("/")
+
     def append_left(self, prefix: str) -> None:
         """Prepend provided prefix to the path
 

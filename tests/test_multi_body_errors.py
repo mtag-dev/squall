@@ -80,10 +80,10 @@ openapi_schema = {
         }
     },
     "paths": {
-        "/items/": {
+        "/items": {
             "post": {
                 "summary": "Save Item No Body",
-                "operationId": "save_item_no_body_items__post",
+                "operationId": "save_item_no_body_items_post",
                 "responses": {
                     "200": {
                         "description": "Successful Response",

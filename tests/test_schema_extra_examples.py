@@ -11,17 +11,17 @@ class Item:
     data: str
 
 
-@app.post("/schema_extra/")
+@app.post("/schema_extra")
 def schema_extra(item: Item):
     return item
 
 
-@app.post("/example/")
+@app.post("/example")
 def example(item: Item = Body(..., example={"data": "Data in Body example"})):
     return item
 
 
-@app.post("/examples/")
+@app.post("/examples")
 def examples(
     item: Item = Body(
         ...,
@@ -37,7 +37,7 @@ def examples(
     return item
 
 
-@app.post("/example_examples/")
+@app.post("/example_examples")
 def example_examples(
     item: Item = Body(
         ...,
@@ -122,7 +122,7 @@ def path_example_examples(
     return item_id
 
 
-@app.get("/query_example/")
+@app.get("/query_example")
 def query_example(
     data: str = Query(
         None,
@@ -132,7 +132,7 @@ def query_example(
     return data
 
 
-@app.get("/query_examples/")
+@app.get("/query_examples")
 def query_examples(
     data: str = Query(
         None,
@@ -145,7 +145,7 @@ def query_examples(
     return data
 
 
-@app.get("/query_example_examples/")
+@app.get("/query_example_examples")
 def query_example_examples(
     data: str = Query(
         None,
@@ -159,7 +159,7 @@ def query_example_examples(
     return data
 
 
-@app.get("/header_example/")
+@app.get("/header_example")
 def header_example(
     data: str = Header(
         None,
@@ -169,7 +169,7 @@ def header_example(
     return data
 
 
-@app.get("/header_examples/")
+@app.get("/header_examples")
 def header_examples(
     data: str = Header(
         None,
@@ -182,7 +182,7 @@ def header_examples(
     return data
 
 
-@app.get("/header_example_examples/")
+@app.get("/header_example_examples")
 def header_example_examples(
     data: str = Header(
         None,
@@ -196,7 +196,7 @@ def header_example_examples(
     return data
 
 
-@app.get("/cookie_example/")
+@app.get("/cookie_example")
 def cookie_example(
     data: str = Cookie(
         None,
@@ -206,7 +206,7 @@ def cookie_example(
     return data
 
 
-@app.get("/cookie_examples/")
+@app.get("/cookie_examples")
 def cookie_examples(
     data: str = Cookie(
         None,
@@ -219,7 +219,7 @@ def cookie_examples(
     return data
 
 
-@app.get("/cookie_example_examples/")
+@app.get("/cookie_example_examples")
 def cookie_example_examples(
     data: str = Cookie(
         None,
@@ -286,10 +286,10 @@ openapi_schema = {
         }
     },
     "paths": {
-        "/schema_extra/": {
+        "/schema_extra": {
             "post": {
                 "summary": "Schema Extra",
-                "operationId": "schema_extra_schema_extra__post",
+                "operationId": "schema_extra_schema_extra_post",
                 "responses": {
                     "200": {
                         "description": "Successful Response",
@@ -316,10 +316,10 @@ openapi_schema = {
                 },
             }
         },
-        "/example/": {
+        "/example": {
             "post": {
                 "summary": "Example",
-                "operationId": "example_example__post",
+                "operationId": "example_example_post",
                 "responses": {
                     "200": {
                         "description": "Successful Response",
@@ -347,10 +347,10 @@ openapi_schema = {
                 },
             }
         },
-        "/examples/": {
+        "/examples": {
             "post": {
                 "summary": "Examples",
-                "operationId": "examples_examples__post",
+                "operationId": "examples_examples_post",
                 "responses": {
                     "200": {
                         "description": "Successful Response",
@@ -388,10 +388,10 @@ openapi_schema = {
                 },
             }
         },
-        "/example_examples/": {
+        "/example_examples": {
             "post": {
                 "summary": "Example Examples",
-                "operationId": "example_examples_example_examples__post",
+                "operationId": "example_examples_example_examples_post",
                 "responses": {
                     "200": {
                         "description": "Successful Response",
@@ -532,10 +532,10 @@ openapi_schema = {
                 },
             }
         },
-        "/query_example/": {
+        "/query_example": {
             "get": {
                 "summary": "Query Example",
-                "operationId": "query_example_query_example__get",
+                "operationId": "query_example_query_example_get",
                 "parameters": [
                     {
                         "required": False,
@@ -563,10 +563,10 @@ openapi_schema = {
                 },
             }
         },
-        "/query_examples/": {
+        "/query_examples": {
             "get": {
                 "summary": "Query Examples",
-                "operationId": "query_examples_query_examples__get",
+                "operationId": "query_examples_query_examples_get",
                 "parameters": [
                     {
                         "required": False,
@@ -600,10 +600,10 @@ openapi_schema = {
                 },
             }
         },
-        "/query_example_examples/": {
+        "/query_example_examples": {
             "get": {
                 "summary": "Query Example Examples",
-                "operationId": "query_example_examples_query_example_examples__get",
+                "operationId": "query_example_examples_query_example_examples_get",
                 "parameters": [
                     {
                         "required": False,
@@ -638,10 +638,10 @@ openapi_schema = {
                 },
             }
         },
-        "/header_example/": {
+        "/header_example": {
             "get": {
                 "summary": "Header Example",
-                "operationId": "header_example_header_example__get",
+                "operationId": "header_example_header_example_get",
                 "parameters": [
                     {
                         "required": False,
@@ -669,10 +669,10 @@ openapi_schema = {
                 },
             }
         },
-        "/header_examples/": {
+        "/header_examples": {
             "get": {
                 "summary": "Header Examples",
-                "operationId": "header_examples_header_examples__get",
+                "operationId": "header_examples_header_examples_get",
                 "parameters": [
                     {
                         "required": False,
@@ -706,10 +706,10 @@ openapi_schema = {
                 },
             }
         },
-        "/header_example_examples/": {
+        "/header_example_examples": {
             "get": {
                 "summary": "Header Example Examples",
-                "operationId": "header_example_examples_header_example_examples__get",
+                "operationId": "header_example_examples_header_example_examples_get",
                 "parameters": [
                     {
                         "required": False,
@@ -744,10 +744,10 @@ openapi_schema = {
                 },
             }
         },
-        "/cookie_example/": {
+        "/cookie_example": {
             "get": {
                 "summary": "Cookie Example",
-                "operationId": "cookie_example_cookie_example__get",
+                "operationId": "cookie_example_cookie_example_get",
                 "parameters": [
                     {
                         "required": False,
@@ -775,10 +775,10 @@ openapi_schema = {
                 },
             }
         },
-        "/cookie_examples/": {
+        "/cookie_examples": {
             "get": {
                 "summary": "Cookie Examples",
-                "operationId": "cookie_examples_cookie_examples__get",
+                "operationId": "cookie_examples_cookie_examples_get",
                 "parameters": [
                     {
                         "required": False,
@@ -812,10 +812,10 @@ openapi_schema = {
                 },
             }
         },
-        "/cookie_example_examples/": {
+        "/cookie_example_examples": {
             "get": {
                 "summary": "Cookie Example Examples",
-                "operationId": "cookie_example_examples_cookie_example_examples__get",
+                "operationId": "cookie_example_examples_cookie_example_examples_get",
                 "parameters": [
                     {
                         "required": False,
@@ -868,13 +868,13 @@ def test_openapi_schema():
 
 
 def test_call_api():
-    response = client.post("/schema_extra/", json={"data": "Foo"})
+    response = client.post("/schema_extra", json={"data": "Foo"})
     assert response.status_code == 200, response.text
-    response = client.post("/example/", json={"data": "Foo"})
+    response = client.post("/example", json={"data": "Foo"})
     assert response.status_code == 200, response.text
-    response = client.post("/examples/", json={"data": "Foo"})
+    response = client.post("/examples", json={"data": "Foo"})
     assert response.status_code == 200, response.text
-    response = client.post("/example_examples/", json={"data": "Foo"})
+    response = client.post("/example_examples", json={"data": "Foo"})
     assert response.status_code == 200, response.text
     response = client.get("/path_example/foo")
     assert response.status_code == 200, response.text
@@ -882,21 +882,21 @@ def test_call_api():
     assert response.status_code == 200, response.text
     response = client.get("/path_example_examples/foo")
     assert response.status_code == 200, response.text
-    response = client.get("/query_example/")
+    response = client.get("/query_example")
     assert response.status_code == 200, response.text
-    response = client.get("/query_examples/")
+    response = client.get("/query_examples")
     assert response.status_code == 200, response.text
-    response = client.get("/query_example_examples/")
+    response = client.get("/query_example_examples")
     assert response.status_code == 200, response.text
-    response = client.get("/header_example/")
+    response = client.get("/header_example")
     assert response.status_code == 200, response.text
-    response = client.get("/header_examples/")
+    response = client.get("/header_examples")
     assert response.status_code == 200, response.text
-    response = client.get("/header_example_examples/")
+    response = client.get("/header_example_examples")
     assert response.status_code == 200, response.text
-    response = client.get("/cookie_example/")
+    response = client.get("/cookie_example")
     assert response.status_code == 200, response.text
-    response = client.get("/cookie_examples/")
+    response = client.get("/cookie_examples")
     assert response.status_code == 200, response.text
-    response = client.get("/cookie_example_examples/")
+    response = client.get("/cookie_example_examples")
     assert response.status_code == 200, response.text

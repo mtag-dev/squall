@@ -18,10 +18,10 @@ openapi_schema = {
     "openapi": "3.0.2",
     "info": {"title": "Squall", "version": "0.1.0"},
     "paths": {
-        "/items/": {
+        "/items": {
             "get": {
                 "summary": "Read Items",
-                "operationId": "read_items_items__get",
+                "operationId": "read_items_items_get",
                 "parameters": [
                     {
                         "required": False,

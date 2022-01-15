@@ -38,7 +38,7 @@ classifiers = [
     "Topic :: Internet :: WWW/HTTP",
 ]
 dependencies = [
-    "squall-router ==0.1.1",
+    "squall-router ==0.2.1",
     "starlette ==0.16.0",
     "orjson >=3.6.4,<4.0.0",
     "apischema >=0.17.0,<1.0.0",
