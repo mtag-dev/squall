@@ -13,6 +13,21 @@ def test_append_left():
     assert p.path == "/my_service/api/v1/my/route"
 
 
+def test_strip_trailing_slash():
+    # Some path present, not trailing slash
+    p = Path("/my/route", lambda: None)
+    p.strip_trailing_slash()
+    assert p.path == "/my/route"
+    # Some path with trailing slash
+    p = Path("/my/route/", lambda: None)
+    p.strip_trailing_slash()
+    assert p.path == "/my/route"
+    # Root should not be stripped
+    p = Path("/", lambda: None)
+    p.strip_trailing_slash()
+    assert p.path == "/"
+
+
 def test_path_params():
     p = Path("/user/{user_id:int}/notes/{note:uuid}/type/{type}", lambda: None)
     assert p.path_params == [("user_id", "int"), ("note", "uuid"), ("type", None)]

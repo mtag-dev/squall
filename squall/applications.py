@@ -78,6 +78,7 @@ class Squall:
         include_in_schema: bool = True,
         compression: Optional[Compression] = None,
         trace_internals: bool = False,
+        ignore_trailing_slashes: bool = True,
         **extra: Any,
     ) -> None:
         self.debug: bool = debug
@@ -90,6 +91,7 @@ class Squall:
             include_in_schema=include_in_schema,
             responses=responses,
             trace_internals=trace_internals,
+            ignore_trailing_slashes=ignore_trailing_slashes,
         )
         # Router methods linking for better user experience like having
         # @app.get(...) instead of @app.get(...)

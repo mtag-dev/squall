@@ -42,12 +42,13 @@ class Router:
         self._prefix = prefix
         self._tags = tags or []
         self._default_response_class = default_response_class
-        self.route_class = route_class
         self._deprecated = deprecated
         self._include_in_schema = include_in_schema
         self._responses = responses or {}
         self._routes: List[Union[APIRoute, WebSocketRoute]] = routes or []
+
         self.trace_internals = trace_internals
+        self.route_class = route_class
 
     def add_api_route(
         self,
@@ -569,6 +570,7 @@ class RootRouter(Router):
         deprecated: Optional[bool] = None,
         include_in_schema: bool = True,
         trace_internals: bool = False,
+        ignore_trailing_slashes: bool = False,
     ) -> None:
         # Need both, Router and Router
         super(RootRouter, self).__init__(
@@ -587,10 +589,13 @@ class RootRouter(Router):
         self._fast_path_route_http: Dict[str, Any] = {}
         self._fast_path_route_ws: Dict[str, Any] = {}
         self._router = squall_router.Router()
+        if ignore_trailing_slashes:
+            self._router.set_ignore_trailing_slashes()
         for convertor in convertors.database.convertors.values():
             self._router.add_validator(convertor.alias, convertor.regex)
         self._last_handler_id = 0
         self._handlers: Dict[int, ASGIApp] = {}
+        self.ignore_trailing_slashes = ignore_trailing_slashes
 
     def __call__(self, scope: Scope, receive: Receive, send: Send) -> Awaitable[Any]:
         """
@@ -634,6 +639,9 @@ class RootRouter(Router):
 
     def route_register(self, route: Union[APIRoute, WebSocketRoute]) -> None:
         methods = getattr(route, "methods", ["WS"])
+        if self.ignore_trailing_slashes:
+            route.path.strip_trailing_slash()
+
         for method in methods:
             self._router.add_route(
                 method, route.path.router_path, self._last_handler_id
